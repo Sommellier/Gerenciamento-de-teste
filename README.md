@@ -13,4 +13,4 @@ O objetivo principal é oferecer uma plataforma acessível, intuitiva e eficient
 
 > [!Note]
 > ## FAQ
-> [Documentação do projeto](https://github.com/Sommellier/CatolicaSC-Portfolio/wiki)
+> [Documentação do projeto](https://github.com/Sommellier/Gerenciamento-de-teste/wiki)
