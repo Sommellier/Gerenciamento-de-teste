@@ -1,5 +1,5 @@
-import { prisma } from '../../infrastructure/prisma' // ajuste o caminho se necessário
-import { hashPassword } from '../../utils/hash.util' // ajuste o caminho se necessário
+import { prisma } from '../../infrastructure/prisma'
+import { hashPassword } from '../../utils/hash.util' 
 import 'dotenv/config'
 
 interface CreateUserInput {
