@@ -3,13 +3,12 @@ import { createUser } from '../application/use-cases/createUser.use-case'
 import { prisma } from '../infrastructure/prisma'
 
 describe('User Login', () => {
-  const userData = {
-    name: 'Tester Login',
-    email: 'login@example.com',
-    password: 'pass1234'
-  }
+  let userData: any
 
-  beforeAll(async () => {
+  beforeEach(async () => {
+    const email = `login_${Date.now()}@example.com`
+    userData = { name: 'Tester Login', email, password: 'pass1234' }
+
     await prisma.user.deleteMany()
     await createUser(userData)
   })
@@ -35,5 +34,23 @@ describe('User Login', () => {
     await expect(() =>
       loginUser({ email: 'nonexist@qa.com', password: '123' })
     ).rejects.toThrow('Invalid credentials')
+  })
+
+  it('should fail with invalid email format', async () => {
+    await expect(() =>
+      loginUser({ email: 'invalid-email', password: '123' })
+    ).rejects.toThrow('Invalid email format')
+  })
+
+  it('should fail if email is missing', async () => {
+    await expect(() =>
+      loginUser({ email: '', password: 'pass1234' })
+    ).rejects.toThrow('Email and password are required')
+  })
+
+  it('should fail if password is missing', async () => {
+    await expect(() =>
+      loginUser({ email: userData.email, password: '' })
+    ).rejects.toThrow('Email and password are required')
   })
 })

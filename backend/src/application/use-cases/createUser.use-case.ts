@@ -1,5 +1,6 @@
-import { prisma } from '../../infrastructure/prisma' // ajuste o caminho se necessário
-import { hashPassword } from '../../utils/hash.util' // ajuste o caminho se necessário
+import { prisma } from '../../infrastructure/prisma'
+import { hashPassword } from '../../utils/hash.util'
+import { AppError } from '../../utils/AppError'
 import 'dotenv/config'
 
 interface CreateUserInput {
@@ -8,15 +9,49 @@ interface CreateUserInput {
   password: string
 }
 
-export async function createUser({ name, email, password }: CreateUserInput) {
-  const userExists = await prisma.user.findUnique({ where: { email } })
+type SafeUser = Omit<Awaited<ReturnType<typeof prisma.user.create>>, 'password'>
+
+export async function createUser({ name, email, password }: CreateUserInput): Promise<SafeUser> {
+  if (!name || !email || !password) {
+    throw new AppError('All fields (name, email, password) are required', 400)
+  }
+
+  const normalizedName = name.trim()
+  const normalizedEmail = email.trim().toLowerCase()
+
+  if (normalizedName.length < 2) {
+    throw new AppError('Name must be at least 2 characters long', 400)
+  }
+
+  const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/
+  if (!nameRegex.test(normalizedName)) {
+    throw new AppError('Name contains invalid characters', 400)
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(normalizedEmail)) {
+    throw new AppError('Invalid email format', 400)
+  }
+
+  if (password.length < 8) {
+    throw new AppError('Password must be at least 8 characters long', 400)
+  }
+
+  const userExists = await prisma.user.findUnique({ where: { email: normalizedEmail } })
   if (userExists) {
-    throw new Error('Email already exists')
+    throw new AppError('Email already exists', 409)
   }
 
   const hashedPassword = await hashPassword(password)
 
-  return await prisma.user.create({
-    data: { name, email, password: hashedPassword }
+  const user = await prisma.user.create({
+    data: {
+      name: normalizedName,
+      email: normalizedEmail,
+      password: hashedPassword,
+    },
   })
+
+  const { password: _, ...safeUser } = user
+  return safeUser
 }
