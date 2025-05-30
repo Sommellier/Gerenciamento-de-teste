@@ -1,6 +1,10 @@
 import { prisma } from '../../infrastructure/prisma'
+<<<<<<< HEAD
 import { hashPassword } from '../../utils/hash.util'
 import { AppError } from '../../utils/AppError'
+=======
+import { hashPassword } from '../../utils/hash.util' 
+>>>>>>> c94f46664fe2374fef459d98c075d165f4a61602
 import 'dotenv/config'
 
 interface CreateUserInput {
@@ -51,7 +55,10 @@ export async function createUser({ name, email, password }: CreateUserInput): Pr
       password: hashedPassword,
     },
   })
+<<<<<<< HEAD
 
   const { password: _, ...safeUser } = user
   return safeUser
+=======
+>>>>>>> c94f46664fe2374fef459d98c075d165f4a61602
 }
