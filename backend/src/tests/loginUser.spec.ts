@@ -1,5 +1,6 @@
-import { loginUser } from '../application/use-cases/loginUser.use-case'
-import { createUser } from '../application/use-cases/createUser.use-case'
+import 'dotenv/config'
+import { loginUser } from '../application/use-cases/user/loginUser.use-case'
+import { createUser } from '../application/use-cases/user/createUser.use-case'
 import { prisma } from '../infrastructure/prisma'
 
 describe('User Login', () => {

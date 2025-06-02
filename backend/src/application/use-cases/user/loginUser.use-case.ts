@@ -1,7 +1,7 @@
-import { prisma } from '../../infrastructure/prisma'
+import { prisma } from '../../../infrastructure/prisma'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { AppError } from '../../utils/AppError'
+import { AppError } from '../../../utils/AppError'
 
 interface LoginInput {
   email: string

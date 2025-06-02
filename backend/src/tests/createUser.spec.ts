@@ -1,4 +1,5 @@
-import { createUser } from '../application/use-cases/createUser.use-case'
+import 'dotenv/config'
+import { createUser } from '../application/use-cases/user/createUser.use-case'
 import { prisma } from '../infrastructure/prisma'
 import bcrypt from 'bcrypt'
 import { beforeEach, describe, expect, it } from '@jest/globals'

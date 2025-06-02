@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { createUser } from '../application/use-cases/createUser.use-case'
-import { loginUser } from '../application/use-cases/loginUser.use-case'
+import { createUser } from '../application/use-cases/user/createUser.use-case'
+import { loginUser } from '../application/use-cases/user/loginUser.use-case'
 import { AppError } from '../utils/AppError'
 
 export async function registerUserController(req: Request, res: Response) {

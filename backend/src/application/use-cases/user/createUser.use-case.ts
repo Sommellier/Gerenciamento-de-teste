@@ -1,6 +1,6 @@
-import { prisma } from '../../infrastructure/prisma'
-import { hashPassword } from '../../utils/hash.util'
-import { AppError } from '../../utils/AppError'
+import { prisma } from '../../../infrastructure/prisma'
+import { hashPassword } from '../../../utils/hash.util'
+import { AppError } from '../../../utils/AppError'
 import 'dotenv/config'
 
 interface CreateUserInput {
