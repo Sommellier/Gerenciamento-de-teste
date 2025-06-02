@@ -72,7 +72,7 @@ const router = useRouter()
 
 function handleReset () {
   console.log('Solicitar recuperação para:', email.value)
-  // Aqui você pode integrar com seu backend (ex: POST /forgot-password)
+  
 }
 
 async function goToLogin () {
