@@ -1,11 +1,14 @@
 import 'dotenv/config'
-import { createUser } from '../application/use-cases/user/createUser.use-case'
-import { prisma } from '../infrastructure/prisma'
+import { createUser } from '../../application/use-cases/user/createUser.use-case'
+import { prisma } from '../../infrastructure/prisma'
 import bcrypt from 'bcrypt'
 import { beforeEach, describe, expect, it } from '@jest/globals'
 
 describe('User Registration', () => {
   beforeEach(async () => {
+    await prisma.passwordResetToken.deleteMany()
+    await prisma.execution.deleteMany()
+    await prisma.userOnProject.deleteMany()
     await prisma.user.deleteMany()
   })
 

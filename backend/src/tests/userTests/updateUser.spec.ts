@@ -1,7 +1,7 @@
 import 'dotenv/config'
-import { prisma } from '../infrastructure/prisma'
-import { createUser } from '../application/use-cases/user/createUser.use-case'
-import { updateUser } from '../application/use-cases/user/updateUser.use-case'
+import { prisma } from '../../infrastructure/prisma'
+import { createUser } from '../../application/use-cases/user/createUser.use-case'
+import { updateUser } from '../../application/use-cases/user/updateUser.use-case'
 import bcrypt from 'bcrypt'
 
 describe('Update User', () => {

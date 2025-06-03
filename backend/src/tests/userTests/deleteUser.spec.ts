@@ -1,7 +1,7 @@
 import 'dotenv/config'
-import { createUser } from '../application/use-cases/user/createUser.use-case'
-import { deleteUser } from '../application/use-cases/user/deleteUser.use-case'
-import { prisma } from '../infrastructure/prisma'
+import { createUser } from '../../application/use-cases/user/createUser.use-case'
+import { deleteUser } from '../../application/use-cases/user/deleteUser.use-case'
+import { prisma } from '../../infrastructure/prisma'
 import { describe, it, beforeEach, expect } from '@jest/globals'
 
 describe('Delete User', () => {

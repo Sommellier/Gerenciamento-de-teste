@@ -1,8 +1,10 @@
 import { Router } from 'express'
-import { registerUserController } from '../controllers/user.controller'
-import { loginUserController } from  '../controllers/auth.controller'
-import { deleteUserController } from '../controllers/deleteUser.controller'
-import { updateUserController } from '../controllers/updateUser.controller'
+import { registerUserController } from '../controllers/user/registeruser.controller'
+import { loginUserController } from  '../controllers/user/auth.controller'
+import { deleteUserController } from '../controllers/user/deleteUser.controller'
+import { updateUserController } from '../controllers/user/updateUser.controller'
+import { forgotPasswordController } from '../controllers/user/forgotPassword.controller'
+import { resetPasswordController } from '../controllers/user/resetPassword.controller'
 
 const router = Router()
 
@@ -20,6 +22,14 @@ router.delete('/users/:id', (req, res, next) => {
 
 router.put('/users/:id', (req, res, next) => {
   Promise.resolve(updateUserController(req, res)).catch(next)
+})
+
+router.post('/request-password-reset', (req, res, next) => {
+  Promise.resolve(forgotPasswordController(req, res)).catch(next)
+})
+
+router.post('/reset-password', (req, res, next) => {
+  Promise.resolve(resetPasswordController(req, res)).catch(next)
 })
 
 export default router
