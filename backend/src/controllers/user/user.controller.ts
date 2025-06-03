@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { createUser } from '../application/use-cases/user/createUser.use-case'
-import { AppError } from '../utils/AppError'
+import { createUser } from '../../application/use-cases/user/createUser.use-case'
+import { AppError } from '../../utils/AppError'
 
 export async function registerUserController(req: Request, res: Response) {
   const { name, email, password } = req.body
@@ -11,6 +11,6 @@ export async function registerUserController(req: Request, res: Response) {
   } catch (err) {
     const status = err instanceof AppError ? err.statusCode : 400
     const errorMessage = err instanceof Error ? err.message : String(err)
-    return res.status(status).json({ error: errorMessage })
+    return res.status(status).json({ message: errorMessage })
   }
 }
