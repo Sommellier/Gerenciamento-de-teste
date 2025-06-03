@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
-import { createUser } from '../application/use-cases/user/createUser.use-case'
-import { loginUser } from '../application/use-cases/user/loginUser.use-case'
-import { AppError } from '../utils/AppError'
+import { createUser } from '../../application/use-cases/user/createUser.use-case'
+import { loginUser } from '../../application/use-cases/user/loginUser.use-case'
+import { AppError } from '../../utils/AppError'
 
 export async function registerUserController(req: Request, res: Response) {
   const { name, email, password } = req.body

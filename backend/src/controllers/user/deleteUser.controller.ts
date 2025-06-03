@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { deleteUser } from '../application/use-cases/user/deleteUser.use-case'
-import { AppError } from '../utils/AppError'
+import { deleteUser } from '../../application/use-cases/user/deleteUser.use-case'
+import { AppError } from '../../utils/AppError'
 
 export async function deleteUserController(req: Request, res: Response) {
   const { id } = req.params

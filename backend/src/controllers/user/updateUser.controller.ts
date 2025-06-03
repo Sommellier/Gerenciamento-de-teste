@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { updateUser } from '../application/use-cases/user/updateUser.use-case'
-import { AppError } from '../utils/AppError'
+import { updateUser } from '../../application/use-cases/user/updateUser.use-case'
+import { AppError } from '../../utils/AppError'
 
 export async function updateUserController(req: Request, res: Response) {
   const userId = req.params.id
