@@ -29,4 +29,4 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           npm install -g sonarqube-scanner
-          npx sonar-scanner -Dsonar.projectKey=4783fbb2c451817cf3d27894b4037b24561f2bcf -Dsonar.organization=Sommellier -Dsonar.sources=./backend/src -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          npx sonar-scanner -Dsonar.projectKey=4783fbb2c451817cf3d27894b4037b24561f2bcf -Dsonar.organization=Sommellier -Dsonar.sources=./backend/src -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }}
