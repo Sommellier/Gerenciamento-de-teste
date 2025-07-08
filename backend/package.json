@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --runInBand",
+    "test:coverage": "jest --coverage",
     "dev": "ts-node-dev src/main.ts"
   },
   "keywords": [],
