@@ -34,4 +34,4 @@ jobs:
             -Dsonar.organization=<SUA_ORGANIZACAO> \
             -Dsonar.sources=./backend/src \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.login=${SONAR_TOKEN}
+            -Dsonar.login=${Sommellier}
