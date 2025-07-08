@@ -24,9 +24,19 @@ jobs:
         run: npm install
         working-directory: ./backend
 
+      - name: Run Tests with Coverage
+        run: npm run test:coverage
+        working-directory: ./backend
+
       - name: Run SonarCloud Analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           npm install -g sonarqube-scanner
-          npx sonar-scanner -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste -Dsonar.organization=sommellier -Dsonar.sources=./backend/src -Dsonar.host.url=https://sonarcloud.io -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          npx sonar-scanner \
+            -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste \
+            -Dsonar.organization=sommellier \
+            -Dsonar.sources=./backend/src \
+            -Dsonar.javascript.lcov.reportPaths=./backend/coverage/lcov.info \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
