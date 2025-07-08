@@ -14,3 +14,5 @@ export async function registerUserController(req: Request, res: Response) {
     return res.status(status).json({ message: errorMessage })
   }
 }
+
+// está sendo usado

@@ -14,3 +14,6 @@ export async function resetPasswordController(req: Request, res: Response) {
     return res.status(status).json({ error: message })
   }
 }
+
+
+// está sendo usado

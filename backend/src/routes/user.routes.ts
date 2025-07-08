@@ -1,9 +1,9 @@
 import { Router } from 'express'
-import { registerUserController } from '../controllers/user/registeruser.controller'
-import { loginUserController } from  '../controllers/user/auth.controller'
+import { registerUserController } from '../controllers/user/createUser.controller'
+import { loginUserController } from  '../controllers/user/loginUser.controller'
 import { deleteUserController } from '../controllers/user/deleteUser.controller'
 import { updateUserController } from '../controllers/user/updateUser.controller'
-import { forgotPasswordController } from '../controllers/user/forgotPassword.controller'
+import { forgotPasswordController } from '../controllers/user/requestPasswordReset.controller'
 import { resetPasswordController } from '../controllers/user/resetPassword.controller'
 
 const router = Router()

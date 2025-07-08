@@ -50,7 +50,7 @@ onMounted(() => {
   token.value = route.query.token as string
   if (!token.value) {
     alert('Token de redefinição inválido.')
-    router.push('/login')
+    void router.push('/login') // corrigido com void
   }
 })
 
@@ -63,8 +63,13 @@ async function handleResetPassword() {
 
     alert('Senha redefinida com sucesso!')
     await router.push('/login')
-  } catch (error: any) {
-    alert(error.response?.data?.error || 'Erro ao redefinir a senha')
+  } catch (error: unknown) {
+    if (error instanceof Error && 'response' in error) {
+      const axiosError = error as { response?: { data?: { error?: string } } }
+      alert(axiosError.response?.data?.error || 'Erro ao redefinir a senha')
+    } else {
+      alert('Erro desconhecido')
+    }
   }
 }
 </script>
