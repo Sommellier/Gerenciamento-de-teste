@@ -1,5 +1,5 @@
 import { config } from 'dotenv'
-config({ path: '.env' }) 
+config({ path: process.env.NODE_ENV === 'test' ? '.env.test' : '.env' })
 
 import { PrismaClient } from '@prisma/client'
 
