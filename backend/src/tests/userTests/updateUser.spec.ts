@@ -5,22 +5,18 @@ import { updateUser } from '../../application/use-cases/user/updateUser.use-case
 import bcrypt from 'bcrypt'
 
 describe('Update User', () => {
-  let originalUser: { id: number; email: string }
-
   beforeEach(async () => {
     await prisma.user.deleteMany()
+  })
 
-    const created = await createUser({
+  it('should update name and email', async () => {
+    const user = await createUser({
       name: 'Original Name',
       email: `original_${Date.now()}@example.com`,
       password: 'originalPassword123'
     })
 
-    originalUser = { id: created.id, email: created.email }
-  })
-
-  it('should update name and email', async () => {
-    const updated = await updateUser(originalUser.id.toString(), {
+    const updated = await updateUser(user.id.toString(), {
       name: 'Updated Name',
       email: 'updated@example.com'
     })
@@ -30,11 +26,15 @@ describe('Update User', () => {
   })
 
   it('should update password and hash it', async () => {
-    await updateUser(originalUser.id.toString(), {
-      password: 'newPassword123'
+    const user = await createUser({
+      name: 'Hash User',
+      email: `hash_${Date.now()}@example.com`,
+      password: 'initialPass123'
     })
 
-    const userInDb = await prisma.user.findUnique({ where: { id: originalUser.id } })
+    await updateUser(user.id.toString(), { password: 'newPassword123' })
+
+    const userInDb = await prisma.user.findUnique({ where: { id: user.id } })
     expect(userInDb).not.toBeNull()
     expect(userInDb!.password).not.toBe('newPassword123')
 
@@ -48,13 +48,19 @@ describe('Update User', () => {
   })
 
   it('should throw error if email already exists', async () => {
-    const duplicateUser = await createUser({
-      name: 'Other',
-      email: `duplicate_${Date.now()}@example.com`,
-      password: 'somepass123'
+    const firstUser = await createUser({
+      name: 'User One',
+      email: `dupe_${Date.now()}@example.com`,
+      password: 'pass12345'
     })
 
-    await expect(updateUser(originalUser.id.toString(), { email: duplicateUser.email }))
+    const secondUser = await createUser({
+      name: 'User Two',
+      email: `dupe_target_${Date.now()}@example.com`,
+      password: 'pass45645'
+    })
+
+    await expect(updateUser(secondUser.id.toString(), { email: firstUser.email }))
       .rejects.toThrow('Email already exists')
   })
 })
