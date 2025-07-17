@@ -5,22 +5,22 @@ import { updateUser } from '../../application/use-cases/user/updateUser.use-case
 import bcrypt from 'bcrypt'
 
 describe('Update User', () => {
-  let userId: number
+  let originalUser: { id: number; email: string }
 
   beforeEach(async () => {
     await prisma.user.deleteMany()
 
-    const user = await createUser({
+    const created = await createUser({
       name: 'Original Name',
       email: `original_${Date.now()}@example.com`,
       password: 'originalPassword123'
     })
 
-    userId = user.id
+    originalUser = { id: created.id, email: created.email }
   })
 
   it('should update name and email', async () => {
-    const updated = await updateUser(userId.toString(), {
+    const updated = await updateUser(originalUser.id.toString(), {
       name: 'Updated Name',
       email: 'updated@example.com'
     })
@@ -30,11 +30,11 @@ describe('Update User', () => {
   })
 
   it('should update password and hash it', async () => {
-    const updated = await updateUser(userId.toString(), {
+    await updateUser(originalUser.id.toString(), {
       password: 'newPassword123'
     })
 
-    const userInDb = await prisma.user.findUnique({ where: { id: userId } })
+    const userInDb = await prisma.user.findUnique({ where: { id: originalUser.id } })
     expect(userInDb).not.toBeNull()
     expect(userInDb!.password).not.toBe('newPassword123')
 
@@ -48,15 +48,13 @@ describe('Update User', () => {
   })
 
   it('should throw error if email already exists', async () => {
-    const duplicatedEmail = `duplicate_${Date.now()}@example.com`
-
-    await createUser({
+    const duplicateUser = await createUser({
       name: 'Other',
-      email: duplicatedEmail,
+      email: `duplicate_${Date.now()}@example.com`,
       password: 'somepass123'
     })
 
-    await expect(updateUser(userId.toString(), { email: duplicatedEmail }))
+    await expect(updateUser(originalUser.id.toString(), { email: duplicateUser.email }))
       .rejects.toThrow('Email already exists')
   })
 })
