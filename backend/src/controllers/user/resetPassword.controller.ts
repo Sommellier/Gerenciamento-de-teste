@@ -16,4 +16,3 @@ export async function resetPasswordController(req: Request, res: Response) {
 }
 
 
-// está sendo usado

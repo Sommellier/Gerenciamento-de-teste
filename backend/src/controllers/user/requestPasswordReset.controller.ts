@@ -14,5 +14,3 @@ export async function forgotPasswordController(req: Request, res: Response) {
     return res.status(status).json({ error: message })
   }
 }
-
-// está sendo usado
