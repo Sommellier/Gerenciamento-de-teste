@@ -48,13 +48,15 @@ describe('Update User', () => {
   })
 
   it('should throw error if email already exists', async () => {
-    const otherUser = await createUser({
+    const duplicatedEmail = `duplicate_${Date.now()}@example.com`
+
+    await createUser({
       name: 'Other',
-      email: 'other@example.com',
+      email: duplicatedEmail,
       password: 'somepass123'
     })
 
-    await expect(updateUser(userId.toString(), { email: 'other@example.com' }))
+    await expect(updateUser(userId.toString(), { email: duplicatedEmail }))
       .rejects.toThrow('Email already exists')
   })
 })
