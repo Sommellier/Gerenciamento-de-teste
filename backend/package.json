@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --runInBand",
-    "test:coverage": "cross-env NODE_ENV=test dotenv -e .env jest --coverage",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage",
     "dev": "ts-node-dev src/main.ts"
   },
   "keywords": [],
