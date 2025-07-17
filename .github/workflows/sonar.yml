@@ -12,6 +12,28 @@ jobs:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 4422
+          POSTGRES_DB: qa_test_manager
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:4422@localhost:5432/qa_test_manager
+      JWT_SECRET: qualquercoisa
+      FRONTEND_URL: http://localhost:8080
+      EMAIL_FROM: fake@example.com
+      EMAIL_PASSWORD: fakepassword
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,9 +41,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-        
+
       - name: Install Dependencies
         run: npm install
+        working-directory: ./backend
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        working-directory: ./backend
+
+      - name: Run Migrations
+        run: npx prisma migrate deploy
         working-directory: ./backend
 
       - name: Run Tests with Coverage
