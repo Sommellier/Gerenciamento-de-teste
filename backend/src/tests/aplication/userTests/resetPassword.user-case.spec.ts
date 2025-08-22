@@ -1,9 +1,9 @@
-import { resetPassword } from '../../../src/application/use-cases/user/resetPassword.use-case';
-import { prisma } from '../../../src/infrastructure/prisma'
-import { hashPassword } from '../../../src/utils/hash.util'
-import { AppError } from '../../../src/utils/AppError'
+import { resetPassword } from '../../../application/use-cases/user/resetPassword.use-case';
+import { prisma } from '../../../infrastructure/prisma'
+import { hashPassword } from '../../../utils/hash.util'
+import { AppError } from '../../../utils/AppError'
 
-jest.mock('../../../src/infrastructure/prisma', () => ({
+jest.mock('../../../../src/infrastructure/prisma', () => ({
     prisma: {
         passwordResetToken: {
             findUnique: jest.fn(),
@@ -15,7 +15,7 @@ jest.mock('../../../src/infrastructure/prisma', () => ({
     }
 }))
 
-jest.mock('../../../src/utils/hash.util', () => ({
+jest.mock('../../../../src/utils/hash.util', () => ({
     hashPassword: jest.fn().mockResolvedValue('hashedPassword')
 }))
 

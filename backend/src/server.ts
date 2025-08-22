@@ -3,6 +3,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import userRoutes from './routes/user.routes' 
+import projectRoutes from './routes/project.routes'
 
 const app = express()
 

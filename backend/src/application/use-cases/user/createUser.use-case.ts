@@ -55,3 +55,4 @@ export async function createUser({ name, email, password }: CreateUserInput): Pr
   const { password: _, ...safeUser } = user
   return safeUser
 }
+

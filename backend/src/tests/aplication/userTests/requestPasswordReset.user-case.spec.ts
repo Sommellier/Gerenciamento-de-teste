@@ -2,7 +2,7 @@ const mockFindUnique = jest.fn()
 const mockCreateToken = jest.fn()
 const mockSendEmail = jest.fn()
 
-jest.mock('../../../src/infrastructure/prisma', () => ({
+jest.mock('../../../../src/infrastructure/prisma', () => ({
   prisma: {
     user: {
       findUnique: mockFindUnique
@@ -13,12 +13,12 @@ jest.mock('../../../src/infrastructure/prisma', () => ({
   }
 }))
 
-jest.mock('../../../src/utils/email.util', () => ({
+jest.mock('../../../../src/utils/email.util', () => ({
   sendEmail: mockSendEmail
 }))
 
-import { requestPasswordReset } from '../../../src/application/use-cases/user/requestPasswordReset.use-case'
-import { AppError } from '../../../src/utils/AppError'
+import { requestPasswordReset } from '../../../application/use-cases/user/requestPasswordReset.use-case'
+import { AppError } from '../../../utils/AppError'
 
 const mockUser = {
   id: 1,

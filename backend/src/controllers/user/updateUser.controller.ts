@@ -15,3 +15,4 @@ export async function updateUserController(req: Request, res: Response) {
     return res.status(status).json({ error: message })
   }
 }
+
