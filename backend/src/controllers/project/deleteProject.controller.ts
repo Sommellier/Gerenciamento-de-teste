@@ -1,21 +1,25 @@
-import { Request, Response, NextFunction } from 'express'
+// src/controllers/project/deleteProject.controller.ts
+import { RequestHandler } from 'express'
 import { deleteProject } from '../../application/use-cases/projetos/deleteProject.use-case'
 
-export async function deleteProjectController(req: Request, res: Response, next: NextFunction) {
+export const deleteProjectController: RequestHandler = async (req, res, next) => {
   try {
     const projectId = Number(req.params.id)
-    if (!Number.isFinite(projectId)) {
-      return res.status(400).json({ message: 'Parâmetro inválido: id' })
-    }
+    // @ts-expect-error: user ad-hoc via middleware de teste
+    const requesterId: number | undefined = req.user?.id
 
-    const requesterId = (req as any).user?.id 
+    if (!Number.isFinite(projectId)) {
+      res.status(400).json({ message: 'Parâmetro inválido: id' })
+      return
+    }
     if (!requesterId) {
-      return res.status(401).json({ message: 'Não autenticado' })
+      res.status(401).json({ message: 'Não autenticado' })
+      return
     }
 
     await deleteProject({ projectId, requesterId })
-    return res.status(204).send()
+    res.status(204).end()           // <- envia e sai, sem "return res..."
   } catch (err) {
-    next(err)
+    next(err as any)
   }
 }

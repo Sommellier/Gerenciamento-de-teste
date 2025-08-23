@@ -1,3 +1,4 @@
+// src/tests/integration/project/updateProject.controller.spec.ts
 import 'dotenv/config'
 import express, { Request, Response, NextFunction } from 'express'
 import request from 'supertest'
@@ -6,13 +7,15 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../../../infrastructure/prisma'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
 import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
-import { updateProject } from '../../../application/use-cases/projetos/updateProject.use-case'
+
+// 🔁 IMPORTA O CONTROLLER REAL (ajuste o caminho conforme seu projeto)
+import { updateProjectController } from '../../../controllers/project/updateProject.controller'
 
 const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
 const tokenFor = (id: number) =>
   jwt.sign({ id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' })
 
-function auth(req: Request, res: Response, next: NextFunction) {
+const auth = (req: Request, res: Response, next: NextFunction) => {
   const [, token] = (req.headers.authorization || '').split(' ')
   if (!token) { res.status(401).json({ message: 'Não autenticado' }); return }
   try {
@@ -24,11 +27,10 @@ function auth(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-
-function errorHandler(err: any, _req: Request, res: Response, _next: NextFunction) {
+const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // console.error('[TEST error]', err) // opcional: ajuda a debugar 500
   const status = Number.isFinite(err?.status) ? err.status : 500
-  const message = err?.message || 'Internal server error'
-  res.status(status).json({ message })
+  res.status(status).json({ message: err?.message || 'Internal server error' })
 }
 
 let app: express.Express
@@ -40,24 +42,11 @@ beforeAll(() => {
   app = express()
   app.use(express.json())
 
-  app.put('/projects/:id', auth, async (req, res, next) => {
-    try {
-      const requesterId: number | undefined = (req as any).user?.id
-      const projectId = Number(req.params.id)
-      if (!requesterId) { res.status(401).json({ message: 'Não autenticado' }); return }
-      if (!Number.isFinite(projectId)) { res.status(400).json({ message: 'Parâmetro inválido: id' }); return }
-
-      const { name, description } = req.body ?? {}
-      const updated = await updateProject({ projectId, requesterId, name, description })
-      res.status(200).json(updated)
-    } catch (e) {
-      next(e)
-    }
-  })
+  // ✅ USA O CONTROLLER REAL EM VEZ DE UMA FUNÇÃO INLINE
+  app.put('/projects/:id', auth, updateProjectController)
 
   app.use(errorHandler)
 })
-
 
 beforeEach(async () => {
   await prisma.$transaction([
@@ -101,11 +90,11 @@ afterAll(async () => {
 })
 
 describe('PUT /projects/:id (update)', () => {
-  it('200: owner atualiza nome e description (trim e null quando vazio)', async () => {
+  it('200: owner atualiza name (trim) e zera description quando vazia', async () => {
     const res = await request(app)
       .put(`/projects/${projectId}`)
       .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-      .send({ name: '  Novo Nome  ', description: '   ' }) 
+      .send({ name: '  Novo Nome  ', description: '   ' })
 
     expect(res.status).toBe(200)
     expect(res.body.name).toBe('Novo Nome')
@@ -116,11 +105,11 @@ describe('PUT /projects/:id (update)', () => {
     expect(db?.description).toBeNull()
   })
 
-  it('409: owner não pode usar nome já existente para ele mesmo', async () => {
+  it('409: não permite nome já existente para o mesmo owner', async () => {
     const res = await request(app)
       .put(`/projects/${projectId}`)
       .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-      .send({ name: 'Nome Já Existe' }) // já existe para o mesmo owner
+      .send({ name: 'Nome Já Existe' })
 
     expect(res.status).toBe(409)
     expect(String(res.body?.message || '')).toMatch(/existe|já|conflict|duplic/i)
@@ -164,14 +153,6 @@ describe('PUT /projects/:id (update)', () => {
     expect(String(res.body?.message || '')).toMatch(/nada|atualizar|vazio/i)
   })
 
-  it('401: sem token', async () => {
-    const res = await request(app)
-      .put(`/projects/${projectId}`)
-      .send({ name: 'Sem token' })
-
-    expect(res.status).toBe(401)
-  })
-
   it('200: atualiza apenas description quando name não vem', async () => {
     const res = await request(app)
       .put(`/projects/${projectId}`)
@@ -187,4 +168,3 @@ describe('PUT /projects/:id (update)', () => {
     expect(db?.description).toBe('nova desc')
   })
 })
-

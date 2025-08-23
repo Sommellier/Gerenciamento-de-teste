@@ -2,11 +2,10 @@ import 'dotenv/config'
 import express from 'express'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
-
 import { prisma } from '../../../infrastructure/prisma'
 import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
-import { deleteProject } from '../../../application/use-cases/projetos/deleteProject.use-case'
+import { deleteProjectController } from '../../../controllers/project/deleteProject.controller' 
 
 const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
@@ -15,6 +14,7 @@ function tokenFor(id: number) {
   return jwt.sign({ id }, secret, { expiresIn: '1h' })
 }
 
+// auth fake só p/ teste
 const auth: express.RequestHandler = (req, res, next) => {
   const header = req.headers.authorization || ''
   const [, token] = header.split(' ')
@@ -23,20 +23,18 @@ const auth: express.RequestHandler = (req, res, next) => {
     return
   }
   try {
-    const secret = process.env.JWT_SECRET || 'test-secret'
-    const payload = jwt.verify(token, secret) as { id: number }
-    // @ts-expect-error: tipagem de req.user só para teste
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'test-secret') as { id: number }
+    // @ts-expect-error user ad-hoc p/ teste
     req.user = { id: payload.id }
     next()
   } catch {
     res.status(401).json({ message: 'Token inválido' })
-    return
   }
 }
 
 const errorHandler: express.ErrorRequestHandler = (err, _req, res, _next) => {
-  const status = Number.isFinite(err?.status) ? err.status : 500
-  const message = err?.message || 'Internal server error'
+  const status = Number.isFinite((err as any)?.status) ? (err as any).status : 500
+  const message = (err as any)?.message || 'Internal server error'
   res.status(status).json({ message })
 }
 
@@ -45,32 +43,10 @@ let ownerA: number
 let ownerB: number
 let projectId: number
 
-const deleteRouteHandler: express.RequestHandler = async (req, res, next) => {
-  try {
-    const projectIdNum = Number(req.params.id)
-    // @ts-expect-error:
-    const requesterId: number | undefined = req.user?.id
-    if (!Number.isFinite(projectIdNum)) {
-      res.status(400).json({ message: 'Parâmetro inválido: id' })
-      return
-    }
-    if (!requesterId) {
-      res.status(401).json({ message: 'Não autenticado' })
-      return
-    }
-
-    await deleteProject({ projectId: projectIdNum, requesterId })
-    res.status(204).end() 
-  } catch (err) {
-    next(err)
-  }
-}
-
 beforeAll(() => {
   app = express()
   app.use(express.json())
-
-  app.delete('/projects/:id', auth, deleteRouteHandler)
+  app.delete('/projects/:id', auth, deleteProjectController)
 
   app.use(errorHandler)
 })
@@ -104,28 +80,13 @@ beforeEach(async () => {
   projectId = proj.id
 
   const tc = await prisma.testCase.create({
-    data: {
-      title: 'TC 1',
-      projectId,
-      steps: 'abrir app',
-      expected: 'app abre',
-    },
+    data: { title: 'TC 1', projectId, steps: 'abrir app', expected: 'app abre' },
   })
-
   await prisma.execution.create({
-    data: {
-      status: 'PENDING',
-      testCase: { connect: { id: tc.id } },
-      user: { connect: { id: ownerA } }, 
-    },
+    data: { status: 'PENDING', testCaseId: tc.id, userId: ownerA },
   })
-
   await prisma.userOnProject.create({
-    data: {
-      userId: ownerA,
-      projectId,
-      role: 'OWNER',
-    },
+    data: { userId: ownerA, projectId, role: 'OWNER' },
   })
 })
 
@@ -133,7 +94,7 @@ afterAll(async () => {
   await prisma.$disconnect()
 })
 
-describe('DELETE /projects/:id', () => {
+describe('DELETE /projects/:id (deleteProject.controller)', () => {
   it('204 quando o dono exclui o projeto', async () => {
     const res = await request(app)
       .delete(`/projects/${projectId}`)
@@ -141,7 +102,6 @@ describe('DELETE /projects/:id', () => {
       .send()
 
     expect(res.status).toBe(204)
-
     const proj = await prisma.project.findUnique({ where: { id: projectId } })
     expect(proj).toBeNull()
 
@@ -155,8 +115,14 @@ describe('DELETE /projects/:id', () => {
   })
 
   it('403 quando não é o dono', async () => {
+    const other = await createProject({
+      name: `Projeto ${unique('QA-2')}`,
+      description: 'Outro projeto',
+      ownerId: ownerA,
+    })
+
     const res = await request(app)
-      .delete(`/projects/${projectId}`)
+      .delete(`/projects/${other.id}`)
       .set('Authorization', `Bearer ${tokenFor(ownerB)}`)
       .send()
 

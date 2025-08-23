@@ -1,24 +1,29 @@
-import { Request, Response, NextFunction } from 'express'
+// src/controllers/project/createProject.controller.ts
+import { RequestHandler } from 'express'
 import { createProject } from '../../application/use-cases/projetos/createProject.use-case'
 
-export async function createProjectController(req: Request, res: Response, next: NextFunction) {
+export const createProjectController: RequestHandler = async (req, res, next) => {
   try {
     const ownerId = (req as any).user?.id
-    if (!ownerId) return res.status(401).json({ message: 'Não autenticado' })
+    if (!ownerId) {
+      res.status(401).json({ message: 'Não autenticado' })
+      return
+    }
 
     const { name, description } = req.body ?? {}
     if (typeof name !== 'string' || !name.trim()) {
-      return res.status(400).json({ message: 'Nome do projeto é obrigatório' })
+      res.status(400).json({ message: 'Nome do projeto é obrigatório' })
+      return
     }
 
     const project = await createProject({
       ownerId,
-      name,
-      description,
+      name: String(name),
+      description: description == null ? undefined : String(description),
     })
 
-    return res.status(201).json(project)
+    res.status(201).json(project) 
   } catch (err) {
-    next(err)
+    next(err as any)
   }
 }
