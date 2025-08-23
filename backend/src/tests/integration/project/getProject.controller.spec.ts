@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../../../infrastructure/prisma'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
 import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
-import { getProjectById } from '../../../application/use-cases/projetos/getProjectById.use-case'
+import { getProjectByIdController } from '../../../controllers/project/getProjectById.controller'
 
 const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
 const tokenFor = (id: number) => jwt.sign({ id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' })
@@ -17,8 +17,11 @@ const auth = (req: Request, res: Response, next: NextFunction) => {
     const payload = jwt.verify(token, process.env.JWT_SECRET || 'test-secret') as { id: number }
     ;(req as any).user = { id: payload.id }
     next()
-  } catch { res.status(401).json({ message: 'Token inválido' }) }
+  } catch {
+    res.status(401).json({ message: 'Token inválido' }); return
+  }
 }
+
 const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
   res.status(Number.isFinite(err?.status) ? err.status : 500).json({ message: err?.message || 'Internal server error' })
 }
@@ -33,16 +36,14 @@ let projectId: number
 beforeAll(() => {
   app = express()
   app.use(express.json())
+
+  // usa o controller real; converte o req para incluir user
   app.get('/projects/:id', auth, async (req, res, next) => {
     try {
-      const pid = Number(req.params.id)
-      // @ts-expect-error user injetado
-      const requesterId: number = req.user?.id
-      if (!Number.isFinite(pid)) { res.status(400).json({ message: 'Parâmetro inválido: id' }); return }
-      const p = await getProjectById({ projectId: pid, requesterId })
-      res.status(200).json(p)
+      await getProjectByIdController(req as unknown as Request & { user?: { id: number } }, res)
     } catch (e) { next(e) }
   })
+
   app.use(errorHandler)
 })
 
@@ -65,10 +66,11 @@ beforeEach(async () => {
   const p = await createProject({ ownerId, name: 'Projeto Read', description: null })
   projectId = p.id
 
-  // Convida/adiciona tester e approver (membros do projeto)
+  // adiciona membros
   await prisma.userOnProject.create({ data: { userId: testerId, projectId, role: 'TESTER' as any } })
   await prisma.userOnProject.create({ data: { userId: approverId, projectId, role: 'APPROVER' as any } })
 })
+
 afterAll(async () => { await prisma.$disconnect() })
 
 describe('GET /projects/:id com RBAC (OWNER/TESTER/APPROVER)', () => {

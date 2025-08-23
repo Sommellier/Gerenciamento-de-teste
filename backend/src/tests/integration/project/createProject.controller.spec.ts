@@ -1,13 +1,12 @@
+// src/tests/integration/project/createProject.controller.spec.ts
 import 'dotenv/config'
 import express from 'express'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
-
 import { prisma } from '../../../infrastructure/prisma'
-import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
+import { createProjectController } from '../../../controllers/project/createProject.controller'  
 
-const unique = (p: string) =>
-  `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
+const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
 function tokenFor(id: number) {
   const secret = process.env.JWT_SECRET || 'test-secret'
@@ -19,67 +18,36 @@ const auth: express.RequestHandler = (req, res, next) => {
   const [, token] = header.split(' ')
   if (!token) {
     res.status(401).json({ message: 'Não autenticado' })
-    return
+    return 
   }
+
   try {
-    const secret = process.env.JWT_SECRET || 'test-secret'
-    const payload = jwt.verify(token, secret) as { id: number }
-    // @ts-expect-error adicionando user ao req só para o teste
+    const payload = jwt.verify(token, process.env.JWT_SECRET || 'test-secret') as { id: number }
+    // @ts-expect-error campo ad-hoc
     req.user = { id: payload.id }
     next()
   } catch {
     res.status(401).json({ message: 'Token inválido' })
-    return
+    return 
   }
 }
-
 const errorHandler: express.ErrorRequestHandler = (err, _req, res, _next) => {
-  const status = Number.isFinite(err?.status) ? err.status : 500
-  const message = err?.message || 'Internal server error'
+  const status = Number.isFinite((err as any)?.status) ? (err as any).status : 500
+  const message = (err as any)?.message || 'Internal server error'
   res.status(status as number).json({ message })
 }
 
 let app: express.Express
+let ownerId: number
 
 beforeAll(() => {
   app = express()
   app.use(express.json())
 
-  const createProjectController: express.RequestHandler = async (req, res, next) => {
-    try {
-      // @ts-expect-error: user adicionado no auth de teste
-      const ownerId: number | undefined = req.user?.id
-      const { name, description } = req.body ?? {}
-
-      if (!ownerId) {
-        res.status(401).json({ message: 'Não autenticado' })
-        return
-      }
-      if (!name || typeof name !== 'string' || !name.trim()) {
-        res.status(400).json({ message: 'Nome é obrigatório' })
-        return
-      }
-
-      const project = await createProject({
-        ownerId,
-        name: String(name),
-        description: description === undefined || description === null
-          ? undefined
-          : String(description)
-      })
-
-      res.status(201).json(project)
-    } catch (err) {
-      next(err)
-    }
-  }
-
   app.post('/projects', auth, createProjectController)
 
   app.use(errorHandler)
 })
-
-let ownerId: number
 
 beforeEach(async () => {
   await prisma.passwordResetToken.deleteMany()
@@ -93,7 +61,7 @@ beforeEach(async () => {
     data: {
       name: 'Owner Test',
       email: `${unique('owner')}@example.com`,
-      password: 'hash_aqui_ou_use_createUser', 
+      password: 'hash_aqui_ou_use_createUser',
     },
     select: { id: true },
   })
@@ -105,13 +73,11 @@ afterAll(async () => {
 })
 
 describe('POST /projects (createProject.controller)', () => {
-  it('201 cria projeto (aparar nome/descrição e persiste ownerId do token)', async () => {
-    const body = { name: '  Meu Projeto  ', description: '  desc  ' }
-
+  it('201 cria projeto (apara nome/descrição e persiste ownerId do token)', async () => {
     const res = await request(app)
       .post('/projects')
       .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-      .send(body)
+      .send({ name: '  Meu Projeto  ', description: '  desc  ' })
 
     expect(res.status).toBe(201)
     expect(res.body).toHaveProperty('id')
@@ -126,27 +92,14 @@ describe('POST /projects (createProject.controller)', () => {
 
   it('409 quando nome já existe para o mesmo dono', async () => {
     const name = `Projeto ${unique('X')}`
-
-    await request(app)
-      .post('/projects')
-      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-      .send({ name })
-
-    const res = await request(app)
-      .post('/projects')
-      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-      .send({ name })
-
+    await request(app).post('/projects').set('Authorization', `Bearer ${tokenFor(ownerId)}`).send({ name })
+    const res = await request(app).post('/projects').set('Authorization', `Bearer ${tokenFor(ownerId)}`).send({ name })
     expect(res.status).toBe(409)
     expect(String(res.body?.message || '')).toMatch(/existe|duplicado|conflict|já|exist(s)?/i)
   })
 
   it('400 quando body inválido (sem nome)', async () => {
-    const res = await request(app)
-      .post('/projects')
-      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-      .send({})
-
+    const res = await request(app).post('/projects').set('Authorization', `Bearer ${tokenFor(ownerId)}`).send({})
     expect(res.status).toBe(400)
     expect(String(res.body?.message || '')).toMatch(/nome/i)
   })

@@ -4,7 +4,7 @@ import { createProjectController } from '../controllers/project/createProject.co
 import { deleteProjectController } from '../controllers/project/deleteProject.controller'
 import { updateProjectController } from '../controllers/project/updateProject.controller'
 import { getProjectByIdController } from '../controllers/project/getProjectById.controller'
-import { listProjects } from '../controllers/project/listProjects.use-case'
+import { listProjects } from '../controllers/project/listProjects.controller'
 
 // se já tiver um auth real, importe-o daqui
 // import { auth } from '../middleware/auth'

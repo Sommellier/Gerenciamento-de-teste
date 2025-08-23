@@ -5,22 +5,29 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../../../infrastructure/prisma'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
 import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
-import { listProjects } from '../../../application/use-cases/projetos/listProjects.use-case'
+import { listProjects } from '../../../controllers/project/listProjects.controller'
 
 const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
-const tokenFor = (id: number) => jwt.sign({ id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' })
+const tokenFor = (id: number) =>
+  jwt.sign({ id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' })
 
-const auth = (req: Request, res: Response, next: NextFunction) => {
+// ✅ middleware de auth que não retorna Response (tipagem RequestHandler compatível)
+const auth: express.RequestHandler = (req, res, next) => {
   const [, token] = (req.headers.authorization || '').split(' ')
   if (!token) { res.status(401).json({ message: 'Não autenticado' }); return }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET || 'test-secret') as { id: number }
     ;(req as any).user = { id: payload.id }
     next()
-  } catch { res.status(401).json({ message: 'Token inválido' }) }
+  } catch {
+    res.status(401).json({ message: 'Token inválido' })
+  }
 }
+
 const errorHandler = (err: any, _req: Request, res: Response, _next: NextFunction) => {
-  res.status(Number.isFinite(err?.status) ? err.status : 500).json({ message: err?.message || 'Internal server error' })
+  res
+    .status(Number.isFinite(err?.status) ? err.status : 500)
+    .json({ message: err?.message || 'Internal server error' })
 }
 
 let app: express.Express
@@ -32,17 +39,8 @@ let projectId: number
 beforeAll(() => {
   app = express()
   app.use(express.json())
-  app.get('/projects', auth, async (req, res, next) => {
-    try {
-      // @ts-expect-error user injetado
-      const requesterId: number = req.user?.id
-      const q = typeof req.query.q === 'string' ? req.query.q : undefined
-      const page = Number(req.query.page ?? 1)
-      const pageSize = Number(req.query.pageSize ?? 10)
-      const data = await listProjects({ requesterId, q, page, pageSize })
-      res.status(200).json(data)
-    } catch (e) { next(e) }
-  })
+  // ✅ usar o controller real
+  app.get('/projects', auth, listProjects)
   app.use(errorHandler)
 })
 
@@ -67,7 +65,9 @@ beforeEach(async () => {
   projectId = p1.id
 
   // tester é membro do projeto p2
-  await prisma.userOnProject.create({ data: { userId: testerId, projectId: p2.id, role: 'TESTER' as any } })
+  await prisma.userOnProject.create({
+    data: { userId: testerId, projectId: p2.id, role: 'TESTER' as any }
+  })
 })
 afterAll(async () => { await prisma.$disconnect() })
 
