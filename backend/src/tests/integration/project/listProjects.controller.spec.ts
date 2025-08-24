@@ -11,7 +11,6 @@ const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).s
 const tokenFor = (id: number) =>
   jwt.sign({ id }, process.env.JWT_SECRET || 'test-secret', { expiresIn: '1h' })
 
-// ✅ middleware de auth que não retorna Response (tipagem RequestHandler compatível)
 const auth: express.RequestHandler = (req, res, next) => {
   const [, token] = (req.headers.authorization || '').split(' ')
   if (!token) { res.status(401).json({ message: 'Não autenticado' }); return }
@@ -39,7 +38,6 @@ let projectId: number
 beforeAll(() => {
   app = express()
   app.use(express.json())
-  // ✅ usar o controller real
   app.get('/projects', auth, listProjects)
   app.use(errorHandler)
 })
@@ -64,7 +62,6 @@ beforeEach(async () => {
   const p3 = await createProject({ ownerId, name: 'Gamma', description: null })
   projectId = p1.id
 
-  // tester é membro do projeto p2
   await prisma.userOnProject.create({
     data: { userId: testerId, projectId: p2.id, role: 'TESTER' as any }
   })
@@ -101,5 +98,84 @@ describe('GET /projects (lista owner + membership)', () => {
   it('401 sem token', async () => {
     const r = await request(app).get('/projects')
     expect(r.status).toBe(401)
+  })
+  
+  it('ignora filtro quando q é array (?q=A&q=B) e retorna todos do owner', async () => {
+    const r = await request(app)
+      .get('/projects?q=alpha&q=beta')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(200)
+    expect(r.body.total).toBe(3) 
+  })
+
+  it('paginacao: page=2&pageSize=2 retorna itens remanescentes e total/totalPages coerentes', async () => {
+    const r = await request(app)
+      .get('/projects?page=2&pageSize=2')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(200)
+    expect(r.body.page).toBe(2)
+    expect(r.body.pageSize).toBe(2)
+    expect(r.body.total).toBe(3)
+    expect(r.body.totalPages).toBe(2)
+    expect(Array.isArray(r.body.items)).toBe(true)
+    expect(r.body.items.length).toBe(1) 
+  })
+
+  it('ordena por id desc', async () => {
+    const r = await request(app)
+      .get('/projects?page=1&pageSize=3')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(200)
+    const items = r.body.items
+    expect(items.length).toBeGreaterThanOrEqual(2)
+    expect(items[0].id).toBeGreaterThan(items[1].id)
+  })
+
+  it('filtro q com trim (ex.: "  be  " casa Beta)', async () => {
+    const r = await request(app)
+      .get('/projects?q=  be  ')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(200)
+    expect(r.body.items.some((p: any) => /beta/i.test(p.name))).toBe(true)
+  })
+
+  it('page inválido (abc) hoje resulta em 500 (sem validação no controller)', async () => {
+    const r = await request(app)
+      .get('/projects?page=abc')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect([500, 400]).toContain(r.status) 
+  })
+
+  it('pageSize inválido (xyz) hoje resulta em 500 (sem validação no controller)', async () => {
+    const r = await request(app)
+      .get('/projects?pageSize=xyz')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect([500, 400]).toContain(r.status)
+  })
+
+  it('paginacao: somente page=2 usa pageSize default=10', async () => {
+    const r = await request(app)
+      .get('/projects?page=2')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(200)
+    expect(r.body.page).toBe(2)
+    expect(r.body.pageSize).toBe(10)
+    expect(r.body.total).toBe(3)
+    expect(r.body.totalPages).toBe(1) 
+    expect(Array.isArray(r.body.items)).toBe(true)
+    expect(r.body.items.length).toBe(0) 
+  })
+
+  it('paginacao: somente pageSize=2 usa page default=1', async () => {
+    const r = await request(app)
+      .get('/projects?pageSize=2')
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(200)
+    expect(r.body.page).toBe(1)       
+    expect(r.body.pageSize).toBe(2)
+    expect(r.body.total).toBe(3)
+    expect(r.body.totalPages).toBe(2) 
+    expect(Array.isArray(r.body.items)).toBe(true)
+    expect(r.body.items.length).toBe(2) 
   })
 })

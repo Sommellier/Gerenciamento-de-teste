@@ -1,153 +1,234 @@
-// src/tests/aplication/projectService/listProjects.controller.spec.ts (unitário do use-case)
-import 'dotenv/config'
-import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { listProjects } from '../../../application/use-cases/projetos/listProjects.use-case'
+import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import type { Request, Response, NextFunction } from 'express';
 
 jest.mock('../../../infrastructure/prisma', () => {
   return {
     prisma: {
       userOnProject: { findMany: jest.fn() },
-      project: {
-        findMany: jest.fn(),
-        count: jest.fn(),
-      },
-      $disconnect: jest.fn(),
+      project: { findMany: jest.fn(), count: jest.fn() },
     },
-  }
-})
+  };
+});
 
-import { prisma } from '../../../infrastructure/prisma'
+import { prisma } from '../../../infrastructure/prisma';
+import { listProjectsQuery, listProjects } from '../../../application/use-cases/projetos/listProjects.use-case';
 
-const mockedMembershipFindMany =
-  prisma.userOnProject.findMany as jest.MockedFunction<typeof prisma.userOnProject.findMany>
+const mockedFindMemberships =
+  prisma.userOnProject.findMany as jest.MockedFunction<typeof prisma.userOnProject.findMany>;
+const mockedFindMany =
+  prisma.project.findMany as jest.MockedFunction<typeof prisma.project.findMany>;
+const mockedCount =
+  prisma.project.count as jest.MockedFunction<typeof prisma.project.count>;
 
-const mockedProjectFindMany =
-  prisma.project.findMany as jest.MockedFunction<typeof prisma.project.findMany>
+const makeRes = () => {
+  const res: Partial<Response> = {};
+  (res as any).status = jest.fn().mockReturnValue(res);
+  (res as any).json = jest.fn().mockReturnValue(res);
+  return res as Response & { status: jest.Mock; json: jest.Mock };
+};
 
-const mockedProjectCount =
-  prisma.project.count as jest.MockedFunction<typeof prisma.project.count>
-
-function firstCallFirstArg<T = any>(mockFn: jest.Mock): T {
-  expect(mockFn).toHaveBeenCalled()
-  const call = mockFn.mock.calls[0]
-  expect(call?.length ?? 0).toBeGreaterThan(0)
-  return call[0] as T
-}
-
-describe('listProjects.use-case (unit)', () => {
-  const REQUESTER = 42
-
+describe('listProjectsQuery (unit)', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
-  })
+    jest.clearAllMocks();
+  });
 
-  it('retorna apenas projetos do owner quando não há memberships', async () => {
-    mockedMembershipFindMany.mockResolvedValue([])
+  it('filtra por nome quando q (com espaços) é fornecido e há memberships', async () => {
+    mockedFindMemberships.mockResolvedValue([{ projectId: 10 }, { projectId: 11 }] as any);
+    mockedFindMany.mockResolvedValue([{ id: 11, name: 'Alpha' }] as any);
+    mockedCount.mockResolvedValue(1 as any);
 
-    const items = [
-      { id: 3, name: 'Gamma', ownerId: REQUESTER, description: null },
-      { id: 2, name: 'Beta', ownerId: REQUESTER, description: null },
-    ] as any[]
+    const result = await listProjectsQuery({
+      requesterId: 7,
+      q: '  Alp  ',
+      page: 2,
+      pageSize: 5,
+    });
 
-    mockedProjectFindMany.mockResolvedValue(items)
-    mockedProjectCount.mockResolvedValue(2)
+    expect(mockedFindMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { OR: [{ ownerId: 7 }, { id: { in: [10, 11] } }] },
+          { name: { contains: 'Alp', mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { id: 'desc' },
+      skip: 5,
+      take: 5,
+    });
+    expect(mockedCount).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { OR: [{ ownerId: 7 }, { id: { in: [10, 11] } }] },
+          { name: { contains: 'Alp', mode: 'insensitive' } },
+        ],
+      },
+    });
+    expect(result).toEqual({
+      items: [{ id: 11, name: 'Alpha' }],
+      total: 1,
+      page: 2,
+      pageSize: 5,
+      totalPages: 1,
+    });
+  });
 
-    const result = await listProjects({ requesterId: REQUESTER, q: undefined })
+  it('ignora filtro de nome quando q vira string vazia após trim; memberships vazias -> in: []', async () => {
+    mockedFindMemberships.mockResolvedValue([] as any);
+    mockedFindMany.mockResolvedValue([] as any);
+    mockedCount.mockResolvedValue(0 as any);
 
-    expect(result.total).toBe(2)
-    expect(result.items).toHaveLength(2)
-    expect(result.items.every(p => p.ownerId === REQUESTER)).toBe(true)
+    const result = await listProjectsQuery({
+      requesterId: 42,
+      q: '   ',
+      page: 1,
+      pageSize: 10,
+    });
 
-    expect(mockedMembershipFindMany).toHaveBeenCalledWith({
-      where: { userId: REQUESTER },
-      select: { projectId: true },
-    })
+    expect(mockedFindMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { OR: [{ ownerId: 42 }, { id: { in: [] } }] },
+          {},
+        ],
+      },
+      orderBy: { id: 'desc' },
+      skip: 0,
+      take: 10,
+    });
+    expect(result.totalPages).toBe(1);
+  });
 
-    const calledArgs = firstCallFirstArg<any>(mockedProjectFindMany as unknown as jest.Mock)
-    expect(calledArgs).toEqual(
-      expect.objectContaining({
-        orderBy: { id: 'desc' },
-        skip: 0,
-        take: 10,
-      }),
-    )
+  it('page negativo e pageSize 0 cobrem Math.max -> skip=0 e take=1', async () => {
+    mockedFindMemberships.mockResolvedValue([] as any);
+    mockedFindMany.mockResolvedValue([] as any);
+    mockedCount.mockResolvedValue(0 as any);
 
-    expect(Array.isArray(calledArgs.where.AND)).toBe(true)
-    expect(Array.isArray(calledArgs.where.AND[1].OR)).toBe(true)
-    expect(calledArgs.where.AND[1].OR).toEqual(
-      expect.arrayContaining([
-        { ownerId: REQUESTER },
-        { id: { in: [] } },
-      ]),
-    )
-  })
+    const result = await listProjectsQuery({
+      requesterId: 1,
+      page: -99,
+      pageSize: 0,
+    });
 
-  it('retorna projetos onde é owner OU membro quando há memberships', async () => {
-    mockedMembershipFindMany.mockResolvedValue([{ projectId: 10 }, { projectId: 11 }] as any)
+    expect(mockedFindMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { OR: [{ ownerId: 1 }, { id: { in: [] } }] },
+          {},
+        ],
+      },
+      orderBy: { id: 'desc' },
+      skip: 0,
+      take: 1,
+    });
+    expect(result).toEqual({
+      items: [],
+      total: 0,
+      page: -99,
+      pageSize: 0,
+      totalPages: 1, 
+    });
+  });
+});
 
-    const items = [
-      { id: 11, name: 'Membro 11', ownerId: 999, description: null },
-      { id: 10, name: 'Membro 10', ownerId: 888, description: null },
-      { id: 7, name: 'Sou Owner', ownerId: REQUESTER, description: null },
-    ] as any[]
-    mockedProjectFindMany.mockResolvedValue(items)
-    mockedProjectCount.mockResolvedValue(3)
+describe('listProjects (controller) (unit)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
-    const result = await listProjects({ requesterId: REQUESTER })
+  it('401 quando requesterId ausente', async () => {
+    const req = { user: undefined, query: {} } as unknown as Request;
+    const res = makeRes();
+    const next = jest.fn() as unknown as NextFunction;
 
-    expect(result.total).toBe(3)
-    expect(result.items.map(i => i.id).sort()).toEqual([7, 10, 11].sort())
+    await listProjects(req, res, next);
 
-    const calledArgs = firstCallFirstArg<any>(mockedProjectFindMany as unknown as jest.Mock)
-    expect(calledArgs.where.AND[1].OR).toEqual(
-      expect.arrayContaining([
-        { ownerId: REQUESTER },
-        { id: { in: [10, 11] } },
-      ]),
-    )
-  })
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(res.json).toHaveBeenCalledWith({ message: 'Não autenticado' });
+    expect(next).not.toHaveBeenCalled();
+  });
 
-  it('aplica filtro "q" (trim + case-insensitive) no nome', async () => {
-    mockedMembershipFindMany.mockResolvedValue([])
-    mockedProjectFindMany.mockResolvedValue([] as any)
-    mockedProjectCount.mockResolvedValue(0)
+  it('200 quando sucesso; parseia q/page/pageSize e responde com o resultado', async () => {
+    mockedFindMemberships.mockResolvedValue([] as any);
+    mockedFindMany.mockResolvedValue([{ id: 1, name: 'Beta' }] as any);
+    mockedCount.mockResolvedValue(1 as any);
 
-    const q = '  alp '
-    await listProjects({ requesterId: REQUESTER, q })
+    const req = {
+      user: { id: 99 },
+      query: { q: '  beta ', page: '3', pageSize: '7' },
+    } as unknown as Request;
+    const res = makeRes();
+    const next = jest.fn() as unknown as NextFunction;
 
-    const calledArgs = firstCallFirstArg<any>(mockedProjectFindMany as unknown as jest.Mock)
-    expect(calledArgs.where.AND[0]).toEqual({
-      name: { contains: 'alp', mode: 'insensitive' },
-    })
-  })
+    await listProjects(req, res, next);
+    expect(mockedFindMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { OR: [{ ownerId: 99 }, { id: { in: [] } }] },
+          { name: { contains: 'beta', mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { id: 'desc' },
+      skip: 14, 
+      take: 7,
+    });
 
-  it('paginacao: calcula skip/take corretamente', async () => {
-    mockedMembershipFindMany.mockResolvedValue([])
-    mockedProjectFindMany.mockResolvedValue([{ id: 1, name: 'x', ownerId: REQUESTER, description: null }] as any)
-    mockedProjectCount.mockResolvedValue(7)
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      items: [{ id: 1, name: 'Beta' }],
+      total: 1,
+      page: 3,
+      pageSize: 7,
+      totalPages: 1,
+    });
+    expect(next).not.toHaveBeenCalled();
+  });
 
-    const page = 2
-    const pageSize = 3
-    const result = await listProjects({ requesterId: REQUESTER, page, pageSize })
+  it('q não-string (ex.: array) -> passa como undefined (sem filtro de nome)', async () => {
+    mockedFindMemberships.mockResolvedValue([] as any);
+    mockedFindMany.mockResolvedValue([] as any);
+    mockedCount.mockResolvedValue(0 as any);
 
-    expect(result.total).toBe(7)
-    expect(result.page).toBe(2)
-    expect(result.pageSize).toBe(3)
-    expect(result.totalPages).toBe(3)
+    const req = {
+      user: { id: 50 },
+      query: { q: ['a', 'b'] as any, page: '1', pageSize: '10' },
+    } as unknown as Request;
+    const res = makeRes();
+    const next = jest.fn() as unknown as NextFunction;
 
-    const calledArgs = firstCallFirstArg<any>(mockedProjectFindMany as unknown as jest.Mock)
-    expect(calledArgs.skip).toBe(3) // (2-1)*3
-    expect(calledArgs.take).toBe(3)
-  })
+    await listProjects(req, res, next);
+    expect(mockedFindMany).toHaveBeenCalledWith({
+      where: {
+        AND: [
+          { OR: [{ ownerId: 50 }, { id: { in: [] } }] },
+          {},
+        ],
+      },
+      orderBy: { id: 'desc' },
+      skip: 0,
+      take: 10,
+    });
 
-  it('q vazio/espacos não deve aplicar filtro de nome', async () => {
-    mockedMembershipFindMany.mockResolvedValue([])
-    mockedProjectFindMany.mockResolvedValue([] as any)
-    mockedProjectCount.mockResolvedValue(0)
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+  });
 
-    await listProjects({ requesterId: REQUESTER, q: '   ' })
+  it('erro no try -> next(err)', async () => {
+    const req = { user: { id: 5 }, query: {} } as unknown as Request;
+    const res = makeRes();
+    const next = jest.fn() as unknown as NextFunction;
 
-    const calledArgs = firstCallFirstArg<any>(mockedProjectFindMany as unknown as jest.Mock)
-    expect(calledArgs.where.AND[0]).toEqual({})
-  })
-})
+    const boom = new Error('falhei!');
+    mockedFindMemberships.mockRejectedValue(boom);
+
+    await listProjects(req, res, next);
+
+    expect(next).toHaveBeenCalledWith(boom);
+    expect(res.status).not.toHaveBeenCalledWith(200);
+  });
+});

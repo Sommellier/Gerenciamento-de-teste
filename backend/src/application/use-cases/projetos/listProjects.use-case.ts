@@ -1,3 +1,4 @@
+import { RequestHandler } from 'express'
 import { prisma } from '../../../infrastructure/prisma'
 
 type Input = {
@@ -7,7 +8,7 @@ type Input = {
   pageSize?: number
 }
 
-export async function listProjects({ requesterId, q, page = 1, pageSize = 10 }: Input) {
+export async function listProjectsQuery({ requesterId, q, page = 1, pageSize = 10 }: Input) {
   const whereByName =
     q?.trim()
       ? { name: { contains: q.trim(), mode: 'insensitive' as const } }
@@ -17,26 +18,24 @@ export async function listProjects({ requesterId, q, page = 1, pageSize = 10 }: 
     where: { userId: requesterId },
     select: { projectId: true },
   })
-  const memberProjectIds = memberships.map(m => m.projectId)
+
+  const memberProjectIds = memberships.map((m: { projectId: number }) => m.projectId)
+
+  const baseOr = [
+    { ownerId: requesterId },
+    memberProjectIds.length ? { id: { in: memberProjectIds } } : { id: { in: [] as number[] } },
+  ]
 
   const where = {
-    AND: [
-      whereByName,
-      {
-        OR: [
-          { ownerId: requesterId },
-          memberProjectIds.length ? { id: { in: memberProjectIds } } : { id: { in: [] as number[] } },
-        ],
-      },
-    ],
+    AND: [{ OR: baseOr }, whereByName],
   }
 
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
       orderBy: { id: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: Math.max(0, (page - 1) * pageSize),
+      take: Math.max(1, pageSize),
     }),
     prisma.project.count({ where }),
   ])
@@ -47,5 +46,24 @@ export async function listProjects({ requesterId, q, page = 1, pageSize = 10 }: 
     page,
     pageSize,
     totalPages: Math.max(1, Math.ceil(total / pageSize)),
+  }
+}
+
+export const listProjects: RequestHandler = async (req, res, next) => {
+  try {
+    const requesterId = (req as any).user?.id
+    if (!requesterId) {
+      res.status(401).json({ message: 'Não autenticado' })
+      return
+    }
+
+    const q = typeof req.query.q === 'string' ? req.query.q : undefined
+    const page = req.query.page ? Number(req.query.page) : 1
+    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 10
+
+    const result = await listProjectsQuery({ requesterId, q, page, pageSize })
+    res.status(200).json(result)
+  } catch (err) {
+    next(err as any)
   }
 }

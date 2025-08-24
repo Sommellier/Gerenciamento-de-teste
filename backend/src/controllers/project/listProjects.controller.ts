@@ -1,4 +1,3 @@
-// src/controllers/project/listProjects.controller.ts
 import { RequestHandler } from 'express'
 import { prisma } from '../../infrastructure/prisma'
 
@@ -9,40 +8,36 @@ type Input = {
   pageSize?: number
 }
 
-/** Use case robusto: não depende do nome do campo relacional dentro de Project */
 export async function listProjectsQuery({ requesterId, q, page = 1, pageSize = 10 }: Input) {
   const whereByName =
     q?.trim()
       ? { name: { contains: q.trim(), mode: 'insensitive' as const } }
       : {}
 
-  // 1) Buscar IDs de projetos onde o usuário é membro
   const memberships = await prisma.userOnProject.findMany({
     where: { userId: requesterId },
     select: { projectId: true },
   })
-  const memberProjectIds = memberships.map(m => m.projectId)
+  const memberProjectIds = memberships.map((m: { projectId: number }) => m.projectId)
 
-  // 2) Montar where combinando owner OU membership por id
-  //    AND com possível filtro por nome
   const baseOr = [
     { ownerId: requesterId },
     memberProjectIds.length ? { id: { in: memberProjectIds } } : { id: { in: [] as number[] } },
   ]
 
   const where = {
-    AND: [
-      { OR: baseOr },
-      whereByName,
-    ],
+    AND: [{ OR: baseOr }, whereByName],
   }
+
+  const safePage = Number.isFinite(page) ? Math.max(1, Math.floor(page)) : 1
+  const safePageSize = Number.isFinite(pageSize) ? Math.max(1, Math.floor(pageSize)) : 10
 
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
       orderBy: { id: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip: (safePage - 1) * safePageSize,
+      take: safePageSize,
     }),
     prisma.project.count({ where }),
   ])
@@ -50,13 +45,12 @@ export async function listProjectsQuery({ requesterId, q, page = 1, pageSize = 1
   return {
     items,
     total,
-    page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    page: safePage,
+    pageSize: safePageSize,
+    totalPages: Math.max(1, Math.ceil(total / safePageSize)),
   }
 }
 
-/** Controller Express inalterado */
 export const listProjects: RequestHandler = async (req, res, next) => {
   try {
     const requesterId = (req as any).user?.id

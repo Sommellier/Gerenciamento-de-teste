@@ -18,7 +18,7 @@ export const deleteProjectController: RequestHandler = async (req, res, next) =>
     }
 
     await deleteProject({ projectId, requesterId })
-    res.status(204).end()           // <- envia e sai, sem "return res..."
+    res.status(204).end()           
   } catch (err) {
     next(err as any)
   }

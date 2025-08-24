@@ -1,10 +1,11 @@
+// src/tests/aplication/projectService/createProject.use-case.spec.ts
 import 'dotenv/config'
 import { beforeEach, afterAll, describe, expect, it, jest } from '@jest/globals'
 import { prisma } from '../../../infrastructure/prisma'
-import { Prisma } from '@prisma/client'
 import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
 import { AppError } from '../../../utils/AppError'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
@@ -31,8 +32,12 @@ beforeEach(async () => {
   })
   ownerA = u1.id
   ownerB = u2.id
-  const found = await prisma.user.findMany({ where: { id: { in: [ownerA, ownerB] } } })
-  expect(found.map(u => u.id).sort()).toEqual([ownerA, ownerB].sort())
+
+  const found: Array<{ id: number }> = await prisma.user.findMany({
+    where: { id: { in: [ownerA, ownerB] } },
+    select: { id: true },
+  })
+  expect(found.map((u: { id: number }) => u.id).sort()).toEqual([ownerA, ownerB].sort())
 })
 
 afterAll(async () => {
@@ -81,7 +86,7 @@ it.each([
   { ownerId: -1, label: 'negativo' },
   { ownerId: 1.5, label: 'não-inteiro' },
   { ownerId: NaN, label: 'NaN' },
-])('rejeita quando ownerId é %s', async ({ ownerId, label }) => {
+])('rejeita quando ownerId é %s', async ({ ownerId }) => {
   const spyFindFirst = jest.spyOn(prisma.project, 'findFirst')
   const spyCreate = jest.spyOn(prisma.project, 'create')
 
@@ -100,9 +105,8 @@ it.each([
       name: 'Qualquer Nome Válido',
       description: 'desc',
     })
-  ).rejects.toEqual(
-    expect.any(AppError)
-  )
+  ).rejects.toEqual(expect.any(AppError))
+
   expect(spyFindFirst).not.toHaveBeenCalled()
   expect(spyCreate).not.toHaveBeenCalled()
 })
@@ -135,13 +139,13 @@ describe('createProject - validação de name', () => {
     { name: {} as unknown as string, label: 'objeto' },
     { name: [] as unknown as string, label: 'array' },
     { name: true as unknown as string, label: 'boolean' },
-  ])('rejeita quando name é %s', async ({ name, label }) => {
+  ])('rejeita quando name é %s', async ({ name }) => {
     const spyFind = jest.spyOn(prisma.project, 'findFirst')
     const spyCreate = jest.spyOn(prisma.project, 'create')
 
-    await expect(
-      createProject({ ownerId: 1, name, description: 'desc' })
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(createProject({ ownerId: 1, name, description: 'desc' })).rejects.toMatchObject({
+      status: 400,
+    })
     expect(spyFind).not.toHaveBeenCalled()
     expect(spyCreate).not.toHaveBeenCalled()
   })
@@ -173,13 +177,13 @@ describe('createProject - validação tamanho mínimo do name', () => {
     { name: ' ', label: 'apenas espaço' },
     { name: ' A ', label: '1 caractere com espaços' },
     { name: 'a', label: 'um caractere só' },
-  ])('rejeita quando name é muito curto (%s)', async ({ name, label }) => {
+  ])('rejeita quando name é muito curto (%s)', async ({ name }) => {
     const spyFind = jest.spyOn(prisma.project, 'findFirst')
     const spyCreate = jest.spyOn(prisma.project, 'create')
 
-    await expect(
-      createProject({ ownerId: 1, name, description: null })
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(createProject({ ownerId: 1, name, description: null })).rejects.toMatchObject({
+      status: 400,
+    })
 
     expect(spyFind).not.toHaveBeenCalled()
     expect(spyCreate).not.toHaveBeenCalled()
@@ -209,14 +213,14 @@ describe('createProject - validação tamanho máximo do name', () => {
   })
 
   it('rejeita quando name tem mais de 100 caracteres', async () => {
-    const tooLong = 'a'.repeat(101) // string de 101 caracteres
+    const tooLong = 'a'.repeat(101)
 
     const spyFind = jest.spyOn(prisma.project, 'findFirst')
     const spyCreate = jest.spyOn(prisma.project, 'create')
 
-    await expect(
-      createProject({ ownerId: 1, name: tooLong, description: null })
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(createProject({ ownerId: 1, name: tooLong, description: null })).rejects.toMatchObject(
+      { status: 400 }
+    )
 
     expect(spyFind).not.toHaveBeenCalled()
     expect(spyCreate).not.toHaveBeenCalled()
@@ -253,7 +257,7 @@ describe('createProject - validação regex do name', () => {
     { name: 'Projeto Ágil', desc: 'com espaço e acento' },
     { name: 'Release_v1.0', desc: 'underscore e ponto' },
     { name: 'Planejamento-QA', desc: 'hífen no meio' },
-  ])('aceita quando name é válido (%s: %s)', async ({ name, desc }) => {
+  ])('aceita quando name é válido (%s: %s)', async ({ name }) => {
     const fake = {
       id: 1,
       ownerId: 1,
@@ -275,13 +279,13 @@ describe('createProject - validação regex do name', () => {
     { name: 'Hello#World', invalidChar: '#' },
     { name: 'Test*Case', invalidChar: '*' },
     { name: 'Deploy!', invalidChar: '!' },
-  ])('rejeita quando name contém caractere inválido (%s)', async ({ name, invalidChar }) => {
+  ])('rejeita quando name contém caractere inválido (%s)', async ({ name }) => {
     const spyFind = jest.spyOn(prisma.project, 'findFirst')
     const spyCreate = jest.spyOn(prisma.project, 'create')
 
-    await expect(
-      createProject({ ownerId: 1, name, description: null })
-    ).rejects.toMatchObject({ status: 400 })
+    await expect(createProject({ ownerId: 1, name, description: null })).rejects.toMatchObject({
+      status: 400,
+    })
 
     expect(spyFind).not.toHaveBeenCalled()
     expect(spyCreate).not.toHaveBeenCalled()
@@ -289,11 +293,11 @@ describe('createProject - validação regex do name', () => {
 })
 
 function fakePrismaKnownError(code: string, message = 'prisma error') {
-  // cria um objeto com code + prototype da KnownRequestError para passar no instanceof
+  // Cria um Error e ajusta o prototype para passar no instanceof
   const err: any = new Error(message)
   err.code = code
-  Object.setPrototypeOf(err, Prisma.PrismaClientKnownRequestError.prototype)
-  return err as Prisma.PrismaClientKnownRequestError
+  Object.setPrototypeOf(err, PrismaClientKnownRequestError.prototype)
+  return err as PrismaClientKnownRequestError
 }
 
 describe('createProject - mapeamento de erros do Prisma', () => {
@@ -325,9 +329,7 @@ describe('createProject - mapeamento de erros do Prisma', () => {
 
   it('erros não mapeados viram 500 (Failed to create project)', async () => {
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest
-      .spyOn(prisma.project, 'create')
-      .mockRejectedValue(new Error('algo inesperado'))
+    jest.spyOn(prisma.project, 'create').mockRejectedValue(new Error('algo inesperado'))
 
     await expect(
       createProject({ ownerId: 1, name: 'Falha Genérica', description: null })
@@ -341,7 +343,14 @@ describe('createProject - normalização de description', () => {
   })
 
   it('salva description aparada quando string válida', async () => {
-    const fake = { id: 1, ownerId: 1, name: 'Projeto', description: 'algo', createdAt: new Date(), updatedAt: new Date() }
+    const fake = {
+      id: 1,
+      ownerId: 1,
+      name: 'Projeto',
+      description: 'algo',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
     jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
 
@@ -350,7 +359,14 @@ describe('createProject - normalização de description', () => {
   })
 
   it('salva como null quando string só com espaços', async () => {
-    const fake = { id: 1, ownerId: 1, name: 'Projeto', description: null, createdAt: new Date(), updatedAt: new Date() }
+    const fake = {
+      id: 1,
+      ownerId: 1,
+      name: 'Projeto',
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
     jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
 
@@ -359,7 +375,14 @@ describe('createProject - normalização de description', () => {
   })
 
   it('salva como null quando undefined', async () => {
-    const fake = { id: 1, ownerId: 1, name: 'Projeto', description: null, createdAt: new Date(), updatedAt: new Date() }
+    const fake = {
+      id: 1,
+      ownerId: 1,
+      name: 'Projeto',
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
     jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
 
@@ -368,7 +391,14 @@ describe('createProject - normalização de description', () => {
   })
 
   it('salva como null quando null', async () => {
-    const fake = { id: 1, ownerId: 1, name: 'Projeto', description: null, createdAt: new Date(), updatedAt: new Date() }
+    const fake = {
+      id: 1,
+      ownerId: 1,
+      name: 'Projeto',
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
     jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
 

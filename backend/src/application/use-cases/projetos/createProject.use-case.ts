@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { Prisma } from '@prisma/client'
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 interface CreateProjectInput {
   ownerId: number
@@ -59,14 +60,14 @@ export async function createProject({
       },
     })
   } catch (err: unknown) {
-    if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      if (err.code === 'P2002') {
-        throw new AppError('A project with this name already exists for this owner', 409)
-      }
-      if (err.code === 'P2003') {
-        throw new AppError('Invalid ownerId (foreign key not found)', 400)
-      }
+  if (err instanceof PrismaClientKnownRequestError) {
+    if (err.code === 'P2002') {
+      throw new AppError('A project with this name already exists for this owner', 409)
     }
-    throw new AppError('Failed to create project', 500)
+    if (err.code === 'P2003') {
+      throw new AppError('Invalid ownerId (foreign key not found)', 400)
+    }
   }
+  throw new AppError('Failed to create project', 500)
+}
 }
