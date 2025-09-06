@@ -1,4 +1,3 @@
-// src/controllers/project/createProject.controller.ts
 import { RequestHandler } from 'express'
 import { createProject } from '../../application/use-cases/projetos/createProject.use-case'
 

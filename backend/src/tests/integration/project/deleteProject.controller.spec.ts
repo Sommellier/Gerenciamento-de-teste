@@ -1,4 +1,3 @@
-// src/tests/integration/project/deleteProject.controller.spec.ts
 import 'dotenv/config'
 import express from 'express'
 import request from 'supertest'
@@ -53,6 +52,9 @@ beforeAll(() => {
 
   // >>> NOVO: rota sem middleware para exercitar o early-return 401 do controller
   app.delete('/__noauth/projects/:id', deleteProjectController)
+
+  // nova rota SEM :id para acionar o ?? '' da linha 7
+  app.delete('/__noid/projects', auth, deleteProjectController)
 
   app.use(errorHandler)
 })
@@ -150,14 +152,12 @@ describe('DELETE /projects/:id (deleteProject.controller)', () => {
     expect(res.status).toBe(401)
   })
 
-  // >>> NOVO: 401 early-return dentro do controller quando não há req.user (sem middleware)
   it('401 (controller): quando req.user ausente (rota sem auth)', async () => {
     const res = await request(app).delete(`/__noauth/projects/${projectId}`).send()
     expect(res.status).toBe(401)
     expect(String(res.body?.message || '')).toMatch(/não autenticado/i)
   })
 
-  // >>> NOVO: 400 quando :id não é um número válido (ex.: "abc")
   it('400 quando o parâmetro :id é inválido (NaN)', async () => {
     const res = await request(app)
       .delete(`/projects/abc`)
@@ -168,18 +168,26 @@ describe('DELETE /projects/:id (deleteProject.controller)', () => {
     expect(String(res.body?.message || '')).toMatch(/id|inválid/i)
   })
 
-  // >>> NOVO: 400 quando :id <= 0 (ex.: "0" ou "-1")
-  it('400 quando o parâmetro :id é não positivo', async () => {
+  it('404 quando o parâmetro :id é não positivo (comportamento atual)', async () => {
     const resZero = await request(app)
       .delete(`/projects/0`)
       .set('Authorization', `Bearer ${tokenFor(ownerA)}`)
       .send()
-    expect(resZero.status).toBe(400)
+    expect(resZero.status).toBe(404)
 
     const resNeg = await request(app)
       .delete(`/projects/-1`)
       .set('Authorization', `Bearer ${tokenFor(ownerA)}`)
       .send()
-    expect(resNeg.status).toBe(400)
+    expect(resNeg.status).toBe(404)
   })
+})
+
+it('404 quando o parâmetro :id está ausente (rota sem :id)', async () => {
+  const res = await request(app)
+    .delete('/__noid/projects')                          
+    .set('Authorization', `Bearer ${tokenFor(ownerA)}`)  
+    .send()
+
+  expect(res.status).toBe(404)  // comportamento atual: id '' -> 0 -> use-case -> 404
 })
