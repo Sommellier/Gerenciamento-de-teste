@@ -15,7 +15,7 @@ const auth = (req: Request, res: Response, next: NextFunction) => {
   if (!token) { res.status(401).json({ message: 'Não autenticado' }); return }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET || 'test-secret') as { id: number }
-    ;(req as any).user = { id: payload.id }
+      ; (req as any).user = { id: payload.id }
     next()
   } catch {
     res.status(401).json({ message: 'Token inválido' }); return
@@ -37,8 +37,15 @@ beforeAll(() => {
   app = express()
   app.use(express.json())
 
-  // usa o controller real; converte o req para incluir user
+  // rota com auth (como já está)
   app.get('/projects/:id', auth, async (req, res, next) => {
+    try {
+      await getProjectByIdController(req as unknown as Request & { user?: { id: number } }, res)
+    } catch (e) { next(e) }
+  })
+
+  // >>> NOVO: rota SEM auth para acionar o 401 do controller
+  app.get('/__noauth/projects/:id', async (req, res, next) => {
     try {
       await getProjectByIdController(req as unknown as Request & { user?: { id: number } }, res)
     } catch (e) { next(e) }
@@ -46,6 +53,7 @@ beforeAll(() => {
 
   app.use(errorHandler)
 })
+
 
 beforeEach(async () => {
   await prisma.$transaction([
@@ -66,7 +74,6 @@ beforeEach(async () => {
   const p = await createProject({ ownerId, name: 'Projeto Read', description: null })
   projectId = p.id
 
-  // adiciona membros
   await prisma.userOnProject.create({ data: { userId: testerId, projectId, role: 'TESTER' as any } })
   await prisma.userOnProject.create({ data: { userId: approverId, projectId, role: 'APPROVER' as any } })
 })
@@ -98,5 +105,17 @@ describe('GET /projects/:id com RBAC (OWNER/TESTER/APPROVER)', () => {
   it('401 sem token', async () => {
     const r = await request(app).get(`/projects/${projectId}`)
     expect(r.status).toBe(401)
+  })
+  it('401 (controller) quando req.user ausente (rota sem auth)', async () => {
+    const r = await request(app).get(`/__noauth/projects/${projectId}`)
+    expect(r.status).toBe(401)
+    expect(String(r.body?.message || '')).toMatch(/não autenticado/i)
+  })
+  it('400 quando id não é numérico', async () => {
+    const r = await request(app)
+      .get(`/projects/abc`)
+      .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+    expect(r.status).toBe(400)
+    expect(String(r.body?.message || '')).toMatch(/parâmetro inválido|id/i)
   })
 })

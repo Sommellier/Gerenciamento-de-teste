@@ -4,8 +4,10 @@ import { deleteProject } from '../../application/use-cases/projetos/deleteProjec
 
 export const deleteProjectController: RequestHandler = async (req, res, next) => {
   try {
-    const projectId = Number(req.params.id)
-    // @ts-expect-error: user ad-hoc via middleware de teste
+    const rawId = String(req.params.id ?? '')
+    const projectId = Number(rawId)
+
+    // @ts-expect-error user via middleware de teste
     const requesterId: number | undefined = req.user?.id
 
     if (!Number.isFinite(projectId)) {
@@ -18,7 +20,7 @@ export const deleteProjectController: RequestHandler = async (req, res, next) =>
     }
 
     await deleteProject({ projectId, requesterId })
-    res.status(204).end()           // <- envia e sai, sem "return res..."
+    res.status(204).end()
   } catch (err) {
     next(err as any)
   }

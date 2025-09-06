@@ -6,9 +6,6 @@ import { updateProjectController } from '../controllers/project/updateProject.co
 import { getProjectByIdController } from '../controllers/project/getProjectById.controller'
 import { listProjects } from '../controllers/project/listProjects.controller'
 
-// se já tiver um auth real, importe-o daqui
-// import { auth } from '../middleware/auth'
-
 const auth = (_req: any, _res: any, next: any) => next()
 
 const asyncH =

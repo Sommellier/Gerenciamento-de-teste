@@ -8,12 +8,12 @@
     "dev": "dotenv -e .env -- ts-node-dev --respawn --transpile-only src/main.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
     "test": "cross-env NODE_ENV=test jest --runInBand",
     "test:coverage": "cross-env NODE_ENV=test jest --coverage --runInBand",
     "test:unit": "cross-env NODE_ENV=test jest --runInBand __tests__/unit",
     "test:integration": "cross-env NODE_ENV=test jest --runInBand __tests__/integration",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:reset": "prisma migrate reset --force"
   },
@@ -50,5 +50,5 @@
   },
   "engines": {
     "node": ">=18.18"
-  } 
+  }
 }

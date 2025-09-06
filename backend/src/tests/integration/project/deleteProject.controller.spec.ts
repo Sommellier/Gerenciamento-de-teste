@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../../../infrastructure/prisma'
 import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
-import { deleteProjectController } from '../../../controllers/project/deleteProject.controller' 
+import { deleteProjectController } from '../../../controllers/project/deleteProject.controller'
 
 const unique = (p: string) => `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`
 
@@ -46,7 +46,15 @@ let projectId: number
 beforeAll(() => {
   app = express()
   app.use(express.json())
+
+  // rota protegida (com auth)
   app.delete('/projects/:id', auth, deleteProjectController)
+
+  // >>> NOVO: rota sem middleware para exercitar o early-return 401 do controller
+  app.delete('/__noauth/projects/:id', deleteProjectController)
+
+  // nova rota SEM :id para acionar o ?? '' da linha 7
+  app.delete('/__noid/projects', auth, deleteProjectController)
 
   app.use(errorHandler)
 })
@@ -143,4 +151,43 @@ describe('DELETE /projects/:id (deleteProject.controller)', () => {
     const res = await request(app).delete(`/projects/${projectId}`).send()
     expect(res.status).toBe(401)
   })
+
+  it('401 (controller): quando req.user ausente (rota sem auth)', async () => {
+    const res = await request(app).delete(`/__noauth/projects/${projectId}`).send()
+    expect(res.status).toBe(401)
+    expect(String(res.body?.message || '')).toMatch(/não autenticado/i)
+  })
+
+  it('400 quando o parâmetro :id é inválido (NaN)', async () => {
+    const res = await request(app)
+      .delete(`/projects/abc`)
+      .set('Authorization', `Bearer ${tokenFor(ownerA)}`)
+      .send()
+
+    expect(res.status).toBe(400)
+    expect(String(res.body?.message || '')).toMatch(/id|inválid/i)
+  })
+
+  it('404 quando o parâmetro :id é não positivo (comportamento atual)', async () => {
+    const resZero = await request(app)
+      .delete(`/projects/0`)
+      .set('Authorization', `Bearer ${tokenFor(ownerA)}`)
+      .send()
+    expect(resZero.status).toBe(404)
+
+    const resNeg = await request(app)
+      .delete(`/projects/-1`)
+      .set('Authorization', `Bearer ${tokenFor(ownerA)}`)
+      .send()
+    expect(resNeg.status).toBe(404)
+  })
+})
+
+it('404 quando o parâmetro :id está ausente (rota sem :id)', async () => {
+  const res = await request(app)
+    .delete('/__noid/projects')                          
+    .set('Authorization', `Bearer ${tokenFor(ownerA)}`)  
+    .send()
+
+  expect(res.status).toBe(404)  // comportamento atual: id '' -> 0 -> use-case -> 404
 })

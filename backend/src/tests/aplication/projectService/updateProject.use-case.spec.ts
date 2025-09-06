@@ -259,4 +259,3 @@ describe('updateProject.use-case (unit)', () => {
     expect(result.description).toBe('nova')
   })
 })
-

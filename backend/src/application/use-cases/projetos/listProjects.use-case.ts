@@ -7,7 +7,7 @@ type Input = {
   pageSize?: number
 }
 
-export async function listProjects({ requesterId, q, page = 1, pageSize = 10 }: Input) {
+export async function listProjectsQuery({ requesterId, q, page = 1, pageSize = 10 }: Input) {
   const whereByName =
     q?.trim()
       ? { name: { contains: q.trim(), mode: 'insensitive' as const } }
@@ -17,26 +17,30 @@ export async function listProjects({ requesterId, q, page = 1, pageSize = 10 }: 
     where: { userId: requesterId },
     select: { projectId: true },
   })
-  const memberProjectIds = memberships.map(m => m.projectId)
+
+  const memberProjectIds = memberships.map((m: { projectId: number }) => m.projectId)
 
   const where = {
     AND: [
-      whereByName,
-      {
-        OR: [
+      { OR: [
           { ownerId: requesterId },
           memberProjectIds.length ? { id: { in: memberProjectIds } } : { id: { in: [] as number[] } },
         ],
       },
+      whereByName,
     ],
   }
+
+  const effectivePageSize = Math.max(1, Number.isFinite(pageSize) ? pageSize! : 10)
+  const effectivePage = Number.isFinite(page) ? page! : 1
+  const skip = Math.max(0, (effectivePage - 1) * effectivePageSize)
 
   const [items, total] = await Promise.all([
     prisma.project.findMany({
       where,
       orderBy: { id: 'desc' },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
+      skip,
+      take: effectivePageSize,
     }),
     prisma.project.count({ where }),
   ])
@@ -44,8 +48,8 @@ export async function listProjects({ requesterId, q, page = 1, pageSize = 10 }: 
   return {
     items,
     total,
-    page,
-    pageSize,
-    totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    page,         
+    pageSize,     
+    totalPages: Math.max(1, Math.ceil(total / effectivePageSize)),
   }
 }
