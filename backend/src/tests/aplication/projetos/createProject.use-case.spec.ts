@@ -121,7 +121,14 @@ it('aceita quando ownerId é inteiro positivo (passa da validação)', async () 
     updatedAt: new Date(),
   }
   jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-  jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+  // mock da transação para retornar o fake como se fosse criação + membership
+  jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+    const tx: any = {
+      project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+      userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+    }
+    return fn(tx)
+  })
 
   const result = await createProject({ ownerId: 10, name: 'Projeto', description: undefined })
   expect(result).toEqual(fake)
@@ -160,7 +167,13 @@ describe('createProject - validação de name', () => {
       updatedAt: new Date(),
     }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: 'Projeto Ok', description: null })
     expect(result).toEqual(fake)
@@ -199,7 +212,13 @@ describe('createProject - validação tamanho mínimo do name', () => {
       updatedAt: new Date(),
     }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: ' Ok ', description: null })
     expect(result).toEqual(fake)
@@ -239,7 +258,13 @@ describe('createProject - validação tamanho máximo do name', () => {
     }
 
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: valid, description: null })
     expect(result).toEqual(fake)
@@ -268,7 +293,13 @@ describe('createProject - validação regex do name', () => {
     }
 
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name, description: null })
     expect(result.name).toBe(name)
@@ -307,9 +338,9 @@ describe('createProject - mapeamento de erros do Prisma', () => {
 
   it('mapeia P2002 (unique constraint) para 409', async () => {
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest
-      .spyOn(prisma.project, 'create')
-      .mockRejectedValue(fakePrismaKnownError('P2002', 'Unique constraint failed'))
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (_fn: any) => {
+      throw fakePrismaKnownError('P2002', 'Unique constraint failed')
+    })
 
     await expect(
       createProject({ ownerId: 1, name: 'Duplicado', description: null })
@@ -318,9 +349,9 @@ describe('createProject - mapeamento de erros do Prisma', () => {
 
   it('mapeia P2003 (FK violation) para 400', async () => {
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest
-      .spyOn(prisma.project, 'create')
-      .mockRejectedValue(fakePrismaKnownError('P2003', 'Foreign key constraint failed'))
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (_fn: any) => {
+      throw fakePrismaKnownError('P2003', 'Foreign key constraint failed')
+    })
 
     await expect(
       createProject({ ownerId: 999999, name: 'Qualquer', description: null })
@@ -329,7 +360,9 @@ describe('createProject - mapeamento de erros do Prisma', () => {
 
   it('erros não mapeados viram 500 (Failed to create project)', async () => {
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockRejectedValue(new Error('algo inesperado'))
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (_fn: any) => {
+      throw new Error('algo inesperado')
+    })
 
     await expect(
       createProject({ ownerId: 1, name: 'Falha Genérica', description: null })
@@ -352,7 +385,13 @@ describe('createProject - normalização de description', () => {
       updatedAt: new Date(),
     }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: 'Projeto', description: '  algo  ' })
     expect(result.description).toBe('algo')
@@ -368,7 +407,13 @@ describe('createProject - normalização de description', () => {
       updatedAt: new Date(),
     }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: 'Projeto', description: '   ' })
     expect(result.description).toBeNull()
@@ -384,7 +429,13 @@ describe('createProject - normalização de description', () => {
       updatedAt: new Date(),
     }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: 'Projeto', description: undefined })
     expect(result.description).toBeNull()
@@ -400,7 +451,13 @@ describe('createProject - normalização de description', () => {
       updatedAt: new Date(),
     }
     jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-    jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+    jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+      const tx: any = {
+        project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+        userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+      }
+      return fn(tx)
+    })
 
     const result = await createProject({ ownerId: 1, name: 'Projeto', description: null })
     expect(result.description).toBeNull()
@@ -418,7 +475,13 @@ it('mantém valor quando description não é string nem null/undefined', async (
   }
 
   jest.spyOn(prisma.project, 'findFirst').mockResolvedValue(null as any)
-  jest.spyOn(prisma.project, 'create').mockResolvedValue(fake as any)
+  jest.spyOn(prisma, '$transaction').mockImplementation(async (fn: any) => {
+    const tx: any = {
+      project: { create: (jest.fn() as any).mockResolvedValue(fake as any) },
+      userOnProject: { create: (jest.fn() as any).mockResolvedValue({}) },
+    }
+    return fn(tx)
+  })
 
   const result = await createProject({ ownerId: 1, name: 'Projeto', description: 123 as any })
   expect(result.description).toBe(123)

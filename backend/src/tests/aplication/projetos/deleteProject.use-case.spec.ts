@@ -62,14 +62,7 @@ beforeEach(async () => {
       user: { connect: { id: ownerA } },
     },
   })
-
-  await prisma.userOnProject.create({
-    data: {
-      userId: ownerA,
-      projectId,
-      role: 'OWNER',
-    }
-  })
+  // não criar membership do dono aqui; já é criado pelo createProject use case
 })
 
 afterAll(async () => {

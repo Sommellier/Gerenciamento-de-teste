@@ -235,4 +235,61 @@ describe('Update User', () => {
     const ok = await bcrypt.compare(newPass, userInDb!.password)
     expect(ok).toBe(true)
   })
+
+  it('atualiza avatar quando fornecido', async () => {
+    const user = await createUser({
+      name: 'Test User',
+      email: `test_${unique('u')}@example.com`,
+      password: 'password123',
+    })
+
+    const updated = await updateUser(user.id.toString(), {
+      avatar: '/uploads/avatar.jpg'
+    })
+
+    expect(updated.id).toBe(user.id)
+    expect(updated.avatar).toBe('/uploads/avatar.jpg')
+  })
+
+  it('não atualiza avatar quando undefined é fornecido', async () => {
+    const user = await createUser({
+      name: 'Test User',
+      email: `test_${unique('u')}@example.com`,
+      password: 'password123'
+    })
+
+    // Primeiro definir um avatar
+    await updateUser(user.id.toString(), {
+      avatar: '/uploads/old-avatar.jpg'
+    })
+
+    // Depois tentar atualizar para undefined (não deve alterar)
+    const updated = await updateUser(user.id.toString(), {
+      avatar: undefined
+    })
+
+    expect(updated.id).toBe(user.id)
+    expect(updated.avatar).toBe('/uploads/old-avatar.jpg') // deve manter o valor anterior
+  })
+
+  it('atualiza avatar para null quando null é fornecido', async () => {
+    const user = await createUser({
+      name: 'Test User',
+      email: `test_${unique('u')}@example.com`,
+      password: 'password123'
+    })
+
+    // Primeiro definir um avatar
+    await updateUser(user.id.toString(), {
+      avatar: '/uploads/old-avatar.jpg'
+    })
+
+    // Depois atualizar para null
+    const updated = await updateUser(user.id.toString(), {
+      avatar: null as any
+    })
+
+    expect(updated.id).toBe(user.id)
+    expect(updated.avatar).toBeNull()
+  })
 })

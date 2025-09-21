@@ -1,6 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
-import { Prisma } from '@prisma/client'
+import { Prisma, Role } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 interface CreateProjectInput {
@@ -43,31 +43,52 @@ export async function createProject({
     )
   }
 
+  // Verificar duplicação com case-insensitive
   const duplicate = await prisma.project.findFirst({
-    where: { ownerId, name: normalizedName },
-    select: { id: true },
+    where: { 
+      ownerId, 
+      name: {
+        equals: normalizedName,
+        mode: 'insensitive'
+      }
+    },
+    select: { id: true, name: true },
   })
   if (duplicate) {
     throw new AppError('A project with this name already exists for this owner', 409)
   }
 
   try {
-    return await prisma.project.create({
-      data: {
-        ownerId,
-        name: normalizedName,
-        description: normalizedDescription,
-      },
+    const created = await prisma.$transaction(async (tx) => {
+      const project = await tx.project.create({
+        data: {
+          ownerId,
+          name: normalizedName,
+          description: normalizedDescription,
+        },
+      })
+
+      await tx.userOnProject.create({
+        data: {
+          userId: ownerId,
+          projectId: project.id,
+          role: Role.OWNER,
+        },
+      })
+
+      return project
     })
+
+    return created
   } catch (err: unknown) {
-  if (err instanceof PrismaClientKnownRequestError) {
-    if (err.code === 'P2002') {
-      throw new AppError('A project with this name already exists for this owner', 409)
+    if (err instanceof PrismaClientKnownRequestError) {
+      if (err.code === 'P2002') {
+        throw new AppError('A project with this name already exists for this owner', 409)
+      }
+      if (err.code === 'P2003') {
+        throw new AppError('Invalid ownerId (foreign key not found)', 400)
+      }
     }
-    if (err.code === 'P2003') {
-      throw new AppError('Invalid ownerId (foreign key not found)', 400)
-    }
+    throw new AppError('Failed to create project', 500)
   }
-  throw new AppError('Failed to create project', 500)
-}
 }

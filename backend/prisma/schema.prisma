@@ -9,6 +9,7 @@ datasource db {
 
 enum Role {
   OWNER
+  ADMIN
   MANAGER
   TESTER
   APPROVER
@@ -20,11 +21,47 @@ enum ExecutionStatus {
   REPROVED
 }
 
+enum ScenarioType {
+  FUNCTIONAL
+  REGRESSION
+  SMOKE
+  E2E
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum Environment {
+  DEV
+  QA
+  STAGING
+  PROD
+}
+
+enum ScenarioStatus {
+  CREATED
+  EXECUTED
+  PASSED
+  FAILED
+}
+
+enum PackageStatus {
+  CREATED
+  EXECUTED
+  PASSED
+  FAILED
+}
+
 model User {
-  id       Int      @id @default(autoincrement())
+  id       Int    @id @default(autoincrement())
   name     String
-  email    String   @unique
+  email    String @unique
   password String
+  avatar   String?
 
   // Auditoria
   createdAt DateTime @default(now())
@@ -32,87 +69,93 @@ model User {
 
   passwordResetTokens PasswordResetToken[]
   userProjects        UserOnProject[]
-  projectsOwned       Project[]        @relation("ProjectOwner")
+  projectsOwned       Project[]            @relation("ProjectOwner")
   executions          Execution[]
+
+  invitesSent ProjectInvite[] @relation("InvitedBy")
 }
 
 model Project {
-  id           Int             @id @default(autoincrement())
-  ownerId      Int
-  owner        User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  name         String          @db.VarChar(100) // ou @db.Citext se quiser case-insensitive
-  description  String?         @db.Text
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id          Int      @id @default(autoincrement())
+  ownerId     Int
+  owner       User     @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   testCases    TestCase[]
   userProjects UserOnProject[]
+  scenarios    TestScenario[]
+  testPackages TestPackage[]
+
+  invites ProjectInvite[]
 
   @@unique([ownerId, name], map: "project_owner_name_unique")
   @@index([ownerId])
 }
 
 model UserOnProject {
-  id        Int     @id @default(autoincrement())
+  id        Int  @id @default(autoincrement())
   userId    Int
   projectId Int
   role      Role
 
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([userId, projectId])
   @@index([role])
 }
 
 model TestCase {
-  id           Int         @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   title        String
-  description  String?     @db.Text
-  precondition String?     @db.Text
-  steps        String      @db.Text
-  expected     String      @db.Text
+  description  String?
+  precondition String?
+  steps        String
+  expected     String
 
-  projectId    Int
-  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  executions   Execution[]
-  evidences    Evidence[]  // mantém se quiser anexar direto ao caso (opcional)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  executions Execution[]
+  evidences  Evidence[] // mantém se quiser anexar direto ao caso (opcional)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
   @@index([projectId])
 }
 
 model Execution {
-  id         Int              @id @default(autoincrement())
-  status     ExecutionStatus  @default(PENDING)
-  executedAt DateTime         @default(now())
-  notes      String?          @db.Text
+  id         Int             @id @default(autoincrement())
+  status     ExecutionStatus @default(PENDING)
+  executedAt DateTime        @default(now())
+  notes      String?
 
   userId     Int
-  user       User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
   testCaseId Int
-  testCase   TestCase         @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  testCase   TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
 
-  evidences  Evidence[]
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  evidences Evidence[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@index([testCaseId, executedAt])
 }
 
 model Evidence {
-  id           Int       @id @default(autoincrement())
-  url          String
-  type         String
-  checksum     String    // ex.: sha256 do arquivo
-  executionId  Int?
-  execution    Execution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  testCaseId   Int?
-  testCase     TestCase?  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  id          Int        @id @default(autoincrement())
+  url         String
+  type        String
+  checksum    String // ex.: sha256 do arquivo
+  executionId Int?
+  execution   Execution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  testCaseId  Int?
+  testCase    TestCase?  @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
 
-  createdAt    DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@index([executionId])
   @@index([testCaseId])
@@ -127,4 +170,116 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+}
+
+model ProjectInvite {
+  id          Int          @id @default(autoincrement())
+  projectId   Int
+  email       String
+  role        Role
+  token       String       @unique
+  status      InviteStatus @default(PENDING)
+  invitedById Int
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  declinedAt  DateTime?
+  createdAt   DateTime     @default(now())
+
+  // relação com Project (oposto: Project.invites)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // relação com User (oposto: User.invitesSent) — nomeada para não conflitar
+  invitedBy User @relation("InvitedBy", fields: [invitedById], references: [id], onDelete: Restrict)
+
+  @@index([projectId, email])
+  @@index([status])
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model TestScenario {
+  id             Int            @id @default(autoincrement())
+  title          String
+  description    String?
+  type           ScenarioType
+  priority       Priority
+  tags           String[]       @default([])
+  assigneeEmail  String?
+  environment    Environment?
+  release        String         // YYYY-MM format
+  status         ScenarioStatus @default(CREATED)
+  
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  steps TestScenarioStep[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([projectId])
+  @@index([projectId, release])
+  @@index([status])
+  @@index([assigneeEmail])
+}
+
+model TestScenarioStep {
+  id          Int         @id @default(autoincrement())
+  action      String
+  expected    String
+  stepOrder   Int
+  
+  scenarioId Int
+  scenario   TestScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([scenarioId, stepOrder])
+}
+
+model TestPackage {
+  id             Int           @id @default(autoincrement())
+  title          String
+  description    String?
+  type           ScenarioType
+  priority       Priority
+  tags           String[]      @default([])
+  assigneeEmail  String?
+  environment    Environment?
+  release        String        // YYYY-MM format
+  status         PackageStatus @default(CREATED)
+  
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  steps TestPackageStep[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([projectId])
+  @@index([projectId, release])
+  @@index([status])
+  @@index([assigneeEmail])
+}
+
+model TestPackageStep {
+  id          Int         @id @default(autoincrement())
+  action      String
+  expected    String
+  stepOrder   Int
+  
+  packageId Int
+  package   TestPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([packageId, stepOrder])
 }

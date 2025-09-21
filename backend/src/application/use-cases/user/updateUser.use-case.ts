@@ -6,6 +6,7 @@ interface UpdateUserInput {
   name?: string
   email?: string
   password?: string
+  avatar?: string
 }
 
 export async function updateUser(userId: string, data: UpdateUserInput) {
@@ -53,6 +54,10 @@ export async function updateUser(userId: string, data: UpdateUserInput) {
     }
 
     updates.password = await hashPassword(data.password)
+  }
+
+  if (data.avatar !== undefined) {
+    updates.avatar = data.avatar
   }
 
   const updatedUser = await prisma.user.update({

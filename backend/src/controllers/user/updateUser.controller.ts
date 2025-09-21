@@ -4,10 +4,10 @@ import { AppError } from '../../utils/AppError'
 
 export async function updateUserController(req: Request, res: Response) {
   const userId = req.params.id
-  const { name, email, password } = req.body
+  const { name, email, password, avatar } = req.body
 
   try {
-    const updatedUser = await updateUser(userId, { name, email, password })
+    const updatedUser = await updateUser(userId, { name, email, password, avatar })
     return res.status(200).json(updatedUser)
   } catch (err) {
     const status = err instanceof AppError ? err.statusCode : 400

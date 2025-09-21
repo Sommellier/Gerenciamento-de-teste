@@ -1,5 +1,7 @@
 import { describe, it, expect, jest } from '@jest/globals'
 import request from 'supertest'
+import fs from 'fs'
+import path from 'path'
 
 const helmetMock = jest.fn(() => (_req: any, _res: any, next: any) => next())
 jest.mock('helmet', () => ({ __esModule: true, default: helmetMock }))
@@ -58,7 +60,7 @@ describe('server.ts (Express app)', () => {
         const spy = jest.spyOn(console, 'error').mockImplementation(() => { })
         const res = await request(app).get('/api/__err')
         expect(res.status).toBe(500)
-        expect(res.body).toEqual({ error: 'boom' })
+        expect(res.body).toEqual({ error: 'boom', message: 'boom' })
         expect(spy).toHaveBeenCalled() // morgan/helmet não interferem
         spy.mockRestore()
     })
@@ -73,12 +75,70 @@ describe('server.ts (Express app)', () => {
     it('error handler usa err.statusCode quando presente (ex.: 418)', async () => {
         const res = await request(app).get('/api/__err418')
         expect(res.status).toBe(418)
-        expect(res.body).toEqual({ error: 'teapot' })
+        expect(res.body).toEqual({ error: 'teapot', message: 'teapot' })
     })
 
     it('error handler usa mensagem padrão quando err.message está ausente', async () => {
         const res = await request(app).get('/api/__errNoMsg')
         expect(res.status).toBe(503)
-        expect(res.body).toEqual({ error: 'Internal Server Error' })
+        expect(res.body).toEqual({ error: 'Internal Server Error', message: 'Internal Server Error' })
+    })
+
+    describe('middleware de arquivos estáticos /uploads', () => {
+        let uploadsDir: string
+        let testFile: string
+
+        beforeAll(() => {
+            // Criar diretório de uploads para teste
+            uploadsDir = path.join(process.cwd(), 'uploads')
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir, { recursive: true })
+            }
+            
+            // Criar arquivo de teste
+            testFile = path.join(uploadsDir, 'test-file.txt')
+            fs.writeFileSync(testFile, 'Test file content')
+        })
+
+        afterAll(() => {
+            // Limpar arquivo de teste
+            if (fs.existsSync(testFile)) {
+                fs.unlinkSync(testFile)
+            }
+            if (fs.existsSync(uploadsDir)) {
+                try {
+                    fs.rmdirSync(uploadsDir)
+                } catch (error) {
+                    // Ignorar erro se diretório não estiver vazio
+                }
+            }
+        })
+
+        it('serve arquivos estáticos com headers CORS corretos', async () => {
+            const res = await request(app).get('/uploads/test-file.txt')
+            
+            expect(res.status).toBe(200)
+            expect(res.text).toBe('Test file content')
+            expect(res.headers['access-control-allow-origin']).toBe('*')
+            expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, DELETE, OPTIONS')
+            expect(res.headers['access-control-allow-headers']).toBe('Origin, X-Requested-With, Content-Type, Accept, Authorization')
+        })
+
+        it('retorna 404 para arquivo inexistente em /uploads', async () => {
+            const res = await request(app).get('/uploads/non-existent-file.txt')
+            expect(res.status).toBe(404)
+        })
+
+        it('funciona com OPTIONS request para CORS preflight', async () => {
+            const res = await request(app)
+                .options('/uploads/test-file.txt')
+                .set('Origin', 'http://localhost:3000')
+                .set('Access-Control-Request-Method', 'GET')
+            
+            expect(res.status).toBe(404) // Express static não suporta OPTIONS por padrão
+            expect(res.headers['access-control-allow-origin']).toBe('*')
+            expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, DELETE, OPTIONS')
+            expect(res.headers['access-control-allow-headers']).toBe('Origin, X-Requested-With, Content-Type, Accept, Authorization')
+        })
     })
 })

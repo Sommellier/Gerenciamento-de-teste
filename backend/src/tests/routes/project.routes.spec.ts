@@ -31,6 +31,10 @@ jest.mock('../../controllers/project/deleteProject.controller', () => ({
 }))
 
 import projectRouter from '../../routes/project.routes'
+jest.mock('../../infrastructure/auth', () => ({
+  __esModule: true,
+  default: (_req: any, _res: any, next: any) => next(),
+}))
 
 // Helpers para acessar as funções mockadas
 import { createProjectController } from '../../controllers/project/createProject.controller'
