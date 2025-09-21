@@ -61,7 +61,7 @@ describe('createPackage - casos de sucesso', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: ['test', 'functional'],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     const result = await createPackage(packageData)
@@ -71,7 +71,7 @@ describe('createPackage - casos de sucesso', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test', 'functional'],
-      release: '2024-01',
+      release: '2024-01-15',
       projectId
     })
     expect(result.id).toBeDefined()
@@ -89,7 +89,7 @@ describe('createPackage - casos de sucesso', () => {
       tags: ['regression', 'critical'],
       assigneeId: userId,
       environment: 'QA' as const,
-      release: '2024-02'
+      release: '2024-02-15'
     }
 
     const result = await createPackage(packageData)
@@ -102,7 +102,7 @@ describe('createPackage - casos de sucesso', () => {
       tags: ['regression', 'critical'],
       assigneeEmail: expect.any(String),
       environment: 'QA',
-      release: '2024-02',
+      release: '2024-02-15',
       projectId
     })
   })
@@ -117,7 +117,7 @@ describe('createPackage - casos de sucesso', () => {
       priority: 'MEDIUM' as const,
       tags: ['smoke'],
       assigneeEmail: user!.email,
-      release: '2024-03'
+      release: '2024-03-15'
     }
 
     const result = await createPackage(packageData)
@@ -138,7 +138,7 @@ describe('createPackage - casos de sucesso', () => {
       priority: 'LOW' as const,
       tags: ['e2e'],
       assigneeId: { value: userId, email: user!.email } as any,
-      release: '2024-04'
+      release: '2024-04-15'
     }
 
     const result = await createPackage(packageData)
@@ -158,7 +158,7 @@ describe('createPackage - casos de sucesso', () => {
       tags: ['e2e'],
       assigneeId: { value: userId } as any,
       assigneeEmail: 'fallback@example.com',
-      release: '2024-04'
+      release: '2024-04-15'
     }
 
     const result = await createPackage(packageData)
@@ -178,7 +178,7 @@ describe('createPackage - validação de projeto', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
@@ -197,7 +197,7 @@ describe('createPackage - validação de assignee', () => {
       priority: 'HIGH' as const,
       tags: ['test'],
       assigneeId: 999999,
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
@@ -214,7 +214,7 @@ describe('createPackage - validação de assignee', () => {
       priority: 'HIGH' as const,
       tags: ['test'],
       assigneeEmail: 'nonexistent@example.com',
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
@@ -246,7 +246,7 @@ describe('createPackage - validação de release', () => {
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
       status: 400,
-      message: 'Formato de release inválido. Use YYYY-MM'
+      message: 'Formato de release inválido. Use YYYY-MM-DD'
     })
   })
 
@@ -262,7 +262,7 @@ describe('createPackage - validação de release', () => {
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
       status: 400,
-      message: 'Formato de release inválido. Use YYYY-MM'
+      message: 'Formato de release inválido. Use YYYY-MM-DD'
     })
   })
 
@@ -273,11 +273,11 @@ describe('createPackage - validação de release', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     const result = await createPackage(packageData)
-    expect(result.release).toBe('2024-01')
+    expect(result.release).toBe('2024-01-15')
   })
 })
 
@@ -291,7 +291,7 @@ describe('createPackage - validação de campos obrigatórios', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     const result = await createPackage(packageData)
@@ -315,7 +315,7 @@ describe('createPackage - validação de tipos (Prisma)', () => {
         type: type as any,
         priority: 'HIGH' as const,
         tags: ['test'],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createPackage(packageData)
@@ -332,7 +332,7 @@ describe('createPackage - validação de tags', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: [],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     const result = await createPackage(packageData)
@@ -346,7 +346,7 @@ describe('createPackage - validação de tags', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: ['tag1', 'tag2', 'tag3'],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     const result = await createPackage(packageData)
@@ -362,7 +362,7 @@ describe('createPackage - casos de erro de integração', () => {
       type: 'FUNCTIONAL' as const,
       priority: 'HIGH' as const,
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     }
 
     await expect(createPackage(packageData)).rejects.toMatchObject({

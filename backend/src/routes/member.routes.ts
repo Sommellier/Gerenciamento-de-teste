@@ -23,7 +23,7 @@ router.delete('/projects/:projectId/members/:userId', auth, asyncH(removeMemberC
 router.get('/projects/:projectId/members', auth, asyncH(listMembersController))
 
 // Rota temporária sem auth para debug (para verificar dados reais)
-router.get('/projects/:projectId/members-debug', async (req, res) => {
+router.get('/projects/:projectId/members-debug', async (req: any, res: any) => {
   try {
     const { projectId } = req.params
     console.log('Debug members route called for project:', projectId)

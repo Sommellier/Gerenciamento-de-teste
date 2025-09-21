@@ -76,7 +76,7 @@ describe('getProjectPackages - casos de sucesso', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test1'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     const package2 = await createPackage({
@@ -85,7 +85,7 @@ describe('getProjectPackages - casos de sucesso', () => {
       type: 'REGRESSION',
       priority: 'MEDIUM',
       tags: ['test2'],
-      release: '2024-02'
+      release: '2024-02-15'
     })
 
     // Criar pacote em outro projeto (não deve aparecer)
@@ -95,7 +95,7 @@ describe('getProjectPackages - casos de sucesso', () => {
       type: 'SMOKE',
       priority: 'LOW',
       tags: ['other'],
-      release: '2024-03'
+      release: '2024-03-15'
     })
 
     const result = await getProjectPackages({ projectId })
@@ -114,7 +114,7 @@ describe('getProjectPackages - casos de sucesso', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test1'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     // Aguardar um pouco para garantir ordem temporal
@@ -126,7 +126,7 @@ describe('getProjectPackages - casos de sucesso', () => {
       type: 'REGRESSION',
       priority: 'MEDIUM',
       tags: ['test2'],
-      release: '2024-02'
+      release: '2024-02-15'
     })
 
     const result = await getProjectPackages({ projectId })
@@ -143,7 +143,7 @@ describe('getProjectPackages - casos de sucesso', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     // Criar steps para o pacote
@@ -189,7 +189,7 @@ describe('getProjectPackages - filtro por release', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     await createPackage({
@@ -198,7 +198,7 @@ describe('getProjectPackages - filtro por release', () => {
       type: 'REGRESSION',
       priority: 'MEDIUM',
       tags: ['test'],
-      release: '2024-02'
+      release: '2024-02-15'
     })
 
     await createPackage({
@@ -207,25 +207,25 @@ describe('getProjectPackages - filtro por release', () => {
       type: 'SMOKE',
       priority: 'LOW',
       tags: ['test'],
-      release: '2024-03'
+      release: '2024-03-15'
     })
   })
 
   it('filtra pacotes por release específica', async () => {
     const result = await getProjectPackages({ 
       projectId, 
-      release: '2024-02' 
+      release: '2024-02-15' 
     })
 
     expect(result).toHaveLength(1)
     expect(result[0].title).toBe('Package 2024-02')
-    expect(result[0].release).toBe('2024-02')
+    expect(result[0].release).toBe('2024-02-15')
   })
 
   it('retorna array vazio quando release não existe', async () => {
     const result = await getProjectPackages({ 
       projectId, 
-      release: '2024-12' 
+      release: '2024-12-15' 
     })
 
     expect(result).toEqual([])
@@ -315,7 +315,7 @@ describe('getProjectPackages - casos especiais', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     const package2 = await createPackage({
@@ -324,7 +324,7 @@ describe('getProjectPackages - casos especiais', () => {
       type: 'REGRESSION',
       priority: 'MEDIUM',
       tags: ['test'],
-      release: '2024-02'
+      release: '2024-02-15'
     })
 
     // Adicionar steps apenas ao segundo pacote
@@ -359,7 +359,7 @@ describe('getProjectPackages - casos especiais', () => {
         type: pkg.type as any,
         priority: pkg.priority as any,
         tags: ['test'],
-        release: '2024-01'
+        release: '2024-01-15'
       })
     }
 
@@ -383,7 +383,7 @@ describe('getProjectPackages - casos especiais', () => {
         priority: 'HIGH',
         tags: ['test'],
         environment: env as any,
-        release: '2024-01'
+        release: '2024-01-15'
       })
     }
 

@@ -73,10 +73,10 @@ export async function createScenario({
       }
     }
 
-    // Validar formato da release (YYYY-MM)
-    const releaseRegex = /^\d{4}-\d{2}$/
+    // Validar formato da release (YYYY-MM-DD)
+    const releaseRegex = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/
     if (!releaseRegex.test(release)) {
-      throw new AppError('Formato de release inválido. Use YYYY-MM', 400)
+      throw new AppError('Formato de release inválido. Use YYYY-MM-DD', 400)
     }
 
     // Validar se há pelo menos um passo

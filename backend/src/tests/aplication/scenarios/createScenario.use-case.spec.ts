@@ -76,7 +76,7 @@ describe('createScenario', () => {
           { action: 'Click button', expected: 'Page loads' },
           { action: 'Fill form', expected: 'Form submits' }
         ],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -89,7 +89,7 @@ describe('createScenario', () => {
         tags: ['test', 'functional'],
         assigneeEmail: null,
         environment: null,
-        release: '2024-01',
+        release: '2024-01-15',
         projectId
       })
 
@@ -116,7 +116,7 @@ describe('createScenario', () => {
         tags: ['regression'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeId,
-        release: '2024-02'
+        release: '2024-02-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -134,7 +134,7 @@ describe('createScenario', () => {
         tags: ['smoke'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeEmail: 'assignee@example.com',
-        release: '2024-03'
+        release: '2024-03-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -152,7 +152,7 @@ describe('createScenario', () => {
         tags: ['e2e'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         environment: 'PROD' as const,
-        release: '2024-04'
+        release: '2024-04-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -170,7 +170,7 @@ describe('createScenario', () => {
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeId: { value: assigneeId, email: 'assignee@example.com' } as any,
-        release: '2024-05'
+        release: '2024-05-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -186,7 +186,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-06'
+        release: '2024-06-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -202,7 +202,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: [],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-07'
+        release: '2024-07-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -223,7 +223,7 @@ describe('createScenario', () => {
           { action: 'Step 3', expected: 'Result 3' },
           { action: 'Step 4', expected: 'Result 4' }
         ],
-        release: '2024-08'
+        release: '2024-08-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -246,7 +246,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
@@ -264,7 +264,7 @@ describe('createScenario', () => {
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeId: 999999,
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
@@ -282,7 +282,7 @@ describe('createScenario', () => {
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeEmail: 'nonexistent@example.com',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
@@ -304,7 +304,7 @@ describe('createScenario', () => {
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
         status: 400,
-        message: 'Formato de release inválido. Use YYYY-MM'
+        message: 'Formato de release inválido. Use YYYY-MM-DD'
       })
     })
 
@@ -321,7 +321,7 @@ describe('createScenario', () => {
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
         status: 400,
-        message: 'Formato de release inválido. Use YYYY-MM'
+        message: 'Formato de release inválido. Use YYYY-MM-DD'
       })
     })
 
@@ -333,7 +333,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-13'
+        release: '2024-13-15'
       }
 
       // O regex atual aceita 2024-13, então vamos testar com um formato realmente inválido
@@ -344,7 +344,7 @@ describe('createScenario', () => {
 
       await expect(createScenario(invalidScenarioData)).rejects.toMatchObject({
         status: 400,
-        message: 'Formato de release inválido. Use YYYY-MM'
+        message: 'Formato de release inválido. Use YYYY-MM-DD'
       })
     })
 
@@ -356,7 +356,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
@@ -373,7 +373,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: undefined as any,
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
@@ -390,7 +390,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: null as any,
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await expect(createScenario(scenarioData)).rejects.toMatchObject({
@@ -412,7 +412,7 @@ describe('createScenario', () => {
           priority: 'MEDIUM' as const,
           tags: ['test'],
           steps: [{ action: 'Test action', expected: 'Expected result' }],
-          release: '2024-01'
+          release: '2024-01-15'
         }
 
         const result = await createScenario(scenarioData)
@@ -439,7 +439,7 @@ describe('createScenario', () => {
           priority,
           tags: ['test'],
           steps: [{ action: 'Test action', expected: 'Expected result' }],
-          release: '2024-01'
+          release: '2024-01-15'
         }
 
         const result = await createScenario(scenarioData)
@@ -467,7 +467,7 @@ describe('createScenario', () => {
           tags: ['test'],
           steps: [{ action: 'Test action', expected: 'Expected result' }],
           environment,
-          release: '2024-01'
+          release: '2024-01-15'
         }
 
         const result = await createScenario(scenarioData)
@@ -484,7 +484,7 @@ describe('createScenario', () => {
     })
 
     it('aceita diferentes formatos de release válidos', async () => {
-      const validReleases = ['2024-01', '2024-12', '2023-06', '2025-03']
+      const validReleases = ['2024-01-15', '2024-12-15', '2023-06-15', '2025-03-15']
       
       for (const release of validReleases) {
         const scenarioData = {
@@ -522,7 +522,7 @@ describe('createScenario', () => {
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeId,
         assigneeEmail: 'assignee@example.com',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -539,7 +539,7 @@ describe('createScenario', () => {
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeId: { value: assigneeId } as any,
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -556,7 +556,7 @@ describe('createScenario', () => {
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
         assigneeId: { value: assigneeId, email: 'different@example.com' } as any,
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -573,7 +573,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -591,7 +591,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -608,7 +608,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: manyTags,
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -628,7 +628,7 @@ describe('createScenario', () => {
         steps: [
           { action: longAction, expected: longExpected }
         ],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -648,7 +648,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -676,7 +676,7 @@ describe('createScenario', () => {
         priority: 'MEDIUM' as const,
         tags: ['test'],
         steps: [{ action: 'Test action', expected: 'Expected result' }],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)
@@ -707,7 +707,7 @@ describe('createScenario', () => {
           { action: 'Action 1', expected: 'Expected 1' },
           { action: 'Action 2', expected: 'Expected 2' }
         ],
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const result = await createScenario(scenarioData)

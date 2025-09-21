@@ -48,7 +48,7 @@ beforeEach(async () => {
     type: 'FUNCTIONAL',
     priority: 'HIGH',
     tags: ['test'],
-    release: '2024-01'
+    release: '2024-01-15'
   })
   packageId = testPackage.id
 })
@@ -136,7 +136,7 @@ describe('deletePackage - validação de pacote', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     await expect(deletePackage({ 
@@ -200,7 +200,7 @@ describe('deletePackage - verificação de integridade', () => {
       type: 'REGRESSION',
       priority: 'MEDIUM',
       tags: ['regression'],
-      release: '2024-02'
+      release: '2024-02-15'
     })
 
     // Deletar o primeiro pacote
@@ -228,7 +228,7 @@ describe('deletePackage - verificação de integridade', () => {
       type: 'SMOKE',
       priority: 'LOW',
       tags: ['smoke'],
-      release: '2024-03'
+      release: '2024-03-15'
     })
 
     // Deletar pacote do primeiro projeto

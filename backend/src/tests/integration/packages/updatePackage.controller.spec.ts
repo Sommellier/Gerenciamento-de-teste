@@ -84,7 +84,7 @@ beforeAll(async () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       projectId: projectId,
-      release: '2024-01'
+      release: '2024-01-15'
     }
   })
   packageId = testPackage.id
@@ -117,7 +117,7 @@ describe('updatePackageController', () => {
           { action: 'Updated Step 1', expected: 'Updated first step' }
         ],
         environment: 'QA',
-        release: '2024-02',
+        release: '2024-02-15',
         status: 'CREATED'
       }
 

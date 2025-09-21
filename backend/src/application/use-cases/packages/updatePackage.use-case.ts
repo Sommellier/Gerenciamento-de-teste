@@ -76,19 +76,19 @@ export async function updatePackage({
     // Validar formato da release se fornecida
     if (release !== undefined && release !== null) {
       if (release === '') {
-        throw new AppError('Formato de release inválido. Use YYYY-MM', 400)
+        throw new AppError('Formato de release inválido. Use YYYY-MM-DD', 400)
       }
       
-      const releaseRegex = /^\d{4}-\d{2}$/
+      const releaseRegex = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/
       if (!releaseRegex.test(release)) {
-        throw new AppError('Formato de release inválido. Use YYYY-MM', 400)
+        throw new AppError('Formato de release inválido. Use YYYY-MM-DD', 400)
       }
       
       // Validar se o mês é válido (01-12)
       const [, month] = release.split('-')
       const monthNum = parseInt(month, 10)
       if (monthNum < 1 || monthNum > 12) {
-        throw new AppError('Formato de release inválido. Use YYYY-MM', 400)
+        throw new AppError('Formato de release inválido. Use YYYY-MM-DD', 400)
       }
     }
 

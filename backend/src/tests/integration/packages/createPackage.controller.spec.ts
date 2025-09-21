@@ -104,7 +104,7 @@ describe('createPackageController', () => {
           { action: 'Step 2', expected: 'Second step' }
         ],
         environment: 'DEV',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       const response = await request(app)
@@ -124,7 +124,7 @@ describe('createPackageController', () => {
         title: 'Test Package',
         type: 'FUNCTIONAL',
         priority: 'HIGH',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await request(app)
@@ -139,7 +139,7 @@ describe('createPackageController', () => {
         title: 'Test Package',
         type: 'FUNCTIONAL',
         priority: 'HIGH',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await request(app)
@@ -171,7 +171,7 @@ describe('createPackageController', () => {
         title: '',
         type: 'FUNCTIONAL',
         priority: 'HIGH',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await request(app)
@@ -188,7 +188,7 @@ describe('createPackageController', () => {
         title: 'Test Package',
         type: '',
         priority: 'HIGH',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await request(app)
@@ -205,7 +205,7 @@ describe('createPackageController', () => {
         title: 'Test Package',
         type: 'FUNCTIONAL',
         priority: '',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       await request(app)
@@ -242,7 +242,7 @@ describe('createPackageController', () => {
         priority: 'MEDIUM',
         tags: ['optional'],
         environment: 'QA',
-        release: '2024-02'
+        release: '2024-02-15'
       }
 
       const response = await request(app)
@@ -263,7 +263,7 @@ describe('createPackageController', () => {
         type: 'SMOKE',
         priority: 'LOW',
         assigneeId: ownerId,
-        release: '2024-03'
+        release: '2024-03-15'
       }
 
       const response = await request(app)
@@ -292,7 +292,7 @@ describe('createPackageController', () => {
         type: 'E2E',
         priority: 'CRITICAL',
         assigneeEmail: assignee.email,
-        release: '2024-04'
+        release: '2024-04-15'
       }
 
       const response = await request(app)
@@ -313,7 +313,7 @@ describe('createPackageController', () => {
         title: 'Test Package Error',
         type: 'FUNCTIONAL',
         priority: 'HIGH',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       // Mock do use case para retornar erro
@@ -335,7 +335,7 @@ describe('createPackageController', () => {
         title: 'Test Package AppError',
         type: 'FUNCTIONAL',
         priority: 'HIGH',
-        release: '2024-01'
+        release: '2024-01-15'
       }
 
       // Mock do use case para retornar AppError

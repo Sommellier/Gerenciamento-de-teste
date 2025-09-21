@@ -58,7 +58,7 @@ beforeEach(async () => {
     type: 'FUNCTIONAL',
     priority: 'HIGH',
     tags: ['original'],
-    release: '2024-01'
+    release: '2024-01-15'
   })
   packageId = testPackage.id
 })
@@ -78,7 +78,7 @@ describe('updatePackage - casos de sucesso', () => {
       priority: 'MEDIUM' as const,
       tags: ['updated'],
       environment: 'QA' as const,
-      release: '2024-02',
+      release: '2024-02-15',
       status: 'EXECUTED' as const
     }
 
@@ -92,7 +92,7 @@ describe('updatePackage - casos de sucesso', () => {
       priority: 'MEDIUM',
       tags: ['updated'],
       environment: 'QA',
-      release: '2024-02',
+      release: '2024-02-15',
       status: 'EXECUTED'
     })
   })
@@ -252,7 +252,7 @@ describe('updatePackage - validação de pacote', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     const updateData = {
@@ -305,14 +305,14 @@ describe('updatePackage - validação de release', () => {
       type: 'FUNCTIONAL',
       priority: 'HIGH',
       tags: ['test'],
-      release: '2024-01'
+      release: '2024-01-15'
     })
 
     const invalidFormats = [
       { release: '2024-1', desc: 'mês com 1 dígito' },
       { release: '24-01', desc: 'ano com 2 dígitos' },
       { release: '2024/01', desc: 'formato com barra' },
-      { release: '2024-13', desc: 'mês inválido' },
+      { release: '2024-13-15', desc: 'mês inválido' },
       { release: 'invalid', desc: 'formato inválido' },
       { release: '', desc: 'string vazia' }
     ]
@@ -326,7 +326,7 @@ describe('updatePackage - validação de release', () => {
 
       await expect(updatePackage(updateData)).rejects.toMatchObject({
         status: 400,
-        message: 'Formato de release inválido. Use YYYY-MM'
+        message: 'Formato de release inválido. Use YYYY-MM-DD'
       })
     }
   })
@@ -335,12 +335,12 @@ describe('updatePackage - validação de release', () => {
     const updateData = {
       packageId,
       projectId,
-      release: '2024-02'
+      release: '2024-02-15'
     }
 
     const result = await updatePackage(updateData)
     expect(result).not.toBeNull()
-    expect(result!.release).toBe('2024-02')
+    expect(result!.release).toBe('2024-02-15')
   })
 })
 
