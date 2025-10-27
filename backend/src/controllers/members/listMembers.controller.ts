@@ -22,12 +22,10 @@ export async function listMembersController(
   next: NextFunction
 ) {
   try {
-    console.log('listMembersController called with projectId:', req.params.projectId)
-    console.log('User:', req.user)
-    
     if (!req.user?.id) throw new AppError('Não autenticado', 401)
 
     const projectId = Number(req.params.projectId)
+    const requesterId = req.user.id
     const roles = parseRolesParam(req.query.roles)
     const q = typeof req.query.q === 'string' ? req.query.q : undefined
     const page = req.query.page ? Number(req.query.page) : undefined
@@ -42,10 +40,9 @@ export async function listMembersController(
     const sortParam = String(req.query.sort ?? '').toLowerCase()
     const sort = sortParam === 'desc' ? 'desc' : sortParam === 'asc' ? 'asc' : undefined
 
-    console.log('Calling listMembers with projectId:', projectId, 'requesterId:', req.user.id)
     const result = await listMembers({
       projectId,
-      requesterId: req.user.id,
+      requesterId,
       roles,
       q,
       page,
@@ -54,7 +51,6 @@ export async function listMembersController(
       sort,
     })
 
-    console.log('Members found:', result.items?.length || 0)
     return res.status(200).json(result)
   } catch (err) {
     console.error('Error in listMembersController:', err)

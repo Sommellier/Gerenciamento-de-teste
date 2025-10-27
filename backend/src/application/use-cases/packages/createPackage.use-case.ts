@@ -68,28 +68,31 @@ export async function createPackage({
       }
     }
 
-    // Validar formato da release (YYYY-MM-DD)
-    const releaseRegex = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/
+    // Validar formato da release (YYYY-MM ou YYYY-MM-DD)
+    const releaseRegex = /^\d{4}-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?$/
     if (!releaseRegex.test(release)) {
-      throw new AppError('Formato de release inválido. Use YYYY-MM-DD', 400)
+      throw new AppError('Formato de release inválido. Use YYYY-MM ou YYYY-MM-DD', 400)
     }
 
     // Criar o pacote
     const testPackage = await prisma.testPackage.create({
       data: {
         title,
-        description,
+        description: description || null,
         type: type as any,
         priority: priority as any,
-        tags,
-        assigneeEmail: finalAssigneeEmail,
-        environment: environment as any,
+        tags: JSON.stringify(tags), // Converter array para JSON string
+        assigneeEmail: finalAssigneeEmail || null,
+        environment: environment ? environment as any : null,
         release,
         projectId
       }
     })
 
-    return testPackage
+    return {
+      ...testPackage,
+      tags: JSON.parse(testPackage.tags || '[]')
+    }
   } catch (error) {
     console.error('Error in createPackage:', error)
     throw error

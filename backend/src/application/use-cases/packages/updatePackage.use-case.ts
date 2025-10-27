@@ -99,7 +99,7 @@ export async function updatePackage({
     if (description !== undefined) updateData.description = description
     if (type !== undefined) updateData.type = type
     if (priority !== undefined) updateData.priority = priority
-    if (tags !== undefined) updateData.tags = tags
+    if (tags !== undefined) updateData.tags = JSON.stringify(tags) // Converter array para JSON string
     if (finalAssigneeEmail !== undefined) updateData.assigneeEmail = finalAssigneeEmail
     if (environment !== undefined) updateData.environment = environment
     if (release !== undefined) updateData.release = release
@@ -144,7 +144,10 @@ export async function updatePackage({
       })
     }
 
-    return updatedPackage
+    return {
+      ...updatedPackage,
+      tags: JSON.parse(updatedPackage.tags || '[]')
+    }
   } catch (error) {
     console.error('Error in updatePackage:', error)
     throw error

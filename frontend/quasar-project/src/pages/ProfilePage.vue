@@ -203,6 +203,7 @@
               </div>
             </q-card-section>
           </q-card>
+
         </div>
       </div>
     </section>
@@ -251,6 +252,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
   </q-page>
 </template>
 
@@ -275,6 +277,7 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const formRef = ref<any>(null)
 const fileInput = ref<any>(null)
+
 
 // Dialogs
 const successDialog = ref(false)
@@ -305,10 +308,6 @@ const confirmPasswordRules = [
   (val: string) => !newPassword.value || val === newPassword.value || 'Senhas não coincidem'
 ]
 
-const isFormValid = computed(() => {
-  return name.value && email.value && 
-         (!newPassword.value || (newPassword.value === confirmPassword.value))
-})
 
 // Methods
 function goBack() {
@@ -406,10 +405,7 @@ async function uploadAvatar(file: File) {
 async function loadProfile() {
   loading.value = true
   try {
-    console.log('Loading profile...')
-    console.log('Token:', localStorage.getItem('token'))
     const response = await api.get('/profile')
-    console.log('Profile response:', response.data)
     profile.value = response.data
     
     // Populate form

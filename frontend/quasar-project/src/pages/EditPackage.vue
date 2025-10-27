@@ -308,7 +308,7 @@ const environmentOptions = [
 const statusOptions = [
   { label: 'Criado', value: 'CREATED' },
   { label: 'Executado', value: 'EXECUTED' },
-  { label: 'Passou', value: 'PASSED' },
+  { label: 'Concluído', value: 'PASSED' },
   { label: 'Falhou', value: 'FAILED' }
 ]
 

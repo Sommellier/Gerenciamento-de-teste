@@ -1,179 +1,334 @@
+<!-- Página de Criação de Projeto Moderna -->
 <template>
-  <q-page class="q-pa-none">
-    <!-- BG blur -->
-    <div class="hero" />
+  <div class="create-project-page">
+    <!-- Background com gradiente animado -->
+    <div class="animated-bg">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
 
-    <!-- Glass container -->
-    <section class="glass-shell">
-      <div class="header-row">
+    <!-- Container principal -->
+    <main class="main-container">
+      <!-- Header moderno -->
+      <header class="page-header">
+        <div class="header-content">
         <div class="header-left">
-          <q-btn 
-            flat 
-            round 
-            color="primary" 
-            icon="arrow_back" 
-            size="md"
-            @click="goBack"
-            class="back-btn"
-          >
-            <q-tooltip>Voltar ao menu principal</q-tooltip>
-          </q-btn>
-          
-          <div class="title-wrap">
-            <q-avatar color="primary" text-color="white" size="40px" icon="folder_open" />
-            <div>
-              <div class="title">Criar Projeto</div>
-              <div class="subtitle">Defina o básico e convide sua equipe</div>
+            <button class="back-button" @click="goBack" aria-label="Voltar ao dashboard">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <div class="title-section">
+              <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 19A2 2 0 0 1 20 21H4A2 2 0 0 1 2 19V5A2 2 0 0 1 4 3H8L12 7H20A2 2 0 0 1 22 9V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="title-content">
+                <h1 class="page-title">Criar Projeto</h1>
+                <p class="page-subtitle">Defina o básico e convide sua equipe</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="header-actions">
+            <button 
+              class="create-button"
+              @click="submitForm"
+              :disabled="submitting || !isFormValid"
+              aria-label="Criar projeto"
+            >
+              <svg v-if="!submitting" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H16L21 8V19A2 2 0 0 1 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div v-else class="loading-spinner"></div>
+              {{ submitting ? 'Criando...' : 'Criar Projeto' }}
+            </button>
+            
+            <!-- Profile Icon -->
+            <div class="profile-icon-container">
+              <button 
+                class="profile-icon-button"
+                @click="goToProfile"
+                aria-label="Ir para o perfil"
+              >
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
+      </header>
 
-        <q-btn color="primary" unelevated size="md" :loading="submitting" label="Criar projeto" @click="submitForm"
-          class="primary-cta" />
-      </div>
-
+      <!-- Conteúdo principal -->
+      <section class="content-section">
       <div class="content-grid">
-        <!-- LEFT: Form -->
-        <q-card flat bordered class="panel">
-          <q-card-section class="panel-head">
-            <q-icon name="description" size="22px" class="q-mr-sm" />
-            <div class="panel-title">Dados do projeto</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <q-form ref="formRef" @submit.prevent="onSubmit" class="q-gutter-md">
-              <q-input v-model="name" label="Nome" filled :maxlength="100" counter :rules="nameRules" lazy-rules>
-                <template #prepend><q-icon name="folder" /></template>
-              </q-input>
-
-              <q-input v-model="description" label="Descrição (opcional)" type="textarea" autogrow filled
-                :maxlength="500" counter>
-                <template #prepend><q-icon name="notes" /></template>
-              </q-input>
-
-              <q-banner v-if="name.trim().length < 2" class="hint" rounded dense inline-actions>
-                <template #avatar>
-                  <q-icon name="info" />
-                </template>
-                Mínimo de 2 caracteres. Permitidos: letras, números, espaço, “-”, “_” e “.”.
-              </q-banner>
-            </q-form>
-          </q-card-section>
-        </q-card>
-
-        <!-- RIGHT: Collaborators -->
-        <q-card flat bordered class="panel">
-          <q-card-section class="panel-head">
-            <q-icon name="group_add" size="22px" class="q-mr-sm" />
-            <div class="panel-title">Colaboradores</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <div class="row q-col-gutter-sm items-stretch q-mb-md">
-              <div class="col">
-                <q-input v-model="emailInput" label="Adicionar por e-mail" type="email" filled clearable
-                  :error="emailInput.length > 0 && !emailRegex.test(emailInput)" error-message="Informe um e-mail válido"
-                  @keyup.enter="addEmail">
-                  <template #prepend><q-icon name="mail" /></template>
-                </q-input>
+          <!-- Formulário de dados do projeto -->
+          <div class="form-card">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6A2 2 0 0 0 4 4V20A2 2 0 0 0 6 22H18A2 2 0 0 0 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
-              <div class="col-auto">
-                <q-btn color="primary" class="full-h" label="Adicionar" :disable="!emailRegex.test(emailInput)"
-                  @click="addEmail" />
+              <div class="card-title">Dados do Projeto</div>
+            </div>
+            
+            <div class="card-content">
+              <form @submit.prevent="onSubmit" class="project-form">
+                <div class="form-group">
+                  <label class="form-label">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22 19A2 2 0 0 1 20 21H4A2 2 0 0 1 2 19V5A2 2 0 0 1 4 3H8L12 7H20A2 2 0 0 1 22 9V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Nome do Projeto
+                  </label>
+                  <input
+                    v-model="name"
+                    type="text"
+                    class="form-input"
+                    placeholder="Digite o nome do projeto"
+                    maxlength="100"
+                    required
+                  />
+                  <div class="input-counter">{{ name.length }}/100</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 2H6A2 2 0 0 0 4 4V20A2 2 0 0 0 6 22H18A2 2 0 0 0 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="10,9 9,9 8,9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Descrição (Opcional)
+                  </label>
+                  <textarea
+                    v-model="description"
+                    class="form-textarea"
+                    placeholder="Descreva o objetivo do projeto..."
+                    maxlength="500"
+                    rows="4"
+                  ></textarea>
+                  <div class="input-counter">{{ description.length }}/500</div>
+                </div>
+
+                <!-- Hint para validação -->
+                <div v-if="name.trim().length < 2" class="form-hint">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Mínimo de 2 caracteres. Permitidos: letras, números, espaço, "-", "_" e ".".
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Seção de colaboradores -->
+          <div class="collaborators-card">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17 21V19A4 4 0 0 0 13 15H5A4 4 0 0 0 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M23 21V19A4 4 0 0 0 19.5 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16 3.13A4 4 0 0 1 16 10.87" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
+              <div class="card-title">Colaboradores</div>
             </div>
 
-            <q-table flat bordered :rows="collaborators" :columns="columns" row-key="email"
-              :no-data-label="'Nenhum colaborador adicionado'" :rows-per-page-options="[5, 10, 0]" class="collab-table">
-              <!-- email -->
-              <template #body-cell-email="props">
-                <q-td :props="props">
-                  <div class="row items-center no-wrap q-gutter-sm">
-                    <q-avatar size="28px" :color="avatarColor(props.row.email)" text-color="white">
-                      {{ initialsFrom(props.row.email) }}
-                    </q-avatar>
-                    <div class="ellipsis" style="max-width: 220px">{{ props.row.email }}</div>
+            <div class="card-content">
+              <!-- Adicionar colaborador -->
+              <div class="add-collaborator">
+                <div class="input-group">
+                  <div class="input-wrapper">
+                    <svg class="input-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <input
+                      v-model="emailInput"
+                      type="email"
+                      class="email-input"
+                      placeholder="Adicionar por e-mail"
+                      @keyup.enter="addEmail"
+                    />
                   </div>
-                </q-td>
-              </template>
+                  <button 
+                    class="add-button"
+                    @click="addEmail"
+                    :disabled="!emailRegex.test(emailInput)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Adicionar
+                  </button>
+                </div>
+              </div>
 
-              <!-- role -->
-              <template #body-cell-role="props">
-                <q-td :props="props">
-                  <q-select v-model="props.row.role" :options="roleOptions" dense outlined emit-value map-options
-                    style="min-width: 140px" />
-                </q-td>
-              </template>
+              <!-- Lista de colaboradores -->
+              <div class="collaborators-list">
+                <div v-if="collaborators.length === 0" class="empty-state">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 21V19A4 4 0 0 0 13 15H5A4 4 0 0 0 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M23 21V19A4 4 0 0 0 19.5 15.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 3.13A4 4 0 0 1 16 10.87" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <h3>Nenhum colaborador adicionado</h3>
+                  <p>Adicione colaboradores por e-mail para convidá-los ao projeto</p>
+                </div>
 
-              <!-- status -->
-              <template #body-cell-status="props">
-                <q-td :props="props">
-                  <q-chip dense :color="statusColor(props.row.status)" text-color="white">
-                    {{ props.row.status }}
-                  </q-chip>
-                </q-td>
-              </template>
+                <div v-else class="collaborators-table">
+                  <div 
+                    v-for="collaborator in collaborators" 
+                    :key="collaborator.email"
+                    class="collaborator-row"
+                  >
+                    <div class="collaborator-info">
+                      <div class="collaborator-avatar">
+                        {{ initialsFrom(collaborator.email) }}
+                      </div>
+                      <div class="collaborator-details">
+                        <div class="collaborator-email">{{ collaborator.email }}</div>
+                        <div class="collaborator-status" :class="`status-${collaborator.status.toLowerCase()}`">
+                          {{ collaborator.status }}
+                        </div>
+                      </div>
+                    </div>
 
-              <!-- actions -->
-              <template #body-cell-actions="props">
-                <q-td :props="props" class="text-right">
-                  <q-btn dense flat round icon="more_vert">
-                    <q-menu auto-close anchor="bottom right" self="top right">
-                      <q-list style="min-width: 180px">
-                        <q-item clickable @click="resendInvite(props.row)">
-                          <q-item-section avatar><q-icon name="forward_to_inbox" /></q-item-section>
-                          <q-item-section>Reenviar convite</q-item-section>
-                        </q-item>
-                        <q-item clickable @click="removeRow(props.row.email)">
-                          <q-item-section avatar><q-icon name="delete_outline" /></q-item-section>
-                          <q-item-section>Remover</q-item-section>
-                        </q-item>
-                      </q-list>
-                    </q-menu>
-                  </q-btn>
-                </q-td>
-              </template>
-            </q-table>
-          </q-card-section>
-        </q-card>
+                    <div class="collaborator-role">
+                      <select 
+                        v-model="collaborator.role" 
+                        class="role-select"
+                      >
+                        <option value="MANAGER">Manager</option>
+                        <option value="TESTER">Tester</option>
+                        <option value="APPROVER">Approver</option>
+                      </select>
+                    </div>
+
+                    <div class="collaborator-actions">
+                      <button 
+                        class="action-button"
+                        @click="showCollaboratorMenu(collaborator)"
+                        aria-label="Ações do colaborador"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="12" cy="12" r="1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <circle cx="19" cy="12" r="1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <circle cx="5" cy="12" r="1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Menu de ações do colaborador -->
+    <div v-if="showMenu" class="menu-overlay" @click="closeMenu">
+      <div class="menu-container" @click.stop>
+        <div class="menu-header">
+          <h3>Ações do Colaborador</h3>
+          <button class="menu-close" @click="closeMenu">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="menu-content">
+          <button class="menu-action" @click="resendInvite(selectedCollaborator)">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Reenviar Convite
+          </button>
+          <button class="menu-action danger" @click="removeCollaborator(selectedCollaborator.email)">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19,6V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V6M8,6V4A2,2 0 0,1 10,2H14A2,2 0 0,1 16,4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Remover
+          </button>
+        </div>
       </div>
-
-      <q-linear-progress v-show="submitting" indeterminate color="primary" class="q-mt-md q-rounded-borders"
-        style="height: 4px" />
-    </section>
+    </div>
 
     <!-- Success dialog -->
-    <q-dialog v-model="successDialog">
-      <q-card>
-        <q-card-section class="row items-center q-gutter-sm">
-          <q-icon name="check_circle" color="positive" size="32px" />
-          <div class="text-h6">Projeto criado</div>
-        </q-card-section>
-        <q-card-section class="q-pt-none">{{ successText }}</q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="OK" color="primary" @click="onSuccessOk" />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
+    <div v-if="successDialog" class="dialog-overlay" @click="closeSuccessDialog">
+      <div class="dialog-container success" @click.stop>
+        <div class="dialog-header">
+          <div class="dialog-icon success">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="22,4 12,14.01 9,11.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>Projeto Criado!</h3>
+        </div>
+        <div class="dialog-content">
+          <p>{{ successText }}</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="confirm-button success" @click="onSuccessOk">
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Error dialog -->
-    <q-dialog v-model="errorDialog">
-      <q-card>
-        <q-card-section class="row items-center q-gutter-sm">
-          <q-icon name="error" color="negative" size="32px" />
-          <div class="text-h6">Falha ao criar projeto</div>
-        </q-card-section>
-        <q-card-section class="q-pt-none">{{ errorText }}</q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Fechar" color="primary" v-close-popup />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </q-page>
+    <div v-if="errorDialog" class="dialog-overlay" @click="closeErrorDialog">
+      <div class="dialog-container error" @click.stop>
+        <div class="dialog-header">
+          <div class="dialog-icon error">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+              <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>Falha ao Criar Projeto</h3>
+        </div>
+        <div class="dialog-content">
+          <p>{{ errorText }}</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="confirm-button error" @click="closeErrorDialog">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar, QTableProps } from 'quasar'
 import api from 'src/services/api'
@@ -187,24 +342,15 @@ function goBack() {
   router.push('/dashboard')
 }
 
-/** ---------- usuário logado (ownerId) ---------- */
-const ownerId = ref<number | null>(null)
-function loadOwnerId() {
-  try {
-    const raw = localStorage.getItem('user') || sessionStorage.getItem('user')
-    if (!raw) { ownerId.value = null; return }
-    const u = JSON.parse(raw)
-    ownerId.value = typeof u?.id === 'number' ? u.id : Number(u?.id) || null
-  } catch { ownerId.value = null }
+function goToProfile() {
+  router.push('/profile')
 }
-onMounted(loadOwnerId)
 
 /** ---------- projeto ---------- */
 const projectId = ref<number | null>(null)
 const name = ref<string>('')
 const description = ref<string>('')
 const submitting = ref(false)
-const formRef = ref<any>(null)
 const successDialog = ref(false)
 const successText = ref('Projeto criado com sucesso!')
 const errorDialog = ref(false)
@@ -235,6 +381,15 @@ const emailInput = ref<string>('')
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const collaborators = ref<Row[]>([])
 
+// Menu de colaboradores
+const showMenu = ref(false)
+const selectedCollaborator = ref<Row | null>(null)
+
+// Computed para validação do formulário
+const isFormValid = computed(() => {
+  return name.value.trim().length >= 2 && nameRegex.test(name.value.trim())
+})
+
 const roleOptions = [
   { label: 'Manager', value: 'MANAGER' },
   { label: 'Tester', value: 'TESTER' },
@@ -254,6 +409,31 @@ function addEmail() {
 
 function removeRow(email: string) {
   collaborators.value = collaborators.value.filter(r => r.email !== email)
+}
+
+function showCollaboratorMenu(collaborator: Row) {
+  selectedCollaborator.value = collaborator
+  showMenu.value = true
+}
+
+function closeMenu() {
+  showMenu.value = false
+  selectedCollaborator.value = null
+}
+
+function removeCollaborator(email: string) {
+  removeRow(email)
+  closeMenu()
+}
+
+function closeSuccessDialog() {
+  successDialog.value = false
+  successText.value = ''
+}
+
+function closeErrorDialog() {
+  errorDialog.value = false
+  errorText.value = ''
 }
 
 async function resendInvite(row: Row) {
@@ -316,8 +496,8 @@ type ProjectDTO = {
 }
 
 /** ======= API helpers (ajuste os caminhos se necessário) ======= */
-async function apiCreateProject(payload: { ownerId: number; name: string; description: string | null }) {
-  // POST /projects
+async function apiCreateProject(payload: { name: string; description: string | null }) {
+  // POST /projects (ownerId vem do token JWT automaticamente)
   return api.post<ProjectDTO>('/projects', payload)
 }
 
@@ -499,17 +679,15 @@ function getCustomInviteErrorMessage(status: number | undefined, rawMsg: string 
 
 /** ---------- submit ---------- */
 async function onSubmit() {
-  if (!ownerId.value) {
-    $q.notify({ type: 'negative', message: 'Usuário não identificado.' })
+  // Validação inline - não precisa de formRef
+  if (!isFormValid.value) {
+    $q.notify({ type: 'warning', message: 'Preencha o nome do projeto corretamente (mínimo 2 caracteres)' })
     return
   }
-  const ok = await formRef.value?.validate?.()
-  if (!ok) return
 
   submitting.value = true
   try {
     const { data: project } = await apiCreateProject({
-      ownerId: ownerId.value,
       name: name.value.trim(),
       description: (description.value || '').trim() || null
     })
@@ -552,8 +730,6 @@ function resetPage() {
   description.value = ''
   emailInput.value = ''
   collaborators.value = []
-  const f = formRef.value
-  if (f?.resetValidation) f.resetValidation()
 }
 
 function submitForm() { onSubmit() }
@@ -570,129 +746,952 @@ function onSuccessOk() {
 
 
 <style scoped>
-
-.hero {
-  position: fixed;
-  inset: 0;
-  background-image: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1920&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-  filter: blur(6px) saturate(110%);
-  transform: scale(1.05);
-  z-index: 0;
+/* ===== Reset e Base ===== */
+* {
+  box-sizing: border-box;
 }
 
-.glass-shell {
+.create-project-page {
+  min-height: 100vh;
   position: relative;
-  z-index: 1;
-  width: min(1160px, 94vw);
-  margin: 56px auto;
-  padding: 18px 18px 22px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, .58);
-  border: 1px solid rgba(255, 255, 255, .7);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, .18),
-    inset 0 1px 0 rgba(255, 255, 255, .7);
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
 }
 
-.header-row {
+/* ===== Background Animado ===== */
+.animated-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.7;
+  animation: float 20s ease-in-out infinite;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(45deg, #ff6b6b, #feca57);
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(45deg, #48dbfb, #0abde3);
+  top: 60%;
+  right: 20%;
+  animation-delay: -7s;
+}
+
+.orb-3 {
+  width: 250px;
+  height: 250px;
+  background: linear-gradient(45deg, #ff9ff3, #f368e0);
+  bottom: 20%;
+  left: 50%;
+  animation-delay: -14s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-30px) rotate(120deg);
+  }
+  66% {
+    transform: translateY(30px) rotate(240deg);
+  }
+}
+
+/* ===== Container Principal ===== */
+.main-container {
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* ===== Header ===== */
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.header-content {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 14px 14px 6px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 1.5rem 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
-.back-btn {
-  transition: all 0.2s ease;
+.back-button {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
 }
 
-.back-btn:hover {
-  transform: translateX(-2px);
-  background-color: rgba(25, 118, 210, 0.08);
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
 }
 
-.back-btn:active {
-  transform: translateX(-1px);
+.back-button svg {
+  width: 20px;
+  height: 20px;
 }
 
-.title-wrap {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.icon-wrapper {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.icon-wrapper svg {
+  width: 24px;
+  height: 24px;
+}
+
+.title-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.title-content p {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+/* ===== Header Actions ===== */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.create-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.create-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+}
+
+.create-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.create-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== Profile Icon ===== */
+.profile-icon-container {
+  display: flex;
   align-items: center;
 }
 
-.title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #0b1220;
-  line-height: 1.1;
+.profile-icon-button {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
 }
 
-.subtitle {
-  font-size: 13px;
-  color: #64748b;
-  margin-top: 2px;
+.profile-icon-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
 }
 
-.primary-cta {
-  min-width: 160px;
+.profile-icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* ===== Content Section ===== */
+.content-section {
+  margin-bottom: 2rem;
 }
 
 .content-grid {
   display: grid;
-  gap: 18px;
   grid-template-columns: 1fr 1fr;
-  padding: 6px;
+  gap: 2rem;
 }
 
-@media (max-width: 900px) {
-  .content-grid {
-    grid-template-columns: 1fr;
+/* ===== Cards ===== */
+.form-card,
+.collaborators-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.card-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.card-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: white;
+}
+
+.card-content {
+  padding: 1.5rem;
+}
+
+/* ===== Form Styles ===== */
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+}
+
+.form-label svg {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  color: white;
+  font-size: 0.9rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.input-counter {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: right;
+}
+
+.form-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(14, 165, 233, 0.2);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+}
+
+.form-hint svg {
+  width: 16px;
+  height: 16px;
+  color: #0ea5e9;
+}
+
+/* ===== Collaborators Section ===== */
+.add-collaborator {
+  margin-bottom: 1.5rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.input-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  z-index: 1;
+}
+
+.email-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  color: white;
+  font-size: 0.9rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.email-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.email-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.add-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.add-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+}
+
+.add-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.add-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Collaborators List ===== */
+.collaborators-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.empty-state svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.empty-state h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.collaborators-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.collaborator-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.collaborator-row:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.collaborator-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.collaborator-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.collaborator-details {
+  flex: 1;
+}
+
+.collaborator-email {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: white;
+  margin-bottom: 0.25rem;
+}
+
+.collaborator-status {
+  font-size: 0.8rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.status-pending {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.status-invited {
+  background: rgba(13, 202, 240, 0.2);
+  color: #0dcaf0;
+}
+
+.status-accepted {
+  background: rgba(25, 135, 84, 0.2);
+  color: #198754;
+}
+
+.status-declined,
+.status-revoked {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.collaborator-role {
+  min-width: 120px;
+}
+
+.role-select {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem;
+  color: white;
+  font-size: 0.85rem;
+}
+
+.role-select option {
+  background: #2d3748;
+  color: white;
+}
+
+.collaborator-actions {
+  display: flex;
+  align-items: center;
+}
+
+.action-button {
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.action-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.action-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Menu Overlay ===== */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.menu-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  min-width: 300px;
+  max-width: 400px;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.panel {
-  border-radius: 18px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, .85);
-}
-
-.body--dark .panel {
-  background: rgba(22, 22, 22, .65);
-  border-color: rgba(255, 255, 255, .08);
-}
-
-.panel-head {
+.menu-header {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  justify-content: space-between;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
-.panel-title {
+.menu-header h3 {
+  margin: 0;
+  color: #2d3748;
   font-weight: 600;
-  font-size: 15px;
+  font-size: 1.1rem;
 }
 
-.hint {
-  background: rgba(14, 165, 233, 0.08);
-  color: #0369a1;
+.menu-close {
+  width: 32px;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #666;
 }
 
-.full-h {
-  height: 40px;
+.menu-close:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 
-.collab-table {
+.menu-close svg {
+  width: 16px;
+  height: 16px;
+}
+
+.menu-content {
+  padding: 1rem;
+}
+
+.menu-action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: none;
   border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #4a5568;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.menu-action:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.menu-action.danger {
+  color: #e53e3e;
+}
+
+.menu-action.danger:hover {
+  background: rgba(229, 62, 62, 0.1);
+}
+
+.menu-action svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ===== Diálogos ===== */
+.dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.dialog-container {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  min-width: 400px;
+  max-width: 500px;
+  animation: slideUp 0.3s ease;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.dialog-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.dialog-icon.success {
+  background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+}
+
+.dialog-icon.error {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+}
+
+.dialog-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.dialog-header h3 {
+  margin: 0;
+  color: #2d3748;
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.dialog-content {
+  padding: 1.5rem;
+}
+
+.dialog-content p {
+  margin: 0;
+  color: #4a5568;
+  line-height: 1.6;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.confirm-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
+}
+
+.confirm-button.success {
+  background: linear-gradient(135deg, #48dbfb 0%, #0abde3 100%);
+}
+
+.confirm-button.error {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+}
+
+.confirm-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== Responsividade ===== */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 1rem 0.5rem;
+  }
+  
+  .header-content {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .header-left {
+    width: 100%;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .card-content {
+    padding: 1rem;
+  }
+  
+  .input-group {
+    flex-direction: column;
+  }
+  
+  .collaborator-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .collaborator-info {
+    justify-content: center;
+  }
+  
+  .collaborator-role {
+    min-width: auto;
+  }
+  
+  .dialog-container {
+    min-width: 320px;
+    margin: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .create-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
+  
+  .collaborator-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ===== Estados de Foco para Acessibilidade ===== */
+.back-button:focus-visible,
+.create-button:focus-visible,
+.profile-icon-button:focus-visible,
+.form-input:focus-visible,
+.form-textarea:focus-visible,
+.email-input:focus-visible,
+.add-button:focus-visible,
+.action-button:focus-visible,
+.menu-action:focus-visible,
+.confirm-button:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 2px;
+}
+
+/* ===== Scrollbar Personalizada ===== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 </style>

@@ -16,6 +16,9 @@ const routes: RouteRecordRaw[] = [
       // protegido
       { path: 'dashboard', name: 'dashboard', component: () => import('pages/DashboardPage.vue'), meta: { requiresAuth: true } },
 
+      // --- CONVITES ---
+      { path: 'invites', name: 'invites', component: () => import('pages/InvitesPage.vue'), meta: { requiresAuth: true } },
+
       // --- PROJETOS ---
       { path: 'projects', name: 'projects', component: () => import('pages/ProjectsPage.vue'), meta: { requiresAuth: true } },
       { path: 'create-project', name: 'project-create', component: () => import('pages/Createproject.vue'), meta: { requiresAuth: true } },
@@ -26,8 +29,12 @@ const routes: RouteRecordRaw[] = [
       
       // --- PACOTES DE TESTE ---
       { path: 'projects/:projectId/packages', name: 'packages', component: () => import('pages/PackagesPage.vue'), meta: { requiresAuth: true } },
+      { path: 'projects/:projectId/packages/:packageId', name: 'package-details', component: () => import('pages/PackageDetailsPage.vue'), meta: { requiresAuth: true } },
+      { path: 'projects/:projectId/packages/:packageId/scenarios', name: 'package-scenarios', component: () => import('pages/PackageScenarios.vue'), meta: { requiresAuth: true } },
+      { path: 'projects/:projectId/packages/:packageId/scenarios/:scenarioId', name: 'scenario-details', component: () => import('pages/ScenarioDetailsPage.vue'), meta: { requiresAuth: true } },
+      { path: 'projects/:projectId/packages/:packageId/scenarios/:scenarioId/execute', name: 'scenario-execution', component: () => import('pages/ScenarioExecutionPage.vue'), meta: { requiresAuth: true } },
       { path: 'projects/:projectId/create-package', name: 'create-package', component: () => import('pages/CreatePackage.vue'), meta: { requiresAuth: true } },
-      { path: 'packages/:id/edit', name: 'edit-package', component: () => import('pages/EditPackage.vue'), meta: { requiresAuth: true } },
+      { path: 'projects/:projectId/packages/:packageId/edit', name: 'edit-package', component: () => import('pages/EditPackagePage.vue'), meta: { requiresAuth: true } },
 
       // --- PERFIL ---
       { path: 'profile', name: 'profile', component: () => import('pages/ProfilePage.vue'), meta: { requiresAuth: true } },

@@ -51,7 +51,7 @@ async function seedProjectWithMembers() {
     data: { ownerId: owner.id, name: unique('Projeto'), description: null }
   })
 
-  // membros do projeto
+  // membros do projeto (incluir owner como membro OWNER)
   await prisma.userOnProject.create({ data: { projectId: project.id, userId: owner.id, role: 'OWNER' } })
   await prisma.userOnProject.create({ data: { projectId: project.id, userId: manager.id, role: 'MANAGER' } })
   await prisma.userOnProject.create({ data: { projectId: project.id, userId: tester1.id, role: 'TESTER' } })
@@ -152,8 +152,8 @@ describe('listMembers.use-case', () => {
   })
   const roles = res.items.map(i => i.role)
 
-  // ordem do enum no Prisma/Postgres:
-  const enumOrder = ['OWNER', 'MANAGER', 'TESTER', 'APPROVER'] as const
+  // ordem do enum no Prisma/SQLite:
+  const enumOrder = ['APPROVER', 'MANAGER', 'OWNER', 'TESTER'] as const
   const sortedByEnum = [...roles].sort(
     (a, b) => enumOrder.indexOf(a as typeof enumOrder[number]) - enumOrder.indexOf(b as typeof enumOrder[number])
   )

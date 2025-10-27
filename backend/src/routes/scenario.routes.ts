@@ -1,59 +1,53 @@
 import { Router } from 'express'
-import { auth } from '../infrastructure/auth'
-import { createScenarioController } from '../controllers/scenarios/createScenario.controller'
-import { getProjectScenariosController } from '../controllers/scenarios/getProjectScenarios.controller'
-import { getProjectMetricsController } from '../controllers/scenarios/getProjectMetrics.controller'
-import { getProjectReleasesController } from '../controllers/scenarios/getProjectReleases.controller'
-import { getProjectReleases } from '../application/use-cases/scenarios/getProjectReleases.use-case'
-import { AppError } from '../utils/AppError'
+import multer from 'multer'
+import path from 'path'
+import { ScenarioController } from '../controllers/scenarios/scenario.controller'
+import auth from '../infrastructure/auth'
+
+const asyncH =
+  (fn: any) =>
+  (req: any, res: any, next: any) =>
+    Promise.resolve(fn(req, res, next)).catch(next)
 
 const router = Router()
+const scenarioController = new ScenarioController()
 
-// Rota de teste sem auth
-router.get('/test', (req, res) => {
-  res.json({ message: 'Scenario routes working' })
-})
-
-// Rotas para cenários de teste
-router.post('/projects/:projectId/scenarios', auth, createScenarioController)
-router.get('/projects/:projectId/scenarios', auth, getProjectScenariosController)
-router.get('/projects/:projectId/metrics', auth, getProjectMetricsController)
-
-// Rotas temporárias sem auth para debug (movidas para o final)
-
-// Rota para releases
-router.get('/projects/:projectId/releases', auth, async (req: any, res) => {
-  try {
-    const { projectId } = req.params
-    
-    if (!req.user?.id) {
-      res.status(401).json({ message: 'Não autenticado' })
-      return
-    }
-
-    const releases = await getProjectReleases({ projectId: Number(projectId) })
-    res.json(releases)
-  } catch (err) {
-    if (err instanceof AppError) {
-      res.status(err.statusCode).json({ message: err.message })
-    } else {
-      res.status(500).json({ message: 'Erro interno do servidor' })
-    }
+// Configuração do multer para upload de arquivos
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/evidences/')
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname))
   }
 })
 
-// Rota temporária sem auth para releases (para debug)
-router.get('/projects/:projectId/releases-debug', async (req: any, res) => {
-  try {
-    const { projectId } = req.params
-    console.log('Debug releases route called for project:', projectId)
-    
-    const releases = await getProjectReleases({ projectId: Number(projectId) })
-    res.json(releases)
-  } catch (err) {
-    console.error('Error in debug releases route:', err)
-    res.status(500).json({ message: 'Erro interno do servidor' })
+const upload = multer({ 
+  storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
   }
 })
+
+// Rotas para cenários de pacotes
+router.get('/packages/:packageId/scenarios', auth, asyncH(scenarioController.getPackageScenarios.bind(scenarioController)))
+router.post('/packages/:packageId/scenarios', auth, asyncH(scenarioController.createScenario.bind(scenarioController)))
+
+// Rotas para cenários individuais
+router.get('/scenarios/:id', auth, asyncH(scenarioController.getScenarioById.bind(scenarioController)))
+router.put('/scenarios/:id', auth, asyncH(scenarioController.updateScenario.bind(scenarioController)))
+router.delete('/scenarios/:id', auth, asyncH(scenarioController.deleteScenario.bind(scenarioController)))
+
+// Rotas para execução de cenários
+router.post('/scenarios/:id/executions', auth, asyncH(scenarioController.executeScenario.bind(scenarioController)))
+router.post('/scenarios/:id/duplicate', auth, asyncH(scenarioController.duplicateScenario.bind(scenarioController)))
+
+// Rotas para evidências
+router.post('/scenarios/:id/evidences', auth, upload.single('file'), asyncH(scenarioController.uploadEvidence.bind(scenarioController)))
+
+// Rotas para exportação
+router.get('/packages/:packageId/scenarios/export.csv', auth, asyncH(scenarioController.exportScenariosToCSV.bind(scenarioController)))
+router.get('/packages/:packageId/scenarios/report.pdf', auth, asyncH(scenarioController.generateScenarioReport.bind(scenarioController)))
 
 export default router

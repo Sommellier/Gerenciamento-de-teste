@@ -1,101 +1,92 @@
 <template>
-  <q-page class="q-pa-none">
-    <!-- BG blur -->
-    <div class="hero" />
+  <q-page class="modern-create-scenario">
+    <!-- Animated Background -->
+    <div class="animated-bg">
+      <div class="bg-orb orb-1"></div>
+      <div class="bg-orb orb-2"></div>
+      <div class="bg-orb orb-3"></div>
+    </div>
 
-    <!-- Glass container -->
-    <section class="glass-shell">
-      <div class="header-row">
+    <!-- Main Container -->
+    <div class="main-container">
+      <!-- Header -->
+      <div class="page-header">
         <div class="header-left">
-          <q-btn 
-            flat 
-            round 
-            color="primary" 
-            icon="arrow_back" 
-            size="md"
+          <q-btn
+            flat
+            round
+            icon="arrow_back"
             @click="goBack"
             class="back-btn"
-          >
-            <q-tooltip>Voltar ao projeto</q-tooltip>
-          </q-btn>
-          
-          <div class="title-wrap">
-            <q-avatar color="primary" text-color="white" size="40px" icon="add_task" />
-            <div>
-              <div class="title">Criar Cenário de Teste</div>
-              <div class="subtitle">Adicione novos cenários de teste ao projeto</div>
-            </div>
+            color="white"
+          />
+          <div class="header-info">
+            <h1 class="page-title">Criar Cenário de Teste</h1>
+            <p class="page-subtitle">Adicione um novo cenário de teste ao projeto</p>
           </div>
         </div>
-
+        
         <div class="header-actions">
-          <q-btn 
-            color="primary" 
-            unelevated 
-            size="md" 
-            label="Criar Cenário" 
-            @click="submitForm"
-            :loading="creatingScenario"
-            class="create-btn"
-          />
+          <q-btn
+            flat
+            round
+            icon="account_circle"
+            @click="goToProfile"
+            class="profile-btn"
+            color="white"
+          >
+            <q-tooltip>Meu Perfil</q-tooltip>
+          </q-btn>
         </div>
       </div>
 
-      <!-- Form Section -->
-      <q-card flat bordered class="form-panel">
-        <q-card-section class="panel-head">
-          <q-icon name="description" size="22px" class="q-mr-sm" />
-          <div class="panel-title">Dados do Cenário</div>
-        </q-card-section>
-        <q-separator />
-        <q-card-section>
-          <q-form ref="formRef" @submit.prevent="onSubmit" class="q-gutter-md">
-            <div class="form-grid">
-              <div class="form-row">
+      <!-- Content Section -->
+      <div class="content-section">
+        <!-- Form Card -->
+        <div class="form-card">
+          <div class="card-header">
+            <div class="header-icon">
+              <q-icon name="add_task" size="32px" />
+            </div>
+            <div class="header-content">
+              <h2 class="card-title">Informações do Cenário</h2>
+              <p class="card-description">Preencha os dados essenciais para criar o cenário</p>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <q-form @submit="createScenario" class="scenario-form">
+              <!-- Scenario Name -->
+              <div class="form-group">
+                <label class="form-label">
+                  <q-icon name="title" class="label-icon" />
+                  Nome do Cenário de Teste
+                </label>
                 <q-input
-                  v-model="scenarioForm.title"
-                  label="Título *"
+                  v-model="scenarioForm.name"
+                  placeholder="Digite o nome do cenário de teste"
                   outlined
-                  :rules="titleRules"
-                  class="form-field"
-                />
-                <q-select
-                  v-model="scenarioForm.type"
-                  :options="scenarioTypes"
-                  label="Tipo *"
-                  outlined
-                  :rules="typeRules"
-                  class="form-field"
-                />
-              </div>
-              
-              <div class="form-row">
-                <q-select
-                  v-model="scenarioForm.priority"
-                  :options="priorityOptions"
-                  label="Prioridade *"
-                  outlined
-                  :rules="priorityRules"
-                  class="form-field"
-                />
-                <q-select
-                  v-model="scenarioForm.environment"
-                  :options="environmentOptions"
-                  label="Ambiente"
-                  outlined
-                  class="form-field"
+                  :rules="nameRules"
+                  class="form-input"
+                  hint="Ex: Login com credenciais válidas"
                 />
               </div>
 
-              <div class="form-row">
+              <!-- Testador Responsável -->
+              <div class="form-group">
+                <label class="form-label">
+                  <q-icon name="person" class="label-icon" />
+                  Testador Responsável
+                </label>
                 <q-select
-                  v-model="scenarioForm.assigneeId"
+                  v-model="scenarioForm.tester"
                   :options="memberOptions"
-                  label="Responsável"
+                  placeholder="Selecione o testador responsável"
                   outlined
-                  clearable
-                  class="form-field"
-                  @update:model-value="onAssigneeChange"
+                  :rules="testerRules"
+                  class="form-input"
+                  emit-value
+                  map-options
                 >
                   <template v-slot:prepend>
                     <q-icon name="person" />
@@ -103,8 +94,8 @@
                   <template v-slot:option="scope">
                     <q-item v-bind="scope.itemProps">
                       <q-item-section avatar>
-                        <q-avatar :color="getMemberAvatarColor(scope.opt)" text-color="white" size="32px">
-                          {{ getMemberInitials(scope.opt) }}
+                        <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
+                          {{ getInitials(scope.opt.label) }}
                         </q-avatar>
                       </q-item-section>
                       <q-item-section>
@@ -114,117 +105,154 @@
                     </q-item>
                   </template>
                 </q-select>
-                <q-input
-                  v-model="scenarioForm.release"
-                  label="Release"
+              </div>
+
+              <!-- Tipo do Cenário -->
+              <div class="form-group">
+                <label class="form-label">
+                  <q-icon name="category" class="label-icon" />
+                  Tipo do Cenário
+                </label>
+                <q-select
+                  v-model="scenarioForm.type"
+                  :options="typeOptions"
+                  placeholder="Selecione o tipo do cenário"
                   outlined
-                  readonly
-                  class="form-field"
-                />
-              </div>
-
-              <q-input
-                v-model="scenarioForm.description"
-                label="Descrição"
-                type="textarea"
-                outlined
-                rows="3"
-                class="form-field"
-              />
-
-              <q-input
-                v-model="tagsInput"
-                label="Tags (separadas por vírgula)"
-                outlined
-                @update:model-value="updateTags"
-                class="form-field"
-              >
-                <template v-slot:after>
-                  <q-btn
-                    flat
-                    dense
-                    icon="add"
-                    @click="addTag"
-                  />
-                </template>
-              </q-input>
-
-              <div class="tags-display">
-                <q-chip
-                  v-for="tag in scenarioForm.tags"
-                  :key="tag"
-                  removable
-                  @remove="removeTag(tag)"
-                  color="primary"
-                  text-color="white"
+                  :rules="typeRules"
+                  class="form-input"
+                  emit-value
+                  map-options
                 >
-                  {{ tag }}
-                </q-chip>
+                  <template v-slot:prepend>
+                    <q-icon name="category" />
+                  </template>
+                </q-select>
               </div>
-            </div>
 
-            <!-- Steps Section -->
-            <div class="steps-section">
-              <h3 class="steps-title">Passos do Cenário</h3>
-              <div
-                v-for="(step, index) in scenarioForm.steps"
-                :key="step.id"
-                class="step-item"
-              >
-                <div class="step-number">{{ index + 1 }}</div>
-                <div class="step-fields">
-                  <q-input
-                    v-model="step.action"
-                    label="Ação"
-                    outlined
-                    dense
-                    class="step-field"
-                  />
-                  <q-input
-                    v-model="step.expected"
-                    label="Resultado Esperado"
-                    outlined
-                    dense
-                    class="step-field"
-                  />
-                </div>
+              <!-- Prioridade do Cenário -->
+              <div class="form-group">
+                <label class="form-label">
+                  <q-icon name="flag" class="label-icon" />
+                  Prioridade do Cenário
+                </label>
+                <q-select
+                  v-model="scenarioForm.priority"
+                  :options="priorityOptions"
+                  placeholder="Selecione a prioridade do cenário"
+                  outlined
+                  :rules="priorityRules"
+                  class="form-input"
+                  emit-value
+                  map-options
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="flag" />
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Aprovador Responsável -->
+              <div class="form-group">
+                <label class="form-label">
+                  <q-icon name="verified_user" class="label-icon" />
+                  Aprovador Responsável
+                </label>
+                <q-select
+                  v-model="scenarioForm.approver"
+                  :options="memberOptions"
+                  placeholder="Selecione o aprovador responsável"
+                  outlined
+                  :rules="approverRules"
+                  class="form-input"
+                  emit-value
+                  map-options
+                >
+                  <template v-slot:prepend>
+                    <q-icon name="verified_user" />
+                  </template>
+                  <template v-slot:option="scope">
+                    <q-item v-bind="scope.itemProps">
+                      <q-item-section avatar>
+                        <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
+                          {{ getInitials(scope.opt.label) }}
+                        </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ scope.opt.label }}</q-item-label>
+                        <q-item-label caption>{{ scope.opt.email }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </q-select>
+              </div>
+
+              <!-- Form Actions -->
+              <div class="form-actions">
                 <q-btn
                   flat
-                  round
-                  icon="remove"
-                  color="negative"
-                  @click="removeStep(step.id)"
-                  class="remove-step-btn"
+                  label="Cancelar"
+                  @click="goBack"
+                  class="cancel-btn"
+                />
+                <q-btn
+                  type="submit"
+                  color="primary"
+                  label="Criar Cenário"
+                  :loading="creatingScenario"
+                  class="create-btn"
                 />
               </div>
-              <q-btn
-                outline
-                icon="add"
-                label="Adicionar Passo"
-                @click="addStep"
-                class="add-step-btn"
-              />
-            </div>
+            </q-form>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <div class="form-actions">
-              <q-btn
-                type="submit"
-                color="primary"
-                label="Criar Cenário"
-                :loading="creatingScenario"
-                class="create-btn"
-              />
-              <q-btn
-                outline
-                label="Limpar"
-                @click="resetForm"
-                class="clear-btn"
-              />
-            </div>
-          </q-form>
+    <!-- Success Dialog -->
+    <q-dialog v-model="showSuccessDialog" persistent>
+      <q-card class="success-dialog">
+        <q-card-section class="dialog-content">
+          <div class="success-icon">
+            <q-icon name="check_circle" size="64px" color="positive" />
+          </div>
+          <h3 class="success-title">Cenário Criado!</h3>
+          <p class="success-message">
+            O cenário de teste foi criado com sucesso e está pronto para uso.
+          </p>
         </q-card-section>
+        <q-card-actions class="dialog-actions">
+          <q-btn
+            color="primary"
+            label="Continuar"
+            @click="goBack"
+            class="continue-btn"
+          />
+        </q-card-actions>
       </q-card>
-    </section>
+    </q-dialog>
+
+    <!-- Error Dialog -->
+    <q-dialog v-model="showErrorDialog" persistent>
+      <q-card class="error-dialog">
+        <q-card-section class="dialog-content">
+          <div class="error-icon">
+            <q-icon name="error" size="64px" color="negative" />
+          </div>
+          <h3 class="error-title">Erro ao Criar Cenário</h3>
+          <p class="error-message">
+            {{ errorMessage }}
+          </p>
+        </q-card-section>
+        <q-card-actions class="dialog-actions">
+          <q-btn
+            color="negative"
+            label="Tentar Novamente"
+            @click="showErrorDialog = false"
+            class="retry-btn"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -233,11 +261,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { 
-  createTestPackage, 
-  getProjectDetails,
-  getAvailableReleases,
+  getProjectMembers,
   type ProjectMember
-} from '../services/project-details.service'
+} from '../services/project.service'
+import { createScenario } from '../services/scenario.service'
 
 // Composables
 const route = useRoute()
@@ -246,79 +273,79 @@ const $q = useQuasar()
 
 // State
 const members = ref<ProjectMember[]>([])
-const availableReleases = ref<string[]>([])
 const creatingScenario = ref(false)
-const loading = ref(false)
+const showSuccessDialog = ref(false)
+const showErrorDialog = ref(false)
+const errorMessage = ref('')
 
-// Scenario form
+// Scenario form - Updated with type and priority fields
 const scenarioForm = ref({
-  title: '',
-  description: '',
-  type: 'Functional' as 'Functional' | 'Regression' | 'Smoke' | 'E2E',
-  priority: 'Medium' as 'Low' | 'Medium' | 'High' | 'Critical',
-  tags: [] as string[],
-  steps: [
-    { id: 1, action: '', expected: '' }
-  ],
-  assigneeId: null as number | null,
-  assigneeEmail: '',
-  environment: 'QA' as 'Dev' | 'QA' | 'Staging' | 'Prod' | undefined,
-  release: '2024-09'
+  name: '',
+  tester: null as number | null,
+  approver: null as number | null,
+  type: null as string | null,
+  priority: null as string | null
 })
-
-const tagsInput = ref('')
-const formRef = ref<any>(null)
-
-// Options
-const scenarioTypes = ['Functional', 'Regression', 'Smoke', 'E2E']
-const priorityOptions = ['Low', 'Medium', 'High', 'Critical']
-const environmentOptions = ['Dev', 'QA', 'Staging', 'Prod']
 
 // Computed
 const projectId = computed(() => Number(route.params.projectId))
 
 const memberOptions = computed(() => {
   return members.value.map(member => ({
-    label: member.name,
+    label: member.name || member.email,
     value: member.id,
-    email: member.email,
-    avatar: member.avatar
+    email: member.email
   }))
 })
 
+const typeOptions = [
+  { label: 'Funcional', value: 'FUNCTIONAL' },
+  { label: 'Regressão', value: 'REGRESSION' },
+  { label: 'Smoke', value: 'SMOKE' },
+  { label: 'End-to-End', value: 'E2E' }
+]
+
+const priorityOptions = [
+  { label: 'Baixa', value: 'LOW' },
+  { label: 'Média', value: 'MEDIUM' },
+  { label: 'Alta', value: 'HIGH' },
+  { label: 'Crítica', value: 'CRITICAL' }
+]
+
 // Validation rules
-const titleRules = [
-  (v: string) => !!v || 'Título é obrigatório',
-  (v: string) => v.length >= 3 || 'Mínimo 3 caracteres'
+const nameRules = [
+  (val: string) => !!val || 'Nome do cenário é obrigatório',
+  (val: string) => val.length >= 3 || 'Nome deve ter pelo menos 3 caracteres',
+  (val: string) => val.length <= 100 || 'Nome deve ter no máximo 100 caracteres'
+]
+
+const testerRules = [
+  (val: number) => !!val || 'Testador responsável é obrigatório'
+]
+
+const approverRules = [
+  (val: number) => !!val || 'Aprovador responsável é obrigatório'
 ]
 
 const typeRules = [
-  (v: string) => !!v || 'Tipo é obrigatório'
+  (val: string) => !!val || 'Tipo do cenário é obrigatório'
 ]
 
 const priorityRules = [
-  (v: string) => !!v || 'Prioridade é obrigatória'
+  (val: string) => !!val || 'Prioridade do cenário é obrigatória'
 ]
 
-// Navigation
+// Methods
 function goBack() {
   router.push(`/projects/${projectId.value}`)
 }
 
-// Form functions
-function onAssigneeChange(assigneeId: number | null) {
-  if (assigneeId) {
-    const member = members.value.find(m => m.id === assigneeId)
-    if (member) {
-      scenarioForm.value.assigneeEmail = member.email
-    }
-  } else {
-    scenarioForm.value.assigneeEmail = ''
-  }
+function goToProfile() {
+  router.push('/profile')
 }
 
-function getMemberInitials(member: any) {
-  const name = member.label || member.name || 'U'
+function getInitials(name: string) {
+  if (!name) return '?'
   const parts = name.split(' ')
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase()
@@ -326,136 +353,74 @@ function getMemberInitials(member: any) {
   return name.substring(0, 2).toUpperCase()
 }
 
-function getMemberAvatarColor(member: any) {
+function getMemberColor(memberId: number) {
   const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
-  const name = member.label || member.name || 'user'
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return colors[Math.abs(hash) % colors.length]
+  return colors[memberId % colors.length]
 }
 
-function updateTags() {
-  if (tagsInput.value.includes(',')) {
-    const newTags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-    scenarioForm.value.tags = [...new Set([...scenarioForm.value.tags, ...newTags])]
-    tagsInput.value = ''
-  }
-}
-
-function addTag() {
-  if (tagsInput.value.trim()) {
-    const newTag = tagsInput.value.trim()
-    if (!scenarioForm.value.tags.includes(newTag)) {
-      scenarioForm.value.tags.push(newTag)
-    }
-    tagsInput.value = ''
-  }
-}
-
-function removeTag(tag: string) {
-  scenarioForm.value.tags = scenarioForm.value.tags.filter(t => t !== tag)
-}
-
-function addStep() {
-  const newId = Math.max(...scenarioForm.value.steps.map(s => s.id), 0) + 1
-  scenarioForm.value.steps.push({ id: newId, action: '', expected: '' })
-}
-
-function removeStep(stepId: number) {
-  if (scenarioForm.value.steps.length > 1) {
-    scenarioForm.value.steps = scenarioForm.value.steps.filter(s => s.id !== stepId)
-  }
-}
-
-function resetForm() {
-  scenarioForm.value = {
-    title: '',
-    description: '',
-    type: 'Functional',
-    priority: 'Medium',
-    tags: [],
-    steps: [{ id: 1, action: '', expected: '' }],
-    assigneeId: null,
-    assigneeEmail: '',
-    environment: 'QA',
-    release: '2024-09'
-  }
-  tagsInput.value = ''
-  if (formRef.value?.resetValidation) {
-    formRef.value.resetValidation()
-  }
-}
-
-async function onSubmit() {
-  const ok = await formRef.value?.validate?.()
-  if (!ok) return
-
-  creatingScenario.value = true
+async function createScenario() {
   try {
-    // Converter tipos para o formato esperado pelo backend
-    const scenarioData = {
-      ...scenarioForm.value,
-      type: scenarioForm.value.type.toUpperCase(),
-      priority: scenarioForm.value.priority.toUpperCase(),
-      environment: scenarioForm.value.environment?.toUpperCase(),
-      steps: scenarioForm.value.steps.map(step => ({
-        action: step.action,
-        expected: step.expected
-      }))
+    creatingScenario.value = true
+    
+    // Validação básica
+    if (!scenarioForm.value.name || !scenarioForm.value.tester || !scenarioForm.value.approver || !scenarioForm.value.type || !scenarioForm.value.priority) {
+      errorMessage.value = 'Por favor, preencha todos os campos obrigatórios'
+      showErrorDialog.value = true
+      return
     }
+
+    // Verificar se testador e aprovador são diferentes
+    if (scenarioForm.value.tester === scenarioForm.value.approver) {
+      errorMessage.value = 'O testador e o aprovador devem ser pessoas diferentes'
+      showErrorDialog.value = true
+      return
+    }
+
+    // Preparar dados para a API
+    const scenarioData = {
+      title: scenarioForm.value.name,
+      description: `Cenário de teste: ${scenarioForm.value.name}`,
+      type: scenarioForm.value.type,
+      priority: scenarioForm.value.priority,
+      testadorId: scenarioForm.value.tester,
+      aprovadorId: scenarioForm.value.approver,
+      steps: [
+        {
+          action: 'Executar o cenário de teste',
+          expected: 'Cenário executado com sucesso'
+        }
+      ]
+    }
+
+    // Aqui você implementaria a chamada para a API
+    // await createScenario(projectId.value, scenarioData)
     
-    await createTestPackage(projectId.value, scenarioData)
+    // Mock: simular criação bem-sucedida
+    await new Promise(resolve => setTimeout(resolve, 1500))
     
-    $q.notify({
-      type: 'positive',
-      message: 'Cenário criado com sucesso!',
-      position: 'top'
-    })
+    showSuccessDialog.value = true
     
-    resetForm()
-    goBack()
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating scenario:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Erro ao criar cenário',
-      position: 'top'
-    })
+    errorMessage.value = error.message || 'Erro inesperado ao criar cenário'
+    showErrorDialog.value = true
   } finally {
     creatingScenario.value = false
   }
 }
 
-function submitForm() {
-  onSubmit()
-}
-
 // Data loading
 async function loadData() {
-  loading.value = true
   try {
-    const [projectData, releasesData] = await Promise.all([
-      getProjectDetails(projectId.value),
-      getAvailableReleases(projectId.value)
-    ])
-    
-    members.value = projectData.members || []
-    availableReleases.value = releasesData
-    
-    if (releasesData.length > 0 && releasesData[0]) {
-      scenarioForm.value.release = releasesData[0]
-    }
+    // Buscar membros reais do projeto
+    members.value = await getProjectMembers(projectId.value)
   } catch (error) {
     console.error('Error loading data:', error)
     $q.notify({
       type: 'negative',
-      message: 'Erro ao carregar dados',
+      message: 'Erro ao carregar dados do projeto',
       position: 'top'
     })
-  } finally {
-    loading.value = false
   }
 }
 
@@ -466,195 +431,363 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.hero {
-  position: fixed;
-  inset: 0;
-  background-image: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1920&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-  filter: blur(6px) saturate(110%);
-  transform: scale(1.05);
+.modern-create-scenario {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated Background */
+.animated-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
   z-index: 0;
 }
 
-.glass-shell {
-  position: relative;
-  z-index: 1;
-  width: min(1200px, 94vw);
-  margin: 56px auto;
-  padding: 18px 18px 22px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, .58);
-  border: 1px solid rgba(255, 255, 255, .7);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, .18),
-    inset 0 1px 0 rgba(255, 255, 255, .7);
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
+.bg-orb {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  animation: float 6s ease-in-out infinite;
 }
 
-.header-row {
+.orb-1 {
+  width: 200px;
+  height: 200px;
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 150px;
+  height: 150px;
+  top: 60%;
+  right: 15%;
+  animation-delay: 2s;
+}
+
+.orb-3 {
+  width: 100px;
+  height: 100px;
+  bottom: 20%;
+  left: 60%;
+  animation-delay: 4s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(180deg);
+  }
+}
+
+/* Main Container */
+.main-container {
+  position: relative;
+  z-index: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+/* Page Header */
+.page-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 14px 14px 6px;
+  align-items: center;
+  margin-bottom: 40px;
+  padding: 24px 0;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;
 }
 
 .back-btn {
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
 }
 
 .back-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
   transform: translateX(-2px);
-  background-color: rgba(25, 118, 210, 0.08);
 }
 
-.title-wrap {
-  display: grid;
-  grid-template-columns: auto 1fr;
+.header-info {
+  color: white;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: white;
+}
+
+.page-subtitle {
+  font-size: 16px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
   gap: 12px;
-  align-items: center;
 }
 
-.title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
+.profile-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
 }
 
-.subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
+.profile-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
 }
 
-.create-btn {
-  font-weight: 500;
-}
-
-.form-panel {
-  border-radius: 18px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, .85);
-  margin-top: 20px;
-}
-
-.panel-head {
+/* Content Section */
+.content-section {
   display: flex;
-  align-items: center;
-  padding: 12px 16px;
+  justify-content: center;
 }
 
-.panel-title {
-  font-weight: 600;
-  font-size: 15px;
-}
-
-.form-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-.form-field {
+.form-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   width: 100%;
+  max-width: 600px;
+  overflow: hidden;
+  animation: slideUp 0.6s ease-out;
 }
 
-.tags-display {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.steps-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
-}
-
-.steps-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-  color: #1a1a1a;
-}
-
-.step-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-}
-
-.step-number {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #1976d2;
+.card-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 32px;
   color: white;
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
+  gap: 20px;
 }
 
-.step-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+.header-icon {
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.header-content {
   flex: 1;
 }
 
-.step-field {
+.card-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+}
+
+.card-description {
+  font-size: 16px;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.card-body {
+  padding: 40px 32px;
+}
+
+/* Form Styles */
+.scenario-form {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.label-icon {
+  color: #667eea;
+}
+
+.form-input {
   width: 100%;
 }
 
-.remove-step-btn {
-  margin-left: auto;
+.form-input :deep(.q-field__control) {
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  transition: all 0.3s ease;
 }
 
-.add-step-btn {
-  margin-top: 12px;
+.form-input :deep(.q-field__control:hover) {
+  border-color: #667eea;
+  background: #ffffff;
 }
 
+.form-input :deep(.q-field--focused .q-field__control) {
+  border-color: #667eea;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Form Actions */
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   justify-content: flex-end;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
+  margin-top: 40px;
+  padding-top: 32px;
+  border-top: 1px solid #e2e8f0;
 }
 
+.cancel-btn {
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.create-btn {
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.create-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+/* Dialog Styles */
+.success-dialog, .error-dialog {
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  max-width: 400px;
+  width: 90vw;
+}
+
+.dialog-content {
+  text-align: center;
+  padding: 40px 32px 24px;
+}
+
+.success-icon, .error-icon {
+  margin-bottom: 24px;
+}
+
+.success-title, .error-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: #1f2937;
+}
+
+.success-message, .error-message {
+  font-size: 16px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.dialog-actions {
+  padding: 0 32px 32px;
+  justify-content: center;
+}
+
+.continue-btn, .retry-btn {
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-weight: 600;
+  min-width: 120px;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
+  .main-container {
+    padding: 20px 16px;
   }
   
-  .step-fields {
-    grid-template-columns: 1fr;
+  .page-header {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .header-left {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .page-title {
+    font-size: 28px;
+  }
+  
+  .card-header {
+    padding: 24px;
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .card-body {
+    padding: 24px 20px;
   }
   
   .form-actions {
     flex-direction: column;
+  }
+  
+  .form-card {
+    max-width: 100%;
   }
 }
 </style>

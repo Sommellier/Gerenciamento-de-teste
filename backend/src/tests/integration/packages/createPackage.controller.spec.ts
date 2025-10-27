@@ -351,5 +351,171 @@ describe('createPackageController', () => {
 
       createPackageSpy.mockRestore()
     })
+
+    it('funciona em modo debug sem autenticação', async () => {
+      // Criar uma nova app para teste de debug
+      const debugApp = express()
+      debugApp.use(express.json())
+      debugApp.post('/projects/:projectId/packages/debug', createPackageController)
+      debugApp.use(errorHandler)
+
+      const packageData = {
+        title: 'Debug Package',
+        type: 'FUNCTIONAL',
+        priority: 'HIGH',
+        release: '2024-01-15'
+      }
+
+      const response = await request(debugApp)
+        .post(`/projects/${projectId}/packages/debug`)
+        .send(packageData)
+        .expect(201)
+
+      expect(response.body).toHaveProperty('message', 'Pacote criado com sucesso')
+      expect(response.body).toHaveProperty('testPackage')
+    })
+
+    it('trata assigneeEmail como objeto com propriedade value', async () => {
+      const token = tokenFor(ownerId)
+      
+      // Criar usuário para o email
+      const assignee = await prisma.user.create({
+        data: {
+          name: unique('Assignee'),
+          email: 'test@example.com',
+          password: 'password123'
+        }
+      })
+
+      const packageData = {
+        title: 'Test Package Object Email',
+        type: 'FUNCTIONAL',
+        priority: 'HIGH',
+        assigneeEmail: { value: 'test@example.com' },
+        release: '2024-01-15'
+      }
+
+      const response = await request(app)
+        .post(`/projects/${projectId}/packages`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(packageData)
+        .expect(201)
+
+      expect(response.body).toHaveProperty('message', 'Pacote criado com sucesso')
+      
+      // Limpar o assignee criado
+      await prisma.user.delete({ where: { id: assignee.id } })
+    })
+
+    it('trata assigneeEmail como objeto com propriedade email', async () => {
+      const token = tokenFor(ownerId)
+      
+      // Criar usuário para o email
+      const assignee = await prisma.user.create({
+        data: {
+          name: unique('Assignee2'),
+          email: 'test2@example.com',
+          password: 'password123'
+        }
+      })
+
+      const packageData = {
+        title: 'Test Package Object Email 2',
+        type: 'FUNCTIONAL',
+        priority: 'HIGH',
+        assigneeEmail: { email: 'test2@example.com' },
+        release: '2024-01-15'
+      }
+
+      const response = await request(app)
+        .post(`/projects/${projectId}/packages`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(packageData)
+        .expect(201)
+
+      expect(response.body).toHaveProperty('message', 'Pacote criado com sucesso')
+      
+      // Limpar o assignee criado
+      await prisma.user.delete({ where: { id: assignee.id } })
+    })
+
+    it('trata assigneeEmail como objeto null', async () => {
+      const token = tokenFor(ownerId)
+      const packageData = {
+        title: 'Test Package Object Email Null',
+        type: 'FUNCTIONAL',
+        priority: 'HIGH',
+        assigneeEmail: null,
+        release: '2024-01-15'
+      }
+
+      const response = await request(app)
+        .post(`/projects/${projectId}/packages`)
+        .set('Authorization', `Bearer ${token}`)
+        .send(packageData)
+        .expect(201)
+
+      expect(response.body).toHaveProperty('message', 'Pacote criado com sucesso')
+    })
+
+    it('rejeita quando projectId é inválido', async () => {
+      const token = tokenFor(ownerId)
+      const packageData = {
+        title: 'Test Package',
+        type: 'FUNCTIONAL',
+        priority: 'HIGH',
+        release: '2024-01-15'
+      }
+
+      await request(app)
+        .post('/projects/invalid/packages')
+        .set('Authorization', `Bearer ${token}`)
+        .send(packageData)
+        .expect(400)
+        .expect({ message: 'ID do projeto inválido' })
+    })
+
+    it('rejeita quando projectId é NaN', async () => {
+      const token = tokenFor(ownerId)
+      const packageData = {
+        title: 'Test Package',
+        type: 'FUNCTIONAL',
+        priority: 'HIGH',
+        release: '2024-01-15'
+      }
+
+      await request(app)
+        .post('/projects/abc/packages')
+        .set('Authorization', `Bearer ${token}`)
+        .send(packageData)
+        .expect(400)
+        .expect({ message: 'ID do projeto inválido' })
+    })
+
+    it('testa controller diretamente sem autenticação (não debug)', async () => {
+      const req = {
+        params: { projectId: projectId.toString() },
+        body: {
+          title: 'Test Package',
+          type: 'FUNCTIONAL',
+          priority: 'HIGH',
+          release: '2024-01-15'
+        },
+        path: '/projects/123/packages', // Não contém 'debug'
+        user: undefined
+      } as any
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next = jest.fn()
+
+      await createPackageController(req, res, next)
+
+      expect(res.status).toHaveBeenCalledWith(401)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Não autenticado' })
+    })
   })
 })

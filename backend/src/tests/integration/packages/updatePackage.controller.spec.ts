@@ -370,5 +370,25 @@ describe('updatePackageController', () => {
 
       expect(response.body).toHaveProperty('message', 'Pacote atualizado com sucesso')
     })
+
+    it('testa controller diretamente sem autenticação', async () => {
+      const req = {
+        params: { projectId: projectId.toString(), packageId: packageId.toString() },
+        body: {},
+        user: undefined
+      } as any
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next = jest.fn()
+
+      await updatePackageController(req, res, next)
+
+      expect(res.status).toHaveBeenCalledWith(401)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Não autenticado' })
+    })
   })
 })

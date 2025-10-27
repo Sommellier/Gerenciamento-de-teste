@@ -11,9 +11,9 @@ type Input = {
 export async function listProjectsQuery({ requesterId, q, page = 1, pageSize = 10 }: Input) {
   console.log('listProjectsQuery called with:', { requesterId, q, page, pageSize })
   
-  const whereByName =
+  const whereByName = 
     q?.trim()
-      ? { name: { contains: q.trim(), mode: 'insensitive' as const } }
+      ? { name: { contains: q.trim() } }
       : {}
 
   console.log('whereByName:', whereByName)

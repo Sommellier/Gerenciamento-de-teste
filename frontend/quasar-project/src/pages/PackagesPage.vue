@@ -2,9 +2,18 @@
   <q-page class="packages-page">
     <div class="page-header">
       <div class="header-content">
-        <div class="title-section">
-          <q-icon name="inventory_2" class="section-icon" />
-          <h1 class="page-title">Pacotes de Teste</h1>
+        <div class="header-left">
+          <q-btn
+            flat
+            round
+            icon="arrow_back"
+            @click="goBack"
+            class="back-button"
+          />
+          <div class="title-section">
+            <q-icon name="inventory_2" class="section-icon" />
+            <h1 class="page-title">Pacotes de Teste</h1>
+          </div>
         </div>
         <div class="subtitle">Gerencie os pacotes de teste do projeto</div>
       </div>
@@ -15,15 +24,6 @@
       <q-card-section>
         <div class="filters-container">
           <div class="filter-group">
-            <q-select
-              v-model="selectedRelease"
-              :options="releaseOptions"
-              label="Release"
-              outlined
-              clearable
-              class="filter-input"
-              @update:model-value="loadPackages"
-            />
             <q-select
               v-model="selectedStatus"
               :options="statusOptions"
@@ -93,12 +93,34 @@
                   size="sm"
                 />
               </div>
-              <q-btn
+              <q-btn-dropdown
                 icon="more_vert"
                 flat
                 round
-                @click.stop="showPackageMenu(packageItem)"
-              />
+                @click.stop
+                class="package-menu-btn"
+              >
+                <q-list>
+                  <q-item clickable @click="goToScenarios(packageItem.id)">
+                    <q-item-section avatar>
+                      <q-icon name="playlist_play" />
+                    </q-item-section>
+                    <q-item-section>Cenários</q-item-section>
+                  </q-item>
+                  <q-item clickable @click="editPackage(packageItem.id)">
+                    <q-item-section avatar>
+                      <q-icon name="edit" />
+                    </q-item-section>
+                    <q-item-section>Editar</q-item-section>
+                  </q-item>
+                  <q-item clickable @click="deletePackageAction(packageItem.id)">
+                    <q-item-section avatar>
+                      <q-icon name="delete" />
+                    </q-item-section>
+                    <q-item-section>Excluir</q-item-section>
+                  </q-item>
+                </q-list>
+              </q-btn-dropdown>
             </q-card-section>
 
             <q-card-section class="package-content">
@@ -165,29 +187,6 @@
       </q-card-section>
     </q-card>
 
-    <!-- Menu de Ações do Pacote -->
-    <q-menu v-model="showMenu" :target="menuTarget">
-      <q-list style="min-width: 150px">
-        <q-item clickable @click="editPackage(selectedPackage?.id)">
-          <q-item-section avatar>
-            <q-icon name="edit" />
-          </q-item-section>
-          <q-item-section>Editar</q-item-section>
-        </q-item>
-        <q-item clickable @click="executePackage(selectedPackage?.id)">
-          <q-item-section avatar>
-            <q-icon name="play_arrow" />
-          </q-item-section>
-          <q-item-section>Executar</q-item-section>
-        </q-item>
-        <q-item clickable @click="deletePackage(selectedPackage?.id)">
-          <q-item-section avatar>
-            <q-icon name="delete" color="negative" />
-          </q-item-section>
-          <q-item-section>Excluir</q-item-section>
-        </q-item>
-      </q-list>
-    </q-menu>
   </q-page>
 </template>
 
@@ -195,7 +194,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { getProjectPackages, deletePackage, executePackage } from '../services/package.service'
+import { getProjectPackages, deletePackage } from '../services/package.service'
 import type { TestPackage } from '../services/package.service'
 
 const route = useRoute()
@@ -207,14 +206,8 @@ const loading = ref(false)
 const packages = ref<TestPackage[]>([])
 
 // Filtros
-const selectedRelease = ref('')
 const selectedStatus = ref('')
 const selectedType = ref('')
-
-// Menu
-const showMenu = ref(false)
-const menuTarget = ref(null)
-const selectedPackage = ref<TestPackage | null>(null)
 
 // Opções dos filtros
 const releaseOptions = ref<string[]>([])
@@ -236,8 +229,27 @@ const typeOptions = [
 const loadPackages = async () => {
   try {
     loading.value = true
-    const data = await getProjectPackages(projectId.value, selectedRelease.value || undefined)
-    packages.value = data
+    const data = await getProjectPackages(projectId.value)
+    
+    // Verificar se data é um array
+    if (!Array.isArray(data)) {
+      console.error('❌ Data is not an array:', data)
+      packages.value = []
+      return
+    }
+    
+    // Aplicar filtros
+    let filteredData = data
+    
+    if (selectedStatus.value) {
+      filteredData = filteredData.filter(pkg => pkg.status === selectedStatus.value)
+    }
+    
+    if (selectedType.value) {
+      filteredData = filteredData.filter(pkg => pkg.type === selectedType.value)
+    }
+    
+    packages.value = filteredData
 
     // Extrair releases únicas
     const releases = [...new Set(data.map(pkg => pkg.release))].sort().reverse()
@@ -257,40 +269,22 @@ const goToCreatePackage = () => {
   router.push(`/projects/${projectId.value}/create-package`)
 }
 
-const goToPackageDetails = (packageId: number) => {
-  // Por enquanto, vamos para a edição
-  router.push(`/packages/${packageId}/edit`)
+const goBack = () => {
+  router.push(`/projects/${projectId.value}`)
 }
 
-const showPackageMenu = (packageItem: TestPackage) => {
-  selectedPackage.value = packageItem
-  showMenu.value = true
+const goToPackageDetails = (packageId: number) => {
+  router.push(`/projects/${projectId.value}/packages/${packageId}`)
 }
 
 const editPackage = (packageId?: number) => {
   if (packageId) {
-    router.push(`/packages/${packageId}/edit`)
+    router.push(`/projects/${projectId.value}/packages/${packageId}/edit`)
   }
-  showMenu.value = false
 }
 
-const executePackageAction = async (packageId?: number) => {
-  if (!packageId) return
-
-  try {
-    await executePackage(packageId)
-    $q.notify({
-      type: 'positive',
-      message: 'Pacote executado com sucesso!'
-    })
-    loadPackages()
-  } catch (error: any) {
-    $q.notify({
-      type: 'negative',
-      message: 'Erro ao executar pacote'
-    })
-  }
-  showMenu.value = false
+const goToScenarios = (packageId: number) => {
+  router.push(`/projects/${projectId.value}/packages/${packageId}/scenarios`)
 }
 
 const deletePackageAction = async (packageId?: number) => {
@@ -298,12 +292,20 @@ const deletePackageAction = async (packageId?: number) => {
 
   $q.dialog({
     title: 'Confirmar Exclusão',
-    message: 'Tem certeza que deseja excluir este pacote?',
+    message: 'Tem certeza que deseja excluir este pacote? Esta ação não pode ser desfeita.',
     cancel: true,
-    persistent: true
+    persistent: true,
+    ok: {
+      label: 'Excluir',
+      color: 'negative'
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey'
+    }
   }).onOk(async () => {
     try {
-      await deletePackage(packageId)
+      await deletePackage(projectId.value, packageId)
       $q.notify({
         type: 'positive',
         message: 'Pacote excluído com sucesso!'
@@ -316,7 +318,6 @@ const deletePackageAction = async (packageId?: number) => {
       })
     }
   })
-  showMenu.value = false
 }
 
 // Funções auxiliares
@@ -324,7 +325,7 @@ const getStatusLabel = (status: string) => {
   const statusMap: Record<string, string> = {
     CREATED: 'Criado',
     EXECUTED: 'Executado',
-    PASSED: 'Passou',
+    PASSED: 'Concluído',
     FAILED: 'Falhou'
   }
   return statusMap[status] || status
@@ -392,7 +393,20 @@ onMounted(() => {
 }
 
 .header-content {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-button {
+  color: #667eea;
 }
 
 .title-section {
@@ -400,7 +414,6 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-bottom: 8px;
 }
 
 .section-icon {
@@ -490,6 +503,15 @@ onMounted(() => {
 .package-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.package-menu-btn {
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.package-menu-btn:hover {
+  opacity: 1;
 }
 
 .package-header {

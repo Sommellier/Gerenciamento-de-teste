@@ -33,5 +33,11 @@ export async function getProjectScenarios({ projectId, release }: GetProjectScen
     orderBy: { createdAt: 'desc' }
   })
 
-  return scenarios
+  // Converter tags de JSON string para array
+  const scenariosWithParsedTags = scenarios.map(scenario => ({
+    ...scenario,
+    tags: scenario.tags ? JSON.parse(scenario.tags) : []
+  }))
+
+  return scenariosWithParsedTags
 }

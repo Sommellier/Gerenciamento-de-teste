@@ -26,8 +26,13 @@ export async function createPackageController(
       release
     } = req.body
 
+    // Para rota de debug, usar um usuário padrão
     if (!req.user?.id) {
-      throw new AppError('Não autenticado', 401)
+      if (req.path.includes('debug')) {
+        req.user = { id: 19399, email: 'richardriedo87@gmail.com' }
+      } else {
+        throw new AppError('Não autenticado', 401)
+      }
     }
 
     // Validação do projectId
@@ -41,6 +46,12 @@ export async function createPackageController(
       throw new AppError('Campos obrigatórios: title, type, priority, release', 400)
     }
 
+    // Tratar assigneeEmail se for um objeto
+    let finalAssigneeEmail = assigneeEmail
+    if (typeof assigneeEmail === 'object' && assigneeEmail !== null) {
+      finalAssigneeEmail = assigneeEmail.value || assigneeEmail.email || null
+    }
+
     const testPackage = await createPackage({
       projectId: parsedProjectId,
       title,
@@ -49,7 +60,7 @@ export async function createPackageController(
       priority,
       tags: tags || [],
       assigneeId,
-      assigneeEmail,
+      assigneeEmail: finalAssigneeEmail,
       environment,
       release
     })

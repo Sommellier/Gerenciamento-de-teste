@@ -7,7 +7,18 @@ const helmetMock = jest.fn(() => (_req: any, _res: any, next: any) => next())
 jest.mock('helmet', () => ({ __esModule: true, default: helmetMock }))
 
 const corsMock = jest.fn(() => (_req: any, res: any, next: any) => {
-    res.set('access-control-allow-origin', '*')
+    // Configuração de CORS segura - permite apenas origens específicas
+    const origin = _req.headers.origin
+    const allowedOrigins = ['http://localhost:9000', 'http://localhost:8080', 'http://localhost:3000']
+    if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin)
+    } else if (!origin) {
+        // Permitir requisições sem origin (ex: Postman)
+        res.header('Access-Control-Allow-Origin', '*')
+    }
+    res.header('Access-Control-Allow-Credentials', 'true')
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
     next()
 })
 jest.mock('cors', () => ({ __esModule: true, default: corsMock }))
@@ -38,10 +49,13 @@ import app from '../../server'
 
 describe('server.ts (Express app)', () => {
     it('monta /api (GET /api/__health) e adiciona header de CORS', async () => {
-        const res = await request(app).get('/api/__health')
+        const res = await request(app)
+            .get('/api/__health')
+            .set('Origin', 'http://localhost:9000')
+        
         expect(res.status).toBe(200)
         expect(res.body).toEqual({ ok: true })
-        expect(res.headers['access-control-allow-origin']).toBe('*')
+        expect(res.headers['access-control-allow-origin']).toBe('http://localhost:9000')
     })
 
     it('faz parse de JSON (POST /api/__echo)', async () => {
@@ -115,11 +129,13 @@ describe('server.ts (Express app)', () => {
         })
 
         it('serve arquivos estáticos com headers CORS corretos', async () => {
-            const res = await request(app).get('/uploads/test-file.txt')
+            const res = await request(app)
+                .get('/uploads/test-file.txt')
+                .set('Origin', 'http://localhost:9000')
             
             expect(res.status).toBe(200)
             expect(res.text).toBe('Test file content')
-            expect(res.headers['access-control-allow-origin']).toBe('*')
+            expect(res.headers['access-control-allow-origin']).toBe('http://localhost:9000')
             expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, DELETE, OPTIONS')
             expect(res.headers['access-control-allow-headers']).toBe('Origin, X-Requested-With, Content-Type, Accept, Authorization')
         })
@@ -136,7 +152,8 @@ describe('server.ts (Express app)', () => {
                 .set('Access-Control-Request-Method', 'GET')
             
             expect(res.status).toBe(404) // Express static não suporta OPTIONS por padrão
-            expect(res.headers['access-control-allow-origin']).toBe('*')
+            // Quando há origin, o CORS retorna a origin específica, não '*'
+            expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000')
             expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, DELETE, OPTIONS')
             expect(res.headers['access-control-allow-headers']).toBe('Origin, X-Requested-With, Content-Type, Accept, Authorization')
         })

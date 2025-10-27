@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 enum Role {
@@ -57,9 +57,9 @@ enum PackageStatus {
 }
 
 model User {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   name     String
-  email    String @unique
+  email    String  @unique
   password String
   avatar   String?
 
@@ -73,6 +73,17 @@ model User {
   executions          Execution[]
 
   invitesSent ProjectInvite[] @relation("InvitedBy")
+
+  // Relações para cenários
+  scenariosAsTester   TestScenario[] @relation("ScenarioTester")
+  scenariosAsApprover TestScenario[] @relation("ScenarioApprover")
+
+  // Relações para execuções
+  stepComments     StepComment[]              @relation("UserStepComments")
+  stepAttachments  StepAttachment[]           @relation("UserStepAttachments")
+  executionHistory ScenarioExecutionHistory[] @relation("UserExecutionHistory")
+  bugsCreated      Bug[]                      @relation("UserBugsCreated")
+  reportApprovals  TestReportApproval[]       @relation("UserReportApprovals")
 }
 
 model Project {
@@ -88,6 +99,7 @@ model Project {
   userProjects UserOnProject[]
   scenarios    TestScenario[]
   testPackages TestPackage[]
+  bugs         Bug[]
 
   invites ProjectInvite[]
 
@@ -203,66 +215,98 @@ enum InviteStatus {
 }
 
 model TestScenario {
-  id             Int            @id @default(autoincrement())
-  title          String
-  description    String?
-  type           ScenarioType
-  priority       Priority
-  tags           String[]       @default([])
-  assigneeEmail  String?
-  environment    Environment?
-  release        String         // YYYY-MM format
-  status         ScenarioStatus @default(CREATED)
-  
+  id          Int            @id @default(autoincrement())
+  title       String
+  description String?
+  type        ScenarioType
+  priority    Priority
+  tags        String? // JSON string para armazenar array
+  status      ScenarioStatus @default(CREATED)
+  release     String? // YYYY-MM format - adicionado para compatibilidade
+  environment Environment? // Ambiente do cenário - adicionado para compatibilidade
+  assigneeEmail String? // Email do responsável - adicionado para compatibilidade
+
   projectId Int
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  steps TestScenarioStep[]
-  
+
+  // Relacionamento com pacote de teste
+  packageId Int?
+  package   TestPackage? @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  // Testador responsável
+  testadorId Int?
+  testador   User? @relation("ScenarioTester", fields: [testadorId], references: [id], onDelete: SetNull)
+
+  // Aprovador responsável
+  aprovadorId Int?
+  aprovador   User? @relation("ScenarioApprover", fields: [aprovadorId], references: [id], onDelete: SetNull)
+
+  steps      TestScenarioStep[]
+  executions ScenarioExecutionHistory[]
+  bugs       Bug[]
+  reports    TestReport[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([projectId])
-  @@index([projectId, release])
+  @@index([packageId])
   @@index([status])
+  @@index([testadorId])
+  @@index([aprovadorId])
+  @@index([release])
+  @@index([environment])
   @@index([assigneeEmail])
 }
 
 model TestScenarioStep {
-  id          Int         @id @default(autoincrement())
-  action      String
-  expected    String
-  stepOrder   Int
-  
-  scenarioId Int
-  scenario   TestScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
-  
+  id           Int                  @id @default(autoincrement())
+  action       String
+  expected     String
+  actualResult String? // Resultado obtido (rich text)
+  status       StepExecutionStatus? @default(PENDING)
+  stepOrder    Int
+  scenarioId   Int
+  scenario     TestScenario         @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  comments    StepComment[]
+  attachments StepAttachment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
+  @@index([scenarioId])
   @@index([scenarioId, stepOrder])
 }
 
+enum StepExecutionStatus {
+  PENDING
+  PASSED
+  FAILED
+  BLOCKED
+}
+
 model TestPackage {
-  id             Int           @id @default(autoincrement())
-  title          String
-  description    String?
-  type           ScenarioType
-  priority       Priority
-  tags           String[]      @default([])
-  assigneeEmail  String?
-  environment    Environment?
-  release        String        // YYYY-MM format
-  status         PackageStatus @default(CREATED)
-  
+  id            Int           @id @default(autoincrement())
+  title         String
+  description   String?
+  type          ScenarioType
+  priority      Priority
+  tags          String? // JSON string para armazenar array
+  assigneeEmail String?
+  environment   Environment?
+  release       String // YYYY-MM format
+  status        PackageStatus @default(CREATED)
+
   projectId Int
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
-  steps TestPackageStep[]
-  
+
+  steps     TestPackageStep[]
+  scenarios TestScenario[] // Cenários de teste dentro do pacote
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([projectId])
   @@index([projectId, release])
   @@index([status])
@@ -270,16 +314,158 @@ model TestPackage {
 }
 
 model TestPackageStep {
-  id          Int         @id @default(autoincrement())
-  action      String
-  expected    String
-  stepOrder   Int
-  
+  id        Int    @id @default(autoincrement())
+  action    String
+  expected  String
+  stepOrder Int
+
   packageId Int
   package   TestPackage @relation(fields: [packageId], references: [id], onDelete: Cascade)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([packageId, stepOrder])
+}
+
+// Comentários em etapas
+model StepComment {
+  id       Int     @id @default(autoincrement())
+  text     String
+  mentions String? // JSON array de IDs de usuários mencionados
+
+  stepId Int
+  step   TestScenarioStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation("UserStepComments", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([stepId])
+  @@index([userId])
+}
+
+// Anexos/Evidências em etapas
+model StepAttachment {
+  id           Int    @id @default(autoincrement())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+
+  stepId Int
+  step   TestScenarioStep @relation(fields: [stepId], references: [id], onDelete: Cascade)
+
+  uploadedBy Int
+  uploader   User @relation("UserStepAttachments", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([stepId])
+}
+
+// Histórico de execuções do cenário
+model ScenarioExecutionHistory {
+  id          Int     @id @default(autoincrement())
+  action      String // STARTED, COMPLETED, FAILED, STEP_COMPLETED, BUG_CREATED, etc.
+  description String?
+  metadata    String? // JSON com dados adicionais
+
+  scenarioId Int
+  scenario   TestScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  userId Int
+  user   User @relation("UserExecutionHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([scenarioId])
+  @@index([userId])
+  @@index([action])
+}
+
+// Bugs relacionados a cenários
+model Bug {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String?
+  severity    BugSeverity @default(MEDIUM)
+  status      BugStatus   @default(OPEN)
+
+  scenarioId Int
+  scenario   TestScenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+
+  relatedStepId Int? // Etapa relacionada (opcional)
+
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdBy Int
+  creator   User @relation("UserBugsCreated", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([scenarioId])
+  @@index([projectId])
+  @@index([status])
+  @@index([severity])
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+model TestReport {
+  id         Int      @id @default(autoincrement())
+  scenarioId Int
+  fileName   String
+  fileSize   Int
+  mimeType   String
+  checksum   String   @unique
+  content    Bytes // bytea no PostgreSQL
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  scenario TestScenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  approval TestReportApproval?
+
+  @@index([scenarioId])
+  @@index([checksum])
+}
+
+// Aprovação do ECT (PDF)
+model TestReportApproval {
+  id         Int      @id @default(autoincrement())
+  reportId   Int      @unique
+  status     String // APPROVED, REJECTED
+  comment    String? // Comentário opcional do aprovador
+  approvedBy Int // ID do usuário que aprovou
+  approvedAt DateTime @default(now())
+
+  // Hash do arquivo no momento da aprovação (para auditoria)
+  fileHash String
+
+  // URL de verificação (QR Code)
+  verificationUrl String?
+
+  report   TestReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  approver User       @relation("UserReportApprovals", fields: [approvedBy], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+  @@index([approvedBy])
+  @@index([status])
 }

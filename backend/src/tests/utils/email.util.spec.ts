@@ -68,4 +68,79 @@ describe('sendEmail util', () => {
       sendEmail('user@ex.com', 'Y', '<p></p>')
     ).rejects.toThrow('bad cfg')
   })
+
+  it('não envia email quando EMAIL_FROM não está configurado', async () => {
+    // Mock do console.warn para verificar se foi chamado
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    process.env = {
+      ...OLD_ENV,
+      EMAIL_FROM: undefined,
+      EMAIL_PASSWORD: 'secret',
+    }
+    
+    // Recarregar o módulo com as novas variáveis de ambiente
+    delete require.cache[require.resolve(MODULE_PATH)]
+    sendEmail = require(MODULE_PATH).sendEmail
+
+    await sendEmail('user@ex.com', 'Assunto', '<b>Oi</b>')
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[email] EMAIL_FROM/EMAIL_PASSWORD não configurados; e-mail não será enviado'
+    )
+    expect(createTransportMock).not.toHaveBeenCalled()
+    expect(sendMailMock).not.toHaveBeenCalled()
+    
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('não envia email quando EMAIL_PASSWORD não está configurado', async () => {
+    // Mock do console.warn para verificar se foi chamado
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    process.env = {
+      ...OLD_ENV,
+      EMAIL_FROM: 'tester@ex.com',
+      EMAIL_PASSWORD: undefined,
+    }
+    
+    // Recarregar o módulo com as novas variáveis de ambiente
+    delete require.cache[require.resolve(MODULE_PATH)]
+    sendEmail = require(MODULE_PATH).sendEmail
+
+    await sendEmail('user@ex.com', 'Assunto', '<b>Oi</b>')
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[email] EMAIL_FROM/EMAIL_PASSWORD não configurados; e-mail não será enviado'
+    )
+    expect(createTransportMock).not.toHaveBeenCalled()
+    expect(sendMailMock).not.toHaveBeenCalled()
+    
+    consoleWarnSpy.mockRestore()
+  })
+
+  it('não envia email quando ambos EMAIL_FROM e EMAIL_PASSWORD não estão configurados', async () => {
+    // Mock do console.warn para verificar se foi chamado
+    const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation()
+    
+    process.env = {
+      ...OLD_ENV,
+      EMAIL_FROM: undefined,
+      EMAIL_PASSWORD: undefined,
+    }
+    
+    // Recarregar o módulo com as novas variáveis de ambiente
+    delete require.cache[require.resolve(MODULE_PATH)]
+    sendEmail = require(MODULE_PATH).sendEmail
+
+    await sendEmail('user@ex.com', 'Assunto', '<b>Oi</b>')
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '[email] EMAIL_FROM/EMAIL_PASSWORD não configurados; e-mail não será enviado'
+    )
+    expect(createTransportMock).not.toHaveBeenCalled()
+    expect(sendMailMock).not.toHaveBeenCalled()
+    
+    consoleWarnSpy.mockRestore()
+  })
 })

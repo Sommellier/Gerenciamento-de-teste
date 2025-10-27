@@ -217,5 +217,24 @@ describe('deletePackageController', () => {
 
       deletePackageSpy.mockRestore()
     })
+
+    it('testa controller diretamente sem autenticação', async () => {
+      const req = {
+        params: { projectId: projectId.toString(), packageId: packageId.toString() },
+        user: undefined
+      } as any
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next = jest.fn()
+
+      await deletePackageController(req, res, next)
+
+      expect(res.status).toHaveBeenCalledWith(401)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Não autenticado' })
+    })
   })
 })

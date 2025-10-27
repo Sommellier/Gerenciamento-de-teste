@@ -46,9 +46,6 @@ export async function uploadAvatarController(
   next: NextFunction
 ) {
   try {
-    console.log('Upload avatar - req.user:', req.user)
-    console.log('Upload avatar - req.file:', req.file)
-    
     if (!req.user?.id) {
       throw new AppError('Não autenticado', 401)
     }

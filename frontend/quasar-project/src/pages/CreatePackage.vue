@@ -416,12 +416,11 @@ const onSubmit = async () => {
       environment: typeof form.value.environment === 'object' ? form.value.environment.value : form.value.environment,
       release: typeof form.value.release === 'object' ? form.value.release.value : form.value.release,
       assigneeEmail: typeof form.value.assigneeEmail === 'object' ? form.value.assigneeEmail.value : form.value.assigneeEmail,
-      tags: form.value.tags,
-      projectId: Number(projectId)
+      tags: form.value.tags
     }
     console.log('onSubmit - packageData:', packageData)
 
-    await createPackage(packageData)
+    await createPackage(Number(projectId), packageData)
 
     $q.notify({
       type: 'positive',

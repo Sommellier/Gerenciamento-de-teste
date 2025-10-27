@@ -33,5 +33,11 @@ export async function getProjectPackages({ projectId, release }: GetProjectPacka
     orderBy: { createdAt: 'desc' }
   })
 
-  return testPackages
+  // Converter tags de JSON string para array
+  const packagesWithParsedTags = testPackages.map(pkg => ({
+    ...pkg,
+    tags: pkg.tags ? JSON.parse(pkg.tags) : []
+  }))
+
+  return packagesWithParsedTags
 }

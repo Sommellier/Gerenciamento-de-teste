@@ -175,11 +175,16 @@ export async function getProjectDetails(projectId: number, release?: string): Pr
   }
 
   // Real API call
-  const response = await api.get(`/projects/${projectId}/details`, {
-    params: { release }
-  })
-  console.log('API Response:', response.data)
-  return response.data as ProjectDetails
+  try {
+    const response = await api.get(`/projects/${projectId}/details`, {
+      params: { release }
+    })
+    console.log('API Response:', response.data)
+    return response.data as ProjectDetails
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do projeto:', error)
+    throw error
+  }
 }
 
 export async function createTestPackage(projectId: number, testPackage: Omit<TestPackage, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<TestPackage> {
@@ -211,7 +216,18 @@ export async function getProjectMembers(projectId: number): Promise<ProjectMembe
 
   // Real API call
   const response = await api.get(`/projects/${projectId}/members`)
-  return response.data as ProjectMember[]
+  
+  // A API retorna { items: [...] }
+  const items = response.data.items || response.data
+  
+  // Mapear para o formato esperado
+  return items.map((item: any) => ({
+    id: item.user?.id || item.userId,
+    name: item.user?.name || item.name,
+    email: item.user?.email || item.email,
+    role: item.role,
+    avatar: item.user?.avatar || item.avatar
+  }))
 }
 
 export async function getAvailableReleases(projectId: number): Promise<string[]> {

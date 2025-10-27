@@ -18,7 +18,7 @@ export const createProjectController = async (req: Request, res: Response, next:
     }
 
     const project = await createProject({
-      ownerId,
+      ownerId: Number(ownerId), // Garantir que seja number
       name: String(name),
       description: description == null ? undefined : String(description),
     })

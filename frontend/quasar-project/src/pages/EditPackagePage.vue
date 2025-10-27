@@ -1,0 +1,464 @@
+<template>
+  <q-page class="q-pa-none">
+    <!-- BG blur -->
+    <div class="hero" />
+
+    <!-- Glass container -->
+    <section class="glass-shell">
+      <div class="header-row">
+        <div class="header-left">
+          <q-btn 
+            flat 
+            round 
+            color="primary" 
+            icon="arrow_back" 
+            size="md"
+            @click="goBack"
+            class="back-btn"
+          >
+            <q-tooltip>Voltar aos pacotes</q-tooltip>
+          </q-btn>
+          <div class="header-content">
+            <h1 class="page-title">Editar Pacote</h1>
+          </div>
+        </div>
+      </div>
+      <div class="subtitle">Edite as informações do pacote de teste</div>
+    </section>
+
+    <!-- Formulário -->
+    <q-card class="form-card">
+      <q-card-section>
+        <q-form ref="formRef" @submit.prevent="onSubmit" class="q-gutter-md">
+          <!-- Informações Básicas -->
+          <div class="form-section">
+            <h3 class="section-title">Informações Básicas</h3>
+            <div class="form-row">
+              <q-input
+                v-model="packageForm.name"
+                label="Nome do Pacote *"
+                outlined
+                class="form-input"
+                :rules="nameRules"
+              />
+              <q-input
+                v-model="packageForm.description"
+                label="Descrição"
+                outlined
+                type="textarea"
+                rows="3"
+                class="form-input"
+              />
+            </div>
+          </div>
+
+          <!-- Configurações -->
+          <div class="form-section">
+            <h3 class="section-title">Configurações</h3>
+            <div class="form-row">
+              <q-select
+                v-model="packageForm.type"
+                :options="packageTypes"
+                label="Tipo *"
+                outlined
+                class="form-input"
+                :rules="typeRules"
+              />
+              <q-select
+                v-model="packageForm.priority"
+                :options="priorityOptions"
+                label="Prioridade *"
+                outlined
+                class="form-input"
+                :rules="priorityRules"
+              />
+            </div>
+            <div class="form-row">
+              <q-select
+                v-model="packageForm.environment"
+                :options="environmentOptions"
+                label="Ambiente"
+                outlined
+                class="form-input"
+              />
+              <q-input
+                v-model="packageForm.release"
+                label="Release *"
+                outlined
+                class="form-input"
+                :rules="releaseRules"
+              />
+            </div>
+          </div>
+
+          <!-- Tags -->
+          <div class="form-section">
+            <h3 class="section-title">Tags</h3>
+            <q-input
+              v-model="tagsInput"
+              label="Tags (separadas por vírgula)"
+              outlined
+              class="form-input"
+              @blur="updateTags"
+              @keyup.enter="addTag"
+            />
+            <div v-if="packageForm.tags.length > 0" class="tags-container">
+              <q-chip
+                v-for="(tag, index) in packageForm.tags"
+                :key="index"
+                removable
+                @remove="removeTag(index)"
+                :color="getTagColor(tag)"
+                text-color="white"
+                class="tag-chip"
+              >
+                {{ tag }}
+              </q-chip>
+            </div>
+          </div>
+
+          <!-- Responsável -->
+          <div class="form-section">
+            <h3 class="section-title">Responsável</h3>
+            <q-select
+              v-model="packageForm.assigneeId"
+              :options="memberOptions"
+              label="Responsável pelo Pacote"
+              outlined
+              clearable
+              class="form-input"
+              option-value="id"
+              option-label="label"
+            />
+          </div>
+
+          <!-- Botões -->
+          <div class="form-actions">
+            <q-btn
+              type="button"
+              color="grey"
+              label="Cancelar"
+              @click="goBack"
+              class="action-btn"
+            />
+            <q-btn
+              type="submit"
+              color="primary"
+              label="Salvar Alterações"
+              :loading="updatingPackage"
+              class="action-btn"
+            />
+          </div>
+        </q-form>
+      </q-card-section>
+    </q-card>
+  </q-page>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { 
+  getProjectDetails,
+  getAvailableReleases,
+  type ProjectMember
+} from '../services/project-details.service'
+import { getPackageDetails, updatePackage } from '../services/package.service'
+
+// Composables
+const route = useRoute()
+const router = useRouter()
+const $q = useQuasar()
+
+// Dados
+const members = ref<ProjectMember[]>([])
+const availableReleases = ref<string[]>([])
+const updatingPackage = ref(false)
+const loading = ref(false)
+
+// Formulário
+const packageForm = ref({
+  name: '',
+  description: '',
+  type: 'Functional',
+  priority: 'Medium',
+  tags: [] as string[],
+  assigneeId: null as number | null,
+  assigneeEmail: '',
+  environment: 'QA',
+  release: '2024-09'
+})
+
+const tagsInput = ref('')
+const formRef = ref<any>(null)
+
+// Opções
+const packageTypes = ['Functional', 'Regression', 'Smoke', 'E2E']
+const priorityOptions = ['Low', 'Medium', 'High', 'Critical']
+const environmentOptions = ['Dev', 'QA', 'Staging', 'Prod']
+
+// Computed
+const projectId = computed(() => Number(route.params.projectId))
+const packageId = computed(() => Number(route.params.packageId))
+
+const memberOptions = computed(() => {
+  return members.value.map(member => ({
+    ...member,
+    label: `${member.name} (${member.email})`
+  }))
+})
+
+// Validações
+const nameRules = [
+  (val: string) => !!val || 'Nome é obrigatório',
+  (val: string) => val.length >= 3 || 'Nome deve ter pelo menos 3 caracteres'
+]
+
+const typeRules = [
+  (val: string) => !!val || 'Tipo é obrigatório'
+]
+
+const priorityRules = [
+  (val: string) => !!val || 'Prioridade é obrigatória'
+]
+
+const releaseRules = [
+  (val: string) => !!val || 'Release é obrigatória'
+]
+
+// Funções
+const goBack = () => {
+  router.push(`/projects/${projectId.value}/packages`)
+}
+
+const getTagColor = (tag: string) => {
+  const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
+  const index = tag.length % colors.length
+  return colors[index]
+}
+
+const updateTags = () => {
+  if (tagsInput.value.trim()) {
+    const newTags = tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+    packageForm.value.tags = [...new Set([...packageForm.value.tags, ...newTags])]
+    tagsInput.value = ''
+  }
+}
+
+const addTag = () => {
+  const newTag = tagsInput.value.trim()
+  if (newTag && !packageForm.value.tags.includes(newTag)) {
+    packageForm.value.tags.push(newTag)
+    tagsInput.value = ''
+  }
+}
+
+const removeTag = (index: number) => {
+  packageForm.value.tags.splice(index, 1)
+}
+
+async function onSubmit() {
+  const ok = await formRef.value?.validate?.()
+  if (!ok) return
+
+  updatingPackage.value = true
+  try {
+    // Converter tipos para o formato esperado pelo backend
+    const packageData = {
+      ...packageForm.value,
+      type: packageForm.value.type.toUpperCase(),
+      priority: packageForm.value.priority.toUpperCase(),
+      environment: packageForm.value.environment?.toUpperCase(),
+    }
+    
+    await updatePackage(projectId.value, packageId.value, packageData)
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Pacote atualizado com sucesso!',
+      position: 'top'
+    })
+    
+    goBack()
+  } catch (error) {
+    console.error('Error updating package:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Erro ao atualizar pacote',
+      position: 'top'
+    })
+  } finally {
+    updatingPackage.value = false
+  }
+}
+
+// Data loading
+async function loadData() {
+  loading.value = true
+  try {
+    const [projectData, releasesData, packageData] = await Promise.all([
+      getProjectDetails(projectId.value),
+      getAvailableReleases(projectId.value),
+      getPackageDetails(projectId.value, packageId.value)
+    ])
+
+    members.value = projectData.members
+    availableReleases.value = releasesData
+
+    // Preencher formulário com dados do pacote
+    packageForm.value = {
+      name: packageData.name,
+      description: packageData.description || '',
+      type: packageData.type.charAt(0) + packageData.type.slice(1).toLowerCase(),
+      priority: packageData.priority.charAt(0) + packageData.priority.slice(1).toLowerCase(),
+      tags: packageData.tags || [],
+      assigneeId: null, // TODO: Implementar busca por assignee
+      assigneeEmail: packageData.assigneeEmail || '',
+      environment: packageData.environment ? packageData.environment.charAt(0) + packageData.environment.slice(1).toLowerCase() : 'QA',
+      release: packageData.release
+    }
+
+    // Preencher tags input
+    tagsInput.value = packageForm.value.tags.join(', ')
+  } catch (error) {
+    console.error('Error loading data:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Erro ao carregar dados'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
+</script>
+
+<style scoped>
+.hero {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  z-index: -1;
+}
+
+.glass-shell {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  margin: 20px;
+  padding: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.header-content {
+  flex: 1;
+}
+
+.page-title {
+  color: white;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.1rem;
+  margin-bottom: 30px;
+}
+
+.form-card {
+  margin: 20px;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.form-section {
+  margin-bottom: 30px;
+}
+
+.section-title {
+  color: #1a202c;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.form-input {
+  width: 100%;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tag-chip {
+  margin: 2px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.action-btn {
+  min-width: 150px;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-actions {
+    flex-direction: column;
+  }
+  
+  .action-btn {
+    width: 100%;
+  }
+}
+</style>

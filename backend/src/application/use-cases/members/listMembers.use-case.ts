@@ -65,40 +65,170 @@ export async function listMembers({
   })
   if (!project) throw new AppError('Projeto não encontrado', 404)
 
-  // 2) autorização: qualquer membro pode listar
+  // 2) autorização: verificar se o usuário é membro do projeto ou é o owner
+  const isOwner = project.ownerId === requesterId
   const membership = await prisma.userOnProject.findUnique({
     where: { userId_projectId: { userId: requesterId, projectId } },
     select: { role: true },
   })
-  if (!membership) throw new AppError('Acesso negado ao projeto', 403)
+  if (!membership && !isOwner) throw new AppError('Acesso negado ao projeto', 403)
 
   // 3) filtros
   const where: any = { projectId }
-  if (roles && roles.length) where.role = { in: roles }
+  if (roles && roles.length) {
+    where.role = { in: roles }
+    // Com filtro de roles, owner NÃO deve ser incluído automaticamente
+    // pois ele está armazenado no userOnProject separadamente
+  } else {
+    // Sem filtro de roles, incluir owner
+  }
 
   const query = normalizeQuery(q)
-  if (query) {
-    // busca por nome ou e-mail (case-insensitive)
-    where.OR = [
-      { user: { name: { contains: query, mode: 'insensitive' as const } } },
-      { user: { email: { contains: query, mode: 'insensitive' as const } } },
-    ]
-  }
 
   // paginação
   const safePage = Math.max(1, Math.floor(page))
   const safeSize = clamp(Math.floor(pageSize), 1, 100)
+  
   const skip = (safePage - 1) * safeSize
   const take = safeSize
 
-  // ordenação
+  // Para ordenação por nome, precisamos buscar todos os itens e paginar em JavaScript
+  // para garantir ordenação case-insensitive correta
+  if (orderBy === 'name') {
+    const allItems = await prisma.userOnProject.findMany({
+      where,
+      select: {
+        projectId: true,
+        userId: true,
+        role: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    })
+    
+    // Garantir que o owner está na lista APENAS se não houver filtro de roles
+    const ownerInList = allItems.find(item => item.userId === project.ownerId)
+    // Não incluir owner quando há filtro de roles (owner já está no banco como membro)
+    const shouldIncludeOwner = !ownerInList && project.owner && (!roles || roles.length === 0)
+    if (shouldIncludeOwner) {
+      allItems.unshift({
+        projectId: project.id,
+        userId: project.owner.id,
+        role: 'OWNER' as Role,
+        user: project.owner
+      })
+    }
+    
+    // Filtrar itens que correspondem à query de busca (case-insensitive)
+    let filteredItems = allItems
+    if (query) {
+      const lowerQuery = query.toLowerCase()
+      filteredItems = allItems.filter(item => 
+        item.user.name.toLowerCase().includes(lowerQuery) || 
+        item.user.email.toLowerCase().includes(lowerQuery)
+      )
+    }
+    
+    // Aplicar filtro de roles se especificado
+    if (roles && roles.length > 0) {
+      filteredItems = filteredItems.filter(item => roles.includes(item.role))
+    }
+    
+    // Ordenar todos os itens por nome case-insensitive
+    filteredItems.sort((a, b) => {
+      const comparison = a.user.name.toLowerCase().localeCompare(b.user.name.toLowerCase())
+      return sort === 'desc' ? -comparison : comparison
+    })
+    
+    // Aplicar paginação em JavaScript
+    const total = filteredItems.length
+    const items = filteredItems.slice(skip, skip + take)
+    
+    return {
+      items: items as MemberRow[],
+      total,
+      page: safePage,
+      pageSize: safeSize,
+      hasNextPage: skip + items.length < total,
+    }
+  }
+
+  // Para outras ordenações (email, role), usar Prisma normalmente
+  // Mas precisamos buscar todos os itens para aplicar filtro case-insensitive quando há query
+  if (query) {
+    const allItems = await prisma.userOnProject.findMany({
+      where,
+      select: {
+        projectId: true,
+        userId: true,
+        role: true,
+        user: { select: { id: true, name: true, email: true } },
+      },
+    })
+    
+    // Filtrar itens que correspondem à query de busca (case-insensitive)
+    const lowerQuery = query.toLowerCase()
+    let filteredItems = allItems.filter(item => 
+      item.user.name.toLowerCase().includes(lowerQuery) || 
+      item.user.email.toLowerCase().includes(lowerQuery)
+    )
+    
+    // Aplicar filtro de roles se especificado
+    if (roles && roles.length > 0) {
+      filteredItems = filteredItems.filter(item => roles.includes(item.role))
+    }
+    
+    // Garantir que o owner está na lista APENAS se não houver filtro de roles
+    const ownerInList = filteredItems.find(item => item.userId === project.ownerId)
+    // Não incluir owner quando há filtro de roles (owner já está no banco como membro)
+    const shouldIncludeOwner = !ownerInList && project.owner && (!roles || roles.length === 0)
+    
+    if (shouldIncludeOwner) {
+      // Verificar se o owner atende ao filtro de busca
+      if (!query || project.owner.name.toLowerCase().includes(lowerQuery) || project.owner.email.toLowerCase().includes(lowerQuery)) {
+        filteredItems.unshift({
+          projectId: project.id,
+          userId: project.owner.id,
+          role: 'OWNER' as Role,
+          user: project.owner
+        })
+      }
+    }
+    
+    // Ordenar
+    const dir = sort === 'desc' ? 'desc' : 'asc'
+    if (orderBy === 'email') {
+      filteredItems.sort((a, b) => {
+        const comparison = a.user.email.localeCompare(b.user.email)
+        return dir === 'desc' ? -comparison : comparison
+      })
+    } else {
+      const enumOrder = ['APPROVER', 'MANAGER', 'OWNER', 'TESTER'] as const
+      filteredItems.sort((a, b) => {
+        const ai = enumOrder.indexOf(a.role as typeof enumOrder[number])
+        const bi = enumOrder.indexOf(b.role as typeof enumOrder[number])
+        return dir === 'desc' ? bi - ai : ai - bi
+      })
+    }
+    
+    // Aplicar paginação
+    const total = filteredItems.length
+    const items = filteredItems.slice(skip, skip + take)
+    
+    return {
+      items: items as MemberRow[],
+      total,
+      page: safePage,
+      pageSize: safeSize,
+      hasNextPage: skip + items.length < total,
+    }
+  }
+  
+  // Quando não há query, usar Prisma normalmente
   const dir = sort === 'desc' ? 'desc' : 'asc'
   const orderByClause =
     orderBy === 'email'
       ? { user: { email: dir } as const }
-      : orderBy === 'role'
-      ? ({ role: dir } as const)
-      : ({ user: { name: dir } } as const) // default: name asc
+      : ({ role: dir } as const)
 
   const [items, total] = await prisma.$transaction([
     prisma.userOnProject.findMany({
@@ -116,11 +246,21 @@ export async function listMembers({
     prisma.userOnProject.count({ where }),
   ])
 
-  // O owner já está na lista se foi criado como membro do projeto
+  // Garantir que o owner está na lista APENAS se não houver filtro de roles OU se ele corresponde aos filtros
   const ownerInList = items.find(item => item.userId === project.ownerId)
+  // Não incluir owner quando há filtro de roles (owner já está no banco como membro)
+  const shouldIncludeOwner = !ownerInList && project.owner && (!roles || roles.length === 0)
   
-  // Não precisamos adicionar o owner se ele já está na lista
-  const finalTotal = total
+  let finalTotal = total
+  if (shouldIncludeOwner) {
+    items.unshift({
+      projectId: project.id,
+      userId: project.owner.id,
+      role: 'OWNER' as Role,
+      user: project.owner
+    })
+    finalTotal = total + 1
+  }
   
   return {
     items: items as MemberRow[],

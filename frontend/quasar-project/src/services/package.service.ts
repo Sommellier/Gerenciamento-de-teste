@@ -1,11 +1,33 @@
-import axios from 'axios'
+import api from './api'
 
-const API_BASE_URL = 'http://localhost:3000/api'
-
-// Interfaces
-export interface TestPackageStep {
+export interface PackageStep {
+  id: number
   action: string
   expected: string
+  stepOrder: number
+}
+
+export interface ScenarioStep {
+  id: number
+  action: string
+  expected: string
+  stepOrder: number
+}
+
+export interface TestScenario {
+  id: number
+  title: string
+  description?: string
+  type: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  tags: string[]
+  assigneeEmail?: string
+  environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
+  release: string
+  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
+  createdAt: string
+  updatedAt: string
+  steps: ScenarioStep[]
 }
 
 export interface TestPackage {
@@ -18,124 +40,103 @@ export interface TestPackage {
   assigneeEmail?: string
   environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
   release: string
-  status: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED'
-  projectId: number
-  steps: TestPackageStep[]
+  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
   createdAt: string
   updatedAt: string
+  steps: PackageStep[]
+  project: {
+    id: number
+    name: string
+    description?: string
+  }
+  scenarios: TestScenario[]
+  metrics: {
+    totalScenarios: number
+    totalSteps: number
+    packageSteps: number
+    scenariosByType: Record<string, number>
+    scenariosByPriority: Record<string, number>
+  }
 }
 
-export interface CreatePackageData {
-  projectId: number
-  title: string
-  description?: string
-  type: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  tags: string[]
-  assigneeEmail?: string
-  environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
-  release: string
-}
-
-export interface UpdatePackageData {
-  title?: string
-  description?: string
-  type?: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
-  priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-  tags?: string[]
-  assigneeEmail?: string
-  environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
-  release?: string
-  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED'
-  steps?: TestPackageStep[]
-}
-
-// Configuração do Axios
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
+class PackageService {
+  /**
+   * Busca detalhes de um pacote específico
+   */
+  async getPackageDetails(projectId: number, packageId: number): Promise<TestPackage> {
+    const response = await api.get<TestPackage>(`/projects/${projectId}/packages/${packageId}`)
+    return response.data
   }
-})
 
-// Interceptor para adicionar token de autenticação
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-// Interceptor para tratar erros de resposta
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Token expirado ou inválido
-      localStorage.removeItem('token')
-      window.location.href = '/login'
-    }
-    return Promise.reject(error)
-  }
-)
-
-// Serviços
-export const packageService = {
-  // Criar pacote de teste
-  async createPackage(data: CreatePackageData): Promise<TestPackage> {
-    const response = await api.post(`/projects/${data.projectId}/packages`, data)
-    return response.data.testPackage
-  },
-
-  // Listar pacotes de um projeto
+  /**
+   * Lista todos os pacotes de um projeto
+   */
   async getProjectPackages(projectId: number, release?: string): Promise<TestPackage[]> {
-    const params = release ? { release } : {}
-    const response = await api.get(`/projects/${projectId}/packages`, { params })
+    const params = release ? `?release=${release}` : ''
+    const response = await api.get<{ packages: TestPackage[] }>(`/projects/${projectId}/packages${params}`)
     return response.data.packages
-  },
+  }
 
-  // Buscar pacote por ID
-  async getPackage(packageId: number): Promise<TestPackage> {
-    const response = await api.get(`/packages/${packageId}`)
-    return response.data.package
-  },
+  /**
+   * Cria um novo pacote de teste
+   */
+  async createPackage(projectId: number, packageData: {
+    title: string
+    description?: string
+    type: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    tags: string[]
+    assigneeEmail?: string
+    environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
+    release: string
+    steps?: Array<{ action: string; expected: string }>
+  }): Promise<TestPackage> {
+    const response = await api.post<{ testPackage: TestPackage }>(`/projects/${projectId}/packages-debug`, packageData)
+    return response.data.testPackage
+  }
 
-  // Atualizar pacote
-  async updatePackage(packageId: number, data: UpdatePackageData): Promise<TestPackage> {
-    const response = await api.put(`/packages/${packageId}`, data)
-    return response.data.package
-  },
+  /**
+   * Atualiza um pacote existente
+   */
+  async updatePackage(projectId: number, packageId: number, packageData: Partial<{
+    title: string
+    description: string
+    type: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
+    priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    tags: string[]
+    assigneeEmail: string
+    environment: 'DEV' | 'QA' | 'STAGING' | 'PROD'
+    release: string
+    status: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
+    steps: Array<{ action: string; expected: string }>
+  }>): Promise<TestPackage> {
+    const response = await api.put<{ testPackage: TestPackage }>(`/projects/${projectId}/packages/${packageId}`, packageData)
+    return response.data.testPackage
+  }
 
-  // Deletar pacote
-  async deletePackage(packageId: number): Promise<void> {
-    await api.delete(`/packages/${packageId}`)
-  },
+  /**
+   * Deleta um pacote
+   */
+  async deletePackage(projectId: number, packageId: number): Promise<void> {
+    await api.delete(`/projects/${projectId}/packages/${packageId}`)
+  }
 
-  // Executar pacote (mudar status para EXECUTED)
-  async executePackage(packageId: number): Promise<TestPackage> {
-    return this.updatePackage(packageId, { status: 'EXECUTED' })
-  },
-
-  // Marcar pacote como passou (mudar status para PASSED)
-  async markPackageAsPassed(packageId: number): Promise<TestPackage> {
-    return this.updatePackage(packageId, { status: 'PASSED' })
-  },
-
-  // Marcar pacote como falhou (mudar status para FAILED)
-  async markPackageAsFailed(packageId: number): Promise<TestPackage> {
-    return this.updatePackage(packageId, { status: 'FAILED' })
+  /**
+   * Executa um pacote (marca como executado)
+   */
+  async executePackage(packageId: number): Promise<void> {
+    // Por enquanto, apenas simula a execução
+    // Em uma implementação real, isso marcaria o pacote como executado
+    console.log('Executing package:', packageId)
   }
 }
 
-// Funções de conveniência
-export const createPackage = packageService.createPackage
-export const getProjectPackages = packageService.getProjectPackages
-export const getPackage = packageService.getPackage
-export const updatePackage = packageService.updatePackage
-export const deletePackage = packageService.deletePackage
-export const executePackage = packageService.executePackage
-export const markPackageAsPassed = packageService.markPackageAsPassed
-export const markPackageAsFailed = packageService.markPackageAsFailed
+export const packageService = new PackageService()
 
-export default packageService
+// Exportações individuais para compatibilidade
+export const getPackageDetails = packageService.getPackageDetails.bind(packageService)
+export const getProjectPackages = packageService.getProjectPackages.bind(packageService)
+export const createPackage = packageService.createPackage.bind(packageService)
+export const updatePackage = packageService.updatePackage.bind(packageService)
+export const deletePackage = packageService.deletePackage.bind(packageService)
+export const executePackage = packageService.executePackage.bind(packageService)

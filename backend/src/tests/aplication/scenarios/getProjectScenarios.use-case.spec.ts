@@ -398,7 +398,7 @@ describe('getProjectScenarios', () => {
             status: 'CREATED',
             type: 'FUNCTIONAL',
             priority: 'MEDIUM',
-            tags: ['tag1', 'tag2']
+            tags: JSON.stringify(['tag1', 'tag2'])
           },
           {
             title: 'Scenario 2',
@@ -408,7 +408,7 @@ describe('getProjectScenarios', () => {
             status: 'PASSED',
             type: 'FUNCTIONAL',
             priority: 'MEDIUM',
-            tags: ['tag3', 'tag4']
+            tags: JSON.stringify(['tag3', 'tag4'])
           }
         ]
       })
@@ -581,7 +581,7 @@ describe('getProjectScenarios', () => {
           status: 'CREATED',
           type: 'FUNCTIONAL',
           priority: 'MEDIUM',
-          tags: manyTags
+          tags: JSON.stringify(manyTags)
         }
       })
 

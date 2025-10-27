@@ -165,7 +165,7 @@ describe('listProjects (controller) (unit)', () => {
       where: {
         AND: [
           { OR: [{ ownerId: 99 }, { id: { in: [] } }] },
-          { name: { contains: 'beta', mode: 'insensitive' } },
+          { name: { contains: 'beta' } },
         ],
       },
       orderBy: { id: 'desc' },

@@ -78,7 +78,7 @@ export async function listInvites({
     const where: any = { projectId }
     if (status && status.length) where.status = { in: status }
     const emailQuery = normalizeEmailQuery(q)
-    if (emailQuery) where.email = { contains: emailQuery, mode: 'insensitive' as const }
+    if (emailQuery) where.email = { contains: emailQuery }
 
     // paginação
     const safePage = Math.max(1, Math.floor(page))

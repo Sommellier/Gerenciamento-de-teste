@@ -413,7 +413,7 @@ function getScenarioStatus(status: string) {
   const statusMap: { [key: string]: string } = {
     'CREATED': 'Criado',
     'EXECUTED': 'Executado',
-    'PASSED': 'Passou',
+    'PASSED': 'Concluído',
     'FAILED': 'Falhou'
   }
   return statusMap[status] || status

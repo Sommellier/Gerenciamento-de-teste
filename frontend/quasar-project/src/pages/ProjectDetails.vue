@@ -137,7 +137,7 @@
                         <div class="legend-pulse"></div>
                       </div>
                       <div class="legend-content">
-                        <span class="legend-label">Passaram</span>
+                        <span class="legend-label">Concluídos</span>
                         <span class="legend-value">{{ metrics.passed }}</span>
                       </div>
                     </div>
@@ -185,7 +185,7 @@
                         <div class="legend-pulse"></div>
                       </div>
                       <div class="legend-content">
-                        <span class="legend-label">Passaram</span>
+                        <span class="legend-label">Concluídos</span>
                         <span class="legend-value">{{ scenarioMetrics.passed }}</span>
                       </div>
                     </div>
@@ -223,6 +223,92 @@
       </q-card>
     </div>
 
+    <!-- Additional Analytics Section -->
+    <div class="analytics-section">
+      <div class="analytics-grid">
+        <!-- Gráfico 1: Cenários por Prioridade -->
+        <q-card class="glass-card analytics-card">
+          <q-card-section class="analytics-header">
+            <div class="section-header">
+              <div class="section-title-container">
+                <q-icon name="priority_high" class="section-icon" />
+                   <h3 class="section-title">Pacotes por Prioridade</h3>
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-section class="analytics-content">
+            <div class="chart-container">
+              <VueApexCharts
+                v-if="priorityChartSeries.length > 0"
+                type="bar"
+                :options="priorityChartOptions"
+                :series="priorityChartSeries"
+                height="300"
+              />
+              <div v-else class="no-data-chart">
+                <q-icon name="bar_chart" size="48px" color="grey-5" />
+                <p class="text-grey-5">Nenhum dado para exibir</p>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Gráfico 2: Execuções por Mês -->
+        <q-card class="glass-card analytics-card">
+          <q-card-section class="analytics-header">
+            <div class="section-header">
+              <div class="section-title-container">
+                <q-icon name="timeline" class="section-icon" />
+                   <h3 class="section-title">Pacotes Criados por Mês</h3>
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-section class="analytics-content">
+            <div class="chart-container">
+                  <VueApexCharts
+                    v-if="monthlyChartSeries.length > 0"
+                    type="bar"
+                    :options="monthlyChartOptions"
+                    :series="monthlyChartSeries"
+                    height="300"
+                  />
+              <div v-else class="no-data-chart">
+                <q-icon name="timeline" size="48px" color="grey-5" />
+                <p class="text-grey-5">Nenhum dado para exibir</p>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Gráfico 3: Taxa de Sucesso -->
+        <q-card class="glass-card analytics-card">
+          <q-card-section class="analytics-header">
+            <div class="section-header">
+              <div class="section-title-container">
+                <q-icon name="pie_chart" class="section-icon" />
+                   <h3 class="section-title">Status dos Pacotes</h3>
+              </div>
+            </div>
+          </q-card-section>
+          <q-card-section class="analytics-content">
+            <div class="chart-container">
+                  <VueApexCharts
+                    v-if="successRateChartSeries.length > 0"
+                    type="pie"
+                    :options="successRateChartOptions"
+                    :series="successRateChartSeries"
+                    height="300"
+                  />
+              <div v-else class="no-data-chart">
+                <q-icon name="pie_chart" size="48px" color="grey-5" />
+                <p class="text-grey-5">Nenhum dado para exibir</p>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
     <!-- Create Test Package Button -->
     <div class="create-package-section">
       <q-card class="glass-card package-card">
@@ -242,6 +328,7 @@
               @click="goToCreatePackage"
               class="create-package-btn"
               size="md"
+              :disable="!projectId"
             />
             <q-btn
               color="secondary"
@@ -251,6 +338,7 @@
               class="view-packages-btn"
               size="md"
               outline
+              :disable="!projectId"
             />
           </div>
         </q-card-section>
@@ -268,21 +356,31 @@
             </div>
             <div class="section-subtitle">{{ filteredMembers.length }} de {{ members.length }} membros</div>
           </div>
-          <q-input
-            v-model="memberSearch"
-            label="Buscar membros"
-            outlined
-            dense
-            class="search-input"
-            clearable
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" />
-            </template>
-            <template v-slot:append v-if="memberSearch">
-              <q-icon name="clear" class="cursor-pointer" @click="memberSearch = ''" />
-            </template>
-          </q-input>
+          <div class="members-actions">
+            <q-input
+              v-model="memberSearch"
+              label="Buscar membros"
+              outlined
+              dense
+              class="search-input"
+              clearable
+            >
+              <template v-slot:prepend>
+                <q-icon name="search" />
+              </template>
+              <template v-slot:append v-if="memberSearch">
+                <q-icon name="clear" class="cursor-pointer" @click="memberSearch = ''" />
+              </template>
+            </q-input>
+            <q-btn
+              color="primary"
+              icon="person_add"
+              label="Adicionar Membro"
+              @click="showAddMemberDialog = true"
+              class="add-member-btn"
+              size="md"
+            />
+          </div>
         </q-card-section>
         <q-card-section class="members-content">
           
@@ -317,6 +415,73 @@
         </q-card-section>
       </q-card>
     </div>
+
+    <!-- Add Member Dialog -->
+    <q-dialog v-model="showAddMemberDialog" persistent>
+      <q-card class="add-member-dialog" style="min-width: 500px">
+        <q-card-section class="dialog-header">
+          <div class="text-h6">Adicionar Membro ao Projeto</div>
+          <q-btn
+            flat
+            round
+            icon="close"
+            @click="showAddMemberDialog = false"
+            class="close-btn"
+          />
+        </q-card-section>
+
+        <q-card-section class="dialog-content">
+          <q-form @submit="addMember" class="add-member-form">
+            <div class="form-row">
+              <q-input
+                v-model="addMemberForm.email"
+                label="Email do Usuário"
+                outlined
+                type="email"
+                :rules="[val => !!val || 'Email é obrigatório', val => isValidEmail(val) || 'Email inválido']"
+                class="form-input"
+                hint="Digite o email do usuário que deseja adicionar ao projeto"
+              />
+            </div>
+
+            <div class="form-row">
+              <q-select
+                v-model="addMemberForm.role"
+                label="Função"
+                outlined
+                :options="roleOptions"
+                emit-value
+                map-options
+                :rules="[val => !!val || 'Função é obrigatória']"
+                class="form-input"
+                hint="Selecione a função que o membro terá no projeto"
+              />
+            </div>
+
+            <div class="role-description">
+              <q-icon name="info" color="info" />
+              <span>{{ getRoleDescription(addMemberForm.role) }}</span>
+            </div>
+          </q-form>
+        </q-card-section>
+
+        <q-card-actions class="dialog-actions">
+          <q-btn
+            flat
+            label="Cancelar"
+            @click="showAddMemberDialog = false"
+            class="cancel-btn"
+          />
+          <q-btn
+            color="primary"
+            label="Adicionar Membro"
+            @click="addMember"
+            class="save-btn"
+            :loading="addingMember"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -345,6 +510,22 @@ const availableReleases = ref<string[]>([])
 const selectedRelease = ref<string | undefined>(undefined)
 const memberSearch = ref('')
 const loading = ref(false)
+
+// Add member dialog state
+const showAddMemberDialog = ref(false)
+const addingMember = ref(false)
+const addMemberForm = ref({
+  email: '',
+  role: ''
+})
+
+// Role options
+const roleOptions = [
+  { label: 'Administrador', value: 'ADMIN' },
+  { label: 'Gerente', value: 'MANAGER' },
+  { label: 'Testador', value: 'TESTER' },
+  { label: 'Aprovador', value: 'APPROVER' }
+]
 
 // Options
 const scenarioTypes = ['Functional', 'Regression', 'Smoke', 'E2E']
@@ -481,6 +662,282 @@ const chartOptions = computed(() => {
   return options
 })
 
+// Novos gráficos de análises
+const priorityChartSeries = computed(() => {
+  if (!project.value?.testPackages) return []
+  
+  const packages = project.value.testPackages
+  
+  // Agrupar pacotes por prioridade
+  const priorityCounts = {
+    'LOW': 0,
+    'MEDIUM': 0,
+    'HIGH': 0,
+    'CRITICAL': 0
+  }
+  
+  packages.forEach(pkg => {
+    const priority = pkg.priority?.toUpperCase() as keyof typeof priorityCounts
+    if (priority && priorityCounts.hasOwnProperty(priority)) {
+      priorityCounts[priority]++
+    }
+  })
+  
+  return [{
+    name: 'Pacotes',
+    data: [priorityCounts.LOW, priorityCounts.MEDIUM, priorityCounts.HIGH, priorityCounts.CRITICAL]
+  }]
+})
+
+const priorityChartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    height: 300,
+    background: 'transparent',
+    toolbar: { show: false }
+  },
+  plotOptions: {
+    bar: {
+      horizontal: false,
+      columnWidth: '55%',
+      borderRadius: 4
+    }
+  },
+  dataLabels: {
+    enabled: false
+  },
+  stroke: {
+    show: true,
+    width: 2,
+    colors: ['transparent']
+  },
+  xaxis: {
+    categories: ['Baixa', 'Média', 'Alta', 'Crítica'],
+    labels: {
+      style: {
+        colors: '#64748b',
+        fontSize: '12px'
+      }
+    }
+  },
+  yaxis: {
+    labels: {
+      style: {
+        colors: '#64748b',
+        fontSize: '12px'
+      }
+    }
+  },
+  fill: {
+    opacity: 1,
+    colors: ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
+  },
+  colors: ['#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
+  tooltip: {
+    y: {
+      formatter: (val: number) => `${val} cenários`
+    }
+  }
+}))
+
+const monthlyChartSeries = computed(() => {
+  if (!project.value?.testPackages) return []
+  
+  const packages = project.value.testPackages
+  
+  // Agrupar pacotes por mês de criação
+  const monthlyData: { [key: string]: number } = {}
+  
+  packages.forEach(pkg => {
+    const createdAt = new Date(pkg.createdAt)
+    const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`
+    
+    if (!monthlyData[monthKey]) {
+      monthlyData[monthKey] = 0
+    }
+    monthlyData[monthKey]++
+  })
+  
+  // Converter para array ordenado
+  const sortedMonths = Object.keys(monthlyData).sort()
+  const data = sortedMonths.map(month => monthlyData[month])
+  
+  return [{
+    name: 'Pacotes Criados',
+    data: data
+  }]
+})
+
+const monthlyChartOptions = computed(() => {
+  if (!project.value?.testPackages) return {}
+  
+  const packages = project.value.testPackages
+  
+  // Agrupar pacotes por mês de criação
+  const monthlyData: { [key: string]: number } = {}
+  
+  packages.forEach(pkg => {
+    const createdAt = new Date(pkg.createdAt)
+    const monthKey = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`
+    
+    if (!monthlyData[monthKey]) {
+      monthlyData[monthKey] = 0
+    }
+    monthlyData[monthKey]++
+  })
+  
+  // Converter para array ordenado
+  const sortedMonths = Object.keys(monthlyData).sort()
+  const monthLabels = sortedMonths.map(monthKey => {
+    const [year, month] = monthKey.split('-')
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    return `${monthNames[parseInt(month) - 1]} ${year}`
+  })
+  
+  return {
+    chart: {
+      type: 'bar',
+      height: 300,
+      background: 'transparent',
+      toolbar: { show: false }
+    },
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '60%',
+        borderRadius: 6,
+        borderRadiusApplication: 'end',
+        borderRadiusWhenStacked: 'last'
+      }
+    },
+    dataLabels: {
+      enabled: false
+    },
+    stroke: {
+      show: false
+    },
+    xaxis: {
+      categories: monthLabels,
+      labels: {
+        style: {
+          colors: '#64748b',
+          fontSize: '12px'
+        }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: {
+          colors: '#64748b',
+          fontSize: '12px'
+        }
+      }
+    },
+    fill: {
+      opacity: 1,
+      type: 'solid'
+    },
+    colors: ['#3B82F6'],
+    tooltip: {
+      y: {
+        formatter: (val: number) => `${val} pacotes`
+      }
+    },
+    grid: {
+      show: true,
+      borderColor: 'rgba(100, 116, 139, 0.1)',
+      strokeDashArray: 2
+    }
+  }
+})
+
+const successRateChartSeries = computed(() => {
+  if (!project.value?.testPackages) return []
+  
+  const packages = project.value.testPackages
+  
+  // Calcular estatísticas dos pacotes
+  const passedPackages = packages.filter(pkg => pkg.status === 'Passed').length
+  const failedPackages = packages.filter(pkg => pkg.status === 'Failed').length
+  const notExecutedPackages = packages.filter(pkg => pkg.status === 'Created' || !pkg.status).length
+  
+  console.log('Status dos pacotes:', {
+    total: packages.length,
+    passed: passedPackages,
+    failed: failedPackages,
+    notExecuted: notExecutedPackages,
+    packages: packages.map(p => ({ id: p.id, status: p.status }))
+  })
+  
+  // Retornar array simples para gráfico de pizza
+  return [passedPackages, failedPackages, notExecutedPackages]
+})
+
+const successRateChartOptions = computed(() => {
+  return {
+    chart: {
+      type: 'pie',
+      height: 300,
+      background: 'transparent',
+      toolbar: { show: false }
+    },
+    labels: ['Aprovados', 'Reprovados', 'Não Executados'],
+    colors: ['#10B981', '#EF4444', '#6B7280'],
+    dataLabels: {
+      enabled: true,
+      formatter: function (val: number, opts: any) {
+        const labels = ['Aprovados', 'Reprovados', 'Não Executados']
+        return labels[opts.seriesIndex] + ' (' + val.toFixed(1) + '%)'
+      },
+      style: {
+        fontSize: '12px',
+        fontWeight: 'bold',
+        colors: ['#fff', '#fff', '#fff']
+      }
+    },
+    legend: {
+      position: 'bottom',
+      horizontalAlign: 'center',
+      fontSize: '12px',
+      labels: {
+        colors: '#64748b'
+      },
+      markers: {
+        width: 8,
+        height: 8,
+        radius: 2
+      }
+    },
+    tooltip: {
+      y: {
+        formatter: function (val: number, opts: any) {
+          const labels = ['Aprovados', 'Reprovados', 'Não Executados']
+          return labels[opts.seriesIndex] + ': ' + val + ' pacotes'
+        }
+      }
+    },
+    plotOptions: {
+      pie: {
+        expandOnClick: true,
+        donut: {
+          size: '60%'
+        }
+      }
+    },
+    responsive: [{
+      breakpoint: 480,
+      options: {
+        chart: {
+          width: 200
+        },
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }]
+  }
+})
+
 const filteredMembers = computed(() => {
   if (!memberSearch.value) return members.value
   const search = memberSearch.value.toLowerCase()
@@ -542,6 +999,85 @@ function getRoleColor(role: string) {
     'APPROVER': 'teal'
   }
   return colors[role] || 'grey'
+}
+
+// Member management functions
+async function addMember() {
+  try {
+    addingMember.value = true
+    
+    // Validação básica
+    if (!addMemberForm.value.email || !addMemberForm.value.role) {
+      $q.notify({
+        type: 'negative',
+        message: 'Por favor, preencha todos os campos obrigatórios',
+        position: 'top'
+      })
+      return
+    }
+
+    // Verificar se o usuário já é membro
+    const existingMember = members.value.find(member => 
+      member.email.toLowerCase() === addMemberForm.value.email.toLowerCase()
+    )
+    
+    if (existingMember) {
+      $q.notify({
+        type: 'warning',
+        message: 'Este usuário já é membro do projeto',
+        position: 'top'
+      })
+      return
+    }
+
+    // Aqui você implementaria a chamada para a API
+    // await memberService.addMember(projectId.value, addMemberForm.value)
+    
+    // Mock: adicionar membro localmente
+    const newMember: ProjectMember = {
+      id: Date.now(),
+      name: addMemberForm.value.email.split('@')[0], // Mock name
+      email: addMemberForm.value.email,
+      role: addMemberForm.value.role,
+      avatar: null,
+      joinedAt: new Date().toISOString()
+    }
+    
+    members.value.push(newMember)
+    
+    // Limpar formulário e fechar diálogo
+    addMemberForm.value = { email: '', role: '' }
+    showAddMemberDialog.value = false
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Membro adicionado com sucesso!',
+      position: 'top'
+    })
+  } catch (error: any) {
+    $q.notify({
+      type: 'negative',
+      message: 'Erro ao adicionar membro: ' + error.message,
+      position: 'top'
+    })
+  } finally {
+    addingMember.value = false
+  }
+}
+
+function getRoleDescription(role: string) {
+  const descriptions: Record<string, string> = {
+    'ADMIN': 'Acesso total ao projeto, pode gerenciar membros e configurações',
+    'MANAGER': 'Pode gerenciar cenários, pacotes e membros (exceto proprietário)',
+    'TESTER': 'Pode executar testes e criar cenários',
+    'APPROVER': 'Pode aprovar resultados de testes e cenários'
+  }
+  return descriptions[role] || 'Função não definida'
+}
+
+function isValidEmail(email: string) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
 }
 
 async function loadProjectDetails() {
@@ -1070,6 +1606,63 @@ onMounted(() => {
   font-size: 18px;
 }
 
+/* Analytics Section */
+.analytics-section {
+  margin-bottom: 32px;
+}
+
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.analytics-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.analytics-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.analytics-header {
+  padding: 20px 24px 16px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.analytics-content {
+  padding: 24px;
+}
+
+.chart-container {
+  width: 100%;
+  height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.no-data-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+}
+
+.no-data-chart p {
+  margin: 0;
+  font-size: 14px;
+}
+
 /* Create Package Section */
 .create-package-section {
   margin-bottom: 32px;
@@ -1252,6 +1845,25 @@ onMounted(() => {
   gap: 24px;
 }
 
+.members-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.add-member-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.add-member-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
 .members-content {
   padding: 32px;
 }
@@ -1288,6 +1900,80 @@ onMounted(() => {
 
 .members-table :deep(.q-table tbody tr:hover) {
   background: rgba(255, 255, 255, 0.05);
+}
+
+/* Add Member Dialog Styles */
+.add-member-dialog {
+  border-radius: 16px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 24px 0 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.dialog-header .text-h6 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.close-btn {
+  margin-left: auto;
+}
+
+.dialog-content {
+  padding: 24px;
+}
+
+.add-member-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-input {
+  width: 100%;
+}
+
+.role-description {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.dialog-actions {
+  padding: 0 24px 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+}
+
+.save-btn {
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
 /* Animations */

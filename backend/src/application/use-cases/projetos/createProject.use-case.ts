@@ -43,14 +43,11 @@ export async function createProject({
     )
   }
 
-  // Verificar duplicação com case-insensitive
+  // Verificar duplicação (SQLite não suporta case-insensitive, então normalizamos)
   const duplicate = await prisma.project.findFirst({
     where: { 
       ownerId, 
-      name: {
-        equals: normalizedName,
-        mode: 'insensitive'
-      }
+      name: normalizedName
     },
     select: { id: true, name: true },
   })

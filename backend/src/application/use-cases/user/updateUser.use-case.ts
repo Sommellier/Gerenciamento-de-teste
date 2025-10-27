@@ -6,7 +6,7 @@ interface UpdateUserInput {
   name?: string
   email?: string
   password?: string
-  avatar?: string
+  avatar?: string | null
 }
 
 export async function updateUser(userId: string, data: UpdateUserInput) {
@@ -25,7 +25,7 @@ export async function updateUser(userId: string, data: UpdateUserInput) {
 
   if (data.name) {
     const name = data.name.trim()
-    if (name.length < 2 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(name)) {
+    if (name.length < 2 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/.test(name)) {
       throw new AppError('Invalid name', 400)
     }
     updates.name = name

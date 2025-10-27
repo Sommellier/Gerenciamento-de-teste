@@ -257,5 +257,25 @@ describe('getProjectPackagesController', () => {
       expect(response.body).toHaveProperty('packages')
       expect(Array.isArray(response.body.packages)).toBe(true)
     })
+
+    it('testa controller diretamente sem autenticação', async () => {
+      const req = {
+        params: { projectId: projectId.toString() },
+        query: {},
+        user: undefined
+      } as any
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next = jest.fn()
+
+      await getProjectPackagesController(req, res, next)
+
+      expect(res.status).toHaveBeenCalledWith(401)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Não autenticado' })
+    })
   })
 })

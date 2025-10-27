@@ -91,10 +91,13 @@ export async function createScenario({
         description,
         type: type as any,
         priority: priority as any,
-        tags,
-        assigneeEmail: finalAssigneeEmail,
-        environment: environment as any,
-        release,
+        tags: JSON.stringify(tags), // Converter array para JSON string
+        // TODO: assigneeEmail não existe no schema atual
+        // assigneeEmail: finalAssigneeEmail,
+        // TODO: environment não existe no schema atual
+        // environment: environment as any,
+        // TODO: release não existe no schema atual
+        // release,
         projectId,
         steps: {
           create: steps.map((step, index) => ({
@@ -111,7 +114,10 @@ export async function createScenario({
       }
     })
 
-    return scenario
+    return {
+      ...scenario,
+      tags: JSON.parse(scenario.tags || '[]')
+    }
   } catch (error) {
     console.error('Error in createScenario:', error)
     throw error

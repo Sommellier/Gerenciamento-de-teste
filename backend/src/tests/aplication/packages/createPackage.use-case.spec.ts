@@ -246,7 +246,7 @@ describe('createPackage - validação de release', () => {
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
       status: 400,
-      message: 'Formato de release inválido. Use YYYY-MM-DD'
+      message: 'Formato de release inválido. Use YYYY-MM ou YYYY-MM-DD'
     })
   })
 
@@ -262,7 +262,7 @@ describe('createPackage - validação de release', () => {
 
     await expect(createPackage(packageData)).rejects.toMatchObject({
       status: 400,
-      message: 'Formato de release inválido. Use YYYY-MM-DD'
+      message: 'Formato de release inválido. Use YYYY-MM ou YYYY-MM-DD'
     })
   })
 
