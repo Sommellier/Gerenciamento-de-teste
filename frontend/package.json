@@ -3,6 +3,8 @@
     "axios": "^1.9.0"
   },
   "devDependencies": {
-    "@types/axios": "^0.9.36"
+    "@quasar/app-vite": "^2.4.0",
+    "@types/axios": "^0.9.36",
+    "@types/node": "^24.3.1"
   }
 }

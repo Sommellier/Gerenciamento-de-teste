@@ -23,7 +23,7 @@ export async function createUser({ name, email, password }: CreateUserInput): Pr
     throw new AppError('Name must be at least 2 characters long', 400)
   }
 
-  const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/
+  const nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/
   if (!nameRegex.test(normalizedName)) {
     throw new AppError('Name contains invalid characters', 400)
   }

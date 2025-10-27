@@ -1,0 +1,143 @@
+import { prisma } from '../../../infrastructure/prisma'
+import { AppError } from '../../../utils/AppError'
+
+interface GetPackageDetailsInput {
+  packageId: number
+  projectId: number
+}
+
+export async function getPackageDetails({ packageId, projectId }: GetPackageDetailsInput) {
+  try {
+    // Buscar o pacote com dados básicos
+    const testPackage = await prisma.testPackage.findFirst({
+      where: {
+        id: packageId,
+        projectId: projectId
+      },
+      include: {
+        steps: {
+          orderBy: { stepOrder: 'asc' }
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            description: true
+          }
+        }
+      }
+    })
+
+    if (!testPackage) {
+      throw new AppError('Pacote não encontrado', 404)
+    }
+
+    // Buscar cenários do pacote separadamente - primeiro sem os relacionamentos
+    let packageScenarios: any[] = []
+    
+    try {
+      packageScenarios = await (prisma.testScenario as any).findMany({
+        where: {
+          packageId: packageId,
+          projectId: projectId
+        },
+        include: {
+          testador: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true
+            }
+          },
+          aprovador: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true
+            }
+          },
+          steps: {
+            orderBy: { stepOrder: 'asc' }
+          }
+        }
+      })
+    } catch (scenarioError) {
+      // Se falhar, buscar sem os campos testador e aprovador
+      packageScenarios = await (prisma.testScenario as any).findMany({
+        where: {
+          packageId: packageId,
+          projectId: projectId
+        },
+        include: {
+          steps: {
+            orderBy: { stepOrder: 'asc' }
+          }
+        }
+      })
+    }
+
+    // Processar cenários com tags convertidas
+    const scenarios = packageScenarios.map((scenario: any) => ({
+      ...scenario,
+      tags: scenario.tags ? JSON.parse(scenario.tags) : []
+    }))
+
+    // Converter tags de JSON string para array
+    const packageWithParsedTags = {
+      ...testPackage,
+      tags: testPackage.tags ? JSON.parse(testPackage.tags) : []
+    }
+
+    // Calcular métricas baseadas nos cenários reais
+    const totalScenarios = scenarios.length
+    const totalSteps = scenarios.reduce((acc: number, scenario: any) => acc + (scenario.steps?.length || 0), 0)
+    const packageSteps = testPackage.steps?.length || 0
+
+    // Agrupar cenários por tipo
+    const scenariosByType = scenarios.reduce((acc: Record<string, number>, scenario: any) => {
+      acc[scenario.type] = (acc[scenario.type] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Agrupar cenários por prioridade
+    const scenariosByPriority = scenarios.reduce((acc: Record<string, number>, scenario: any) => {
+      acc[scenario.priority] = (acc[scenario.priority] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Agrupar cenários por status
+    const scenariosByStatus = scenarios.reduce((acc: Record<string, number>, scenario: any) => {
+      acc[scenario.status] = (acc[scenario.status] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    // Calcular taxa de execução e sucesso
+    const executedScenarios = scenarios.filter((s: any) => s.status !== 'CREATED').length
+    const passedScenarios = scenarios.filter((s: any) => s.status === 'PASSED').length
+    const executionRate = totalScenarios > 0 ? (executedScenarios / totalScenarios) * 100 : 0
+    const successRate = executedScenarios > 0 ? (passedScenarios / executedScenarios) * 100 : 0
+
+    return {
+      ...packageWithParsedTags,
+      scenarios: scenarios,
+      metrics: {
+        totalScenarios,
+        totalSteps,
+        packageSteps,
+        scenariosByType,
+        scenariosByPriority,
+        scenariosByStatus,
+        executionRate: Math.round(executionRate * 100) / 100,
+        successRate: Math.round(successRate * 100) / 100
+      }
+    }
+  } catch (error) {
+    console.error('Error in getPackageDetails:', error)
+    if (error instanceof Error) {
+      throw new AppError(`Erro ao buscar detalhes do pacote: ${error.message}`, 500)
+    }
+    throw error
+  }
+}

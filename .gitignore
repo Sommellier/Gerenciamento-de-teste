@@ -1,0 +1,10 @@
+node_modules
+.env.*
+uploads/
+backend/uploads/
+backend/temp/
+backend/prisma/*.db
+*.db
+backend/coverage/
+*.log
+.DS_Store

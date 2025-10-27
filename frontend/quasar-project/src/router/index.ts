@@ -1,22 +1,36 @@
-import { defineRouter } from '#q-app/wrappers';
-import {
-  createMemoryHistory,
-  createRouter,
-  createWebHashHistory,
-  createWebHistory,
-} from 'vue-router';
-import routes from './routes';
+// src/router/index.ts
+import { createMemoryHistory, createRouter, createWebHashHistory, createWebHistory } from 'vue-router'
+import routes from './routes'
 
-export default defineRouter(function (/* { store, ssrContext } */) {
+function isLoggedIn(): boolean {
+  return !!localStorage.getItem('token') // << mudou aqui
+}
+
+export default function () {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
-    : (process.env.VUE_ROUTER_MODE === 'history' ? createWebHistory : createWebHashHistory);
+    : (process.env.VUE_ROUTER_MODE === 'history' ? createWebHistory : createWebHashHistory)
 
   const Router = createRouter({
     scrollBehavior: () => ({ left: 0, top: 0 }),
     routes,
     history: createHistory(process.env.VUE_ROUTER_BASE),
-  });
+  })
 
-  return Router;
-});
+  Router.beforeEach((to) => {
+    const authed = isLoggedIn()
+
+    // bloqueia telas do app se não estiver logado
+    if (to.meta.requiresAuth && !authed) {
+      return { name: 'login', query: { redirect: to.fullPath } }
+    }
+
+    // se já está logado, evita voltar para telas públicas
+    const publicNames = ['login', 'register', 'forgot', 'reset']
+    if (authed && publicNames.includes(String(to.name))) {
+      return { name: 'dashboard' }
+    }
+  })
+
+  return Router
+}
