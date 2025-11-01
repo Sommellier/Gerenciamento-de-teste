@@ -6,6 +6,10 @@ import { getPackageDetailsController } from '../controllers/packages/getPackageD
 import { updatePackageController } from '../controllers/packages/updatePackage.controller'
 import { deletePackageController } from '../controllers/packages/deletePackage.controller'
 import { createScenarioInPackageController } from '../controllers/scenarios/createScenarioInPackage.controller'
+import { approvePackageController } from '../controllers/packages/approvePackage.controller'
+import { rejectPackageController } from '../controllers/packages/rejectPackage.controller'
+import { sendPackageToTestController } from '../controllers/packages/sendToTest.controller'
+import { generatePackageECTController } from '../controllers/packages/generatePackageECT.controller'
 
 const router = Router()
 
@@ -16,10 +20,15 @@ router.get('/projects/:projectId/packages/:packageId', auth, getPackageDetailsCo
 router.put('/projects/:projectId/packages/:packageId', auth, updatePackageController)
 router.delete('/projects/:projectId/packages/:packageId', auth, deletePackageController)
 
-// Rota para criar cenário dentro de um pacote (Temporariamente sem auth para debug)
-router.post('/projects/:projectId/packages/:packageId/scenarios', createScenarioInPackageController)
+// Rotas de aprovação/reprovação
+router.post('/projects/:projectId/packages/:packageId/approve', auth, approvePackageController)
+router.post('/projects/:projectId/packages/:packageId/reject', auth, rejectPackageController)
+router.post('/projects/:projectId/packages/:packageId/send-to-test', auth, sendPackageToTestController)
 
-// Rota temporária sem auth para debug
-router.post('/projects/:projectId/packages-debug', createPackageController)
+// Rota para gerar ECT do pacote
+router.post('/projects/:projectId/packages/:packageId/ect', auth, generatePackageECTController)
+
+// Rota para criar cenário dentro de um pacote
+router.post('/projects/:projectId/packages/:packageId/scenarios', auth, createScenarioInPackageController)
 
 export default router

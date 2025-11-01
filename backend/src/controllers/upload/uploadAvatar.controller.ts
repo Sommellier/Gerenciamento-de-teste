@@ -3,6 +3,7 @@ import multer from 'multer'
 import { uploadAvatar } from '../../application/use-cases/upload/uploadAvatar.use-case'
 import { AppError } from '../../utils/AppError'
 import path from 'path'
+import fs from 'fs'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -12,6 +13,10 @@ type AuthenticatedRequest = Request & {
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = path.join(process.cwd(), 'temp')
+    // Criar diretório se não existir
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true })
+    }
     cb(null, uploadPath)
   },
   filename: (req, file, cb) => {

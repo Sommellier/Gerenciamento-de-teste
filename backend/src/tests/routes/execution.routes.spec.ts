@@ -50,32 +50,49 @@ jest.mock('../../controllers/execution/execution.controller', () => ({
 // Mock do multer
 jest.mock('multer', () => {
   const mockDiskStorage = jest.fn((config: any) => {
-    // Simular a execução das funções de callback para cobrir as linhas 18-24
+    // Simular a execução das funções de callback para cobrir as linhas 18-24 e 45-56
     if (config.destination) {
       config.destination(null, null, (err: any, dest: string) => {
-        expect(dest).toBe('uploads/evidences/')
+        // Aceita tanto 'uploads/evidences/' quanto 'uploads/bug-attachments/'
+        expect(['uploads/evidences/', 'uploads/bug-attachments/']).toContain(dest)
       })
     }
     if (config.filename) {
       config.filename(null, { fieldname: 'file', originalname: 'test.jpg' }, (err: any, filename: string) => {
-        expect(filename).toMatch(/evidence-\d+-\d+\.jpg/)
+        // Aceita tanto padrão de evidence quanto bug-attachment
+        expect(filename).toMatch(/(evidence|bug-attachment)-\d+-\d+\.jpg/)
       })
     }
     return {}
   })
   
   const mockMulter = (config: any) => {
-    // Simular a execução do fileFilter para cobrir as linhas 33-37
+    // Simular a execução do fileFilter para cobrir as linhas 33-37 e 63-77
     if (config.fileFilter) {
-      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
-      allowedTypes.forEach(mimetype => {
+      // Tipos permitidos para evidências
+      const evidenceTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+      // Tipos permitidos para anexos de bugs
+      const bugAttachmentTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ]
+      
+      const allAllowedTypes = [...new Set([...evidenceTypes, ...bugAttachmentTypes])]
+      
+      allAllowedTypes.forEach(mimetype => {
         config.fileFilter(null, { mimetype }, (err: any, result: boolean) => {
           expect(result).toBe(true)
         })
       })
       // Testar tipo não permitido
       config.fileFilter(null, { mimetype: 'text/plain' }, (err: any, result: boolean) => {
-        expect(err.message).toBe('Tipo de arquivo não permitido')
+        expect(err).toBeInstanceOf(Error)
+        expect(['Tipo de arquivo não permitido', 'Tipo de arquivo não permitido. Use PDF, Word, PowerPoint ou Excel']).toContain(err.message)
       })
     }
     

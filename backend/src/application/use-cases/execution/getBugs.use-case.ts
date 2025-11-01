@@ -37,6 +37,18 @@ export async function getBugs({ scenarioId, userId }: GetBugsInput) {
             id: true,
             title: true
           }
+        },
+        attachments: {
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true
+              }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }

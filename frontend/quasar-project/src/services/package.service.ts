@@ -40,7 +40,21 @@ export interface TestPackage {
   assigneeEmail?: string
   environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
   release: string
-  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
+  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED' | 'EM_TESTE' | 'CONCLUIDO' | 'REPROVADO'
+  ectUrl?: string
+  approvedBy?: {
+    id: number
+    name: string
+    email: string
+  }
+  approvedAt?: string
+  rejectedBy?: {
+    id: number
+    name: string
+    email: string
+  }
+  rejectedAt?: string
+  rejectionReason?: string
   createdAt: string
   updatedAt: string
   steps: PackageStep[]
@@ -91,7 +105,7 @@ class PackageService {
     release: string
     steps?: Array<{ action: string; expected: string }>
   }): Promise<TestPackage> {
-    const response = await api.post<{ testPackage: TestPackage }>(`/projects/${projectId}/packages-debug`, packageData)
+    const response = await api.post<{ testPackage: TestPackage }>(`/projects/${projectId}/packages`, packageData)
     return response.data.testPackage
   }
 
@@ -128,6 +142,41 @@ class PackageService {
     // Por enquanto, apenas simula a execução
     // Em uma implementação real, isso marcaria o pacote como executado
     console.log('Executing package:', packageId)
+  }
+
+  /**
+   * Aprova um pacote de teste
+   */
+  async approvePackage(projectId: number, packageId: number): Promise<TestPackage> {
+    const response = await api.post<{ package: TestPackage }>(
+      `/projects/${projectId}/packages/${packageId}/approve`
+    )
+    return response.data.package
+  }
+
+  /**
+   * Reprova um pacote de teste
+   */
+  async rejectPackage(
+    projectId: number,
+    packageId: number,
+    rejectionReason: string
+  ): Promise<TestPackage> {
+    const response = await api.post<{ package: TestPackage }>(
+      `/projects/${projectId}/packages/${packageId}/reject`,
+      { rejectionReason }
+    )
+    return response.data.package
+  }
+
+  /**
+   * Reenvia um pacote reprovado para teste
+   */
+  async sendPackageToTest(projectId: number, packageId: number): Promise<TestPackage> {
+    const response = await api.post<{ package: TestPackage }>(
+      `/projects/${projectId}/packages/${packageId}/send-to-test`
+    )
+    return response.data.package
   }
 }
 

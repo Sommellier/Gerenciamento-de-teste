@@ -48,6 +48,11 @@ export async function updatePackage({
       throw new AppError('Pacote não encontrado', 404)
     }
 
+    // RB2.2: Bloquear edições quando pacote está CONCLUIDO
+    if (existingPackage.status === 'CONCLUIDO') {
+      throw new AppError('Pacote CONCLUIDO não pode ser editado', 403)
+    }
+
     // Determinar o email do responsável se fornecido
     let finalAssigneeEmail = assigneeEmail
 

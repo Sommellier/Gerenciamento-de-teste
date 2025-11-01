@@ -1,24 +1,29 @@
 <template>
   <div class="create-package-page">
     <div class="page-header">
-      <div class="header-content">
-        <div class="title-section">
-          <q-btn
-            flat
-            round
-            icon="arrow_back"
-            @click="goBack"
-            class="back-btn"
-            color="primary"
-          />
-          <q-icon name="add_box" class="section-icon" />
-          <h1 class="page-title">Criar Pacote de Teste</h1>
-        </div>
-        <div class="subtitle">Preencha os dados para criar um novo pacote de teste</div>
-      </div>
+      <q-card class="glass-card header-card">
+        <q-card-section class="header-content">
+          <div class="title-section">
+            <q-btn
+              flat
+              round
+              icon="arrow_back"
+              @click="goBack"
+              class="back-btn"
+              color="primary"
+              size="lg"
+            />
+            <q-icon name="add_box" class="section-icon" />
+            <div class="title-wrapper">
+              <h1 class="page-title">Criar Pacote de Teste</h1>
+              <p class="subtitle">Preencha os dados para criar um novo pacote de teste</p>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
     </div>
 
-    <q-card class="form-card">
+    <q-card class="form-card glass-card">
       <q-form @submit="onSubmit" class="package-form">
         <q-card-section class="form-section">
           <!-- Informações Básicas -->
@@ -30,7 +35,10 @@
                 v-model="form.title"
                 label="Título do Pacote *"
                 :rules="[val => !!val || 'Título é obrigatório']"
-                outlined
+                filled
+                dark
+                label-color="white"
+                input-class="text-white"
                 class="form-input"
                 hint="Ex: Login e Autenticação"
               />
@@ -41,7 +49,10 @@
                 v-model="form.description"
                 label="Descrição"
                 type="textarea"
-                outlined
+                filled
+                dark
+                label-color="white"
+                input-class="text-white"
                 class="form-input"
                 hint="Descrição detalhada do pacote de teste"
                 rows="3"
@@ -54,7 +65,9 @@
                   v-model="form.type"
                   :options="typeOptions"
                   label="Tipo *"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   :rules="[val => !!val || 'Tipo é obrigatório']"
                   class="form-input"
                 />
@@ -64,7 +77,9 @@
                   v-model="form.priority"
                   :options="priorityOptions"
                   label="Prioridade *"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   :rules="[val => !!val || 'Prioridade é obrigatória']"
                   class="form-input"
                 />
@@ -77,7 +92,9 @@
                   v-model="form.environment"
                   :options="environmentOptions"
                   label="Ambiente"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   class="form-input"
                 />
               </div>
@@ -87,7 +104,9 @@
                     v-model="form.release"
                     :options="releaseOptions"
                     label="Release *"
-                    outlined
+                    filled
+                    dark
+                    label-color="white"
                     :rules="[val => !!val || 'Release é obrigatória']"
                     class="form-input"
                     :loading="loadingData"
@@ -111,7 +130,9 @@
                 v-model="form.assigneeEmail"
                 :options="members"
                 label="Email do Responsável"
-                outlined
+                filled
+                dark
+                label-color="white"
                 class="form-input"
                 :loading="loadingData"
                 hint="Selecione um membro do projeto"
@@ -123,7 +144,10 @@
               <q-input
                 v-model="tagsInput"
                 label="Tags"
-                outlined
+                filled
+                dark
+                label-color="white"
+                input-class="text-white"
                 class="form-input"
                 hint="Separe as tags por vírgula"
                 @input="updateTags"
@@ -164,16 +188,19 @@
 
     <!-- Modal para criar nova release -->
     <q-dialog v-model="showCreateReleaseDialog" persistent>
-      <q-card style="min-width: 400px">
+      <q-card style="min-width: 400px" class="glass-card">
         <q-card-section>
-          <div class="text-h6">Criar Nova Release</div>
+          <div class="text-h6" style="color: #fff">Criar Nova Release</div>
         </q-card-section>
 
         <q-card-section>
           <q-input
             v-model="newRelease"
             label="Data da Release *"
-            outlined
+            filled
+            dark
+            label-color="white"
+            input-class="text-white"
             hint="Selecione a data da release"
             readonly
             @click="showDatePicker = true"
@@ -321,9 +348,10 @@ const loadProjectData = async () => {
     ])
     
     releases.value = releasesData
-    members.value = membersData.map(member => ({
-      label: `${member.user.name} (${member.user.email})`,
-      value: member.user.email
+    const membersDataAny = membersData as any[]
+    members.value = membersDataAny.map(member => ({
+      label: `${member.user?.name ?? member.name} (${member.user?.email ?? member.email})`,
+      value: member.user?.email ?? member.email
     }))
   } catch (error: any) {
     console.error('Erro ao carregar dados do projeto:', error)
@@ -408,14 +436,20 @@ const onSubmit = async () => {
     console.log('onSubmit - projectId:', projectId)
     
     // Converter objetos para valores antes de enviar
+    const getOptionValue = (val: unknown) => {
+      return typeof val === 'object' && val !== null && (val as any).value !== undefined
+        ? (val as any).value
+        : (val as any)
+    }
+
     const packageData = {
       title: form.value.title,
       description: form.value.description,
-      type: typeof form.value.type === 'object' ? form.value.type.value : form.value.type,
-      priority: typeof form.value.priority === 'object' ? form.value.priority.value : form.value.priority,
-      environment: typeof form.value.environment === 'object' ? form.value.environment.value : form.value.environment,
-      release: typeof form.value.release === 'object' ? form.value.release.value : form.value.release,
-      assigneeEmail: typeof form.value.assigneeEmail === 'object' ? form.value.assigneeEmail.value : form.value.assigneeEmail,
+      type: getOptionValue(form.value.type) as any,
+      priority: getOptionValue(form.value.priority) as any,
+      environment: getOptionValue(form.value.environment) as any,
+      release: getOptionValue(form.value.release) as any,
+      assigneeEmail: getOptionValue(form.value.assigneeEmail) as any,
       tags: form.value.tags
     }
     console.log('onSubmit - packageData:', packageData)
@@ -447,9 +481,18 @@ onMounted(() => {
 
 <style scoped>
 .create-package-page {
-  padding: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
+  min-height: 100vh;
+  width: 100%;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .page-header {
@@ -457,44 +500,43 @@ onMounted(() => {
 }
 
 .header-content {
-  text-align: center;
+  padding: 20px 24px;
 }
 
 .title-section {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 8px;
-  position: relative;
+  gap: 16px;
 }
 
 .back-btn {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  color: #667eea;
 }
 
 .section-icon {
-  font-size: 32px;
-  color: #1976d2;
+  font-size: 36px;
+  color: #667eea;
+}
+
+.title-wrapper {
+  display: flex;
+  flex-direction: column;
 }
 
 .page-title {
   font-size: 32px;
   font-weight: 600;
-  color: #1976d2;
+  color: #ffffff;
   margin: 0;
 }
 
 .subtitle {
   font-size: 16px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 4px 0 0 0;
 }
 
 .form-card {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-radius: 12px;
 }
 
@@ -509,10 +551,10 @@ onMounted(() => {
 .group-title {
   font-size: 20px;
   font-weight: 600;
-  color: #333;
+  color: #ffffff;
   margin-bottom: 24px;
   padding-bottom: 8px;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .form-row {
@@ -536,6 +578,26 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 
+/* Forçar texto/labels/mensagens em branco nos campos Quasar */
+:deep(.q-field__label) {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+:deep(.q-field__native),
+:deep(.q-field__input) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field__messages),
+:deep(.q-field__bottom .q-field__counter) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+:deep(.q-select__dropdown-icon),
+:deep(.q-icon) {
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .tags-display {
   margin-top: 8px;
   display: flex;
@@ -556,9 +618,8 @@ onMounted(() => {
 
 
 .form-actions {
-  padding: 24px 32px;
-  background: #f5f5f5;
-  border-radius: 0 0 12px 12px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   justify-content: flex-end;
   gap: 16px;
@@ -576,7 +637,7 @@ onMounted(() => {
 /* Responsive */
 @media (max-width: 768px) {
   .create-package-page {
-    padding: 16px;
+    padding: 16px 20px;
   }
   
   .form-section {

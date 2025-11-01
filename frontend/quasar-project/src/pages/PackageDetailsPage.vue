@@ -44,6 +44,37 @@
           </div>
           
           <div class="header-actions">
+            <!-- Ações de aprovação/reprovação (apenas para EM_TESTE) -->
+            <template v-if="packageData?.status === 'EM_TESTE'">
+              <q-btn
+                color="positive"
+                icon="check_circle"
+                label="Aprovar"
+                @click="handleApprove"
+                class="action-btn"
+                :loading="approving"
+              />
+              <q-btn
+                color="negative"
+                icon="cancel"
+                label="Reprovar"
+                @click="showRejectDialog = true"
+                class="action-btn"
+              />
+            </template>
+            
+            <!-- Ação de reenvio (para REPROVADO) -->
+            <q-btn
+              v-if="packageData?.status === 'REPROVADO'"
+              color="primary"
+              icon="refresh"
+              label="Reenviar para Teste"
+              @click="handleSendToTest"
+              class="action-btn"
+              :loading="sendingToTest"
+            />
+            
+            <!-- Ações normais (desabilitadas quando CONCLUIDO) -->
             <q-btn
               color="white"
               text-color="primary"
@@ -51,6 +82,7 @@
               label="Editar"
               @click="editPackage"
               class="action-btn"
+              :disable="packageData?.status === 'CONCLUIDO'"
             />
             <q-btn
               color="white"
@@ -59,6 +91,7 @@
               label="Excluir"
               @click="confirmDelete"
               class="action-btn"
+              :disable="packageData?.status === 'CONCLUIDO'"
             />
           </div>
         </div>
@@ -83,6 +116,30 @@
             :label="getStatusLabel(packageData?.status)"
             class="status-chip"
           />
+        </div>
+
+        <!-- Approval/Rejection Info -->
+        <div v-if="packageData?.approvedBy || packageData?.rejectedBy" class="approval-info">
+          <q-separator dark class="q-mb-md" />
+          <div v-if="packageData?.approvedBy" class="approval-item approved">
+            <q-icon name="check_circle" color="positive" size="24px" />
+            <div class="approval-details">
+              <div class="approval-label">Aprovado por</div>
+              <div class="approval-value">{{ packageData.approvedBy.name }}</div>
+              <div class="approval-date">{{ formatDate(packageData.approvedAt) }}</div>
+            </div>
+          </div>
+          <div v-if="packageData?.rejectedBy" class="approval-item rejected">
+            <q-icon name="cancel" color="negative" size="24px" />
+            <div class="approval-details">
+              <div class="approval-label">Reprovado por</div>
+              <div class="approval-value">{{ packageData.rejectedBy.name }}</div>
+              <div class="approval-date">{{ formatDate(packageData.rejectedAt) }}</div>
+              <div v-if="packageData.rejectionReason" class="rejection-reason">
+                <strong>Motivo:</strong> {{ packageData.rejectionReason }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -813,75 +870,248 @@
     </q-dialog>
 
     <!-- Bug Details Dialog -->
-    <q-dialog v-model="showBugDetailsDialog" :maximized="false" transition-show="slide-up" transition-hide="slide-down">
-      <q-card style="min-width: 600px; max-width: 800px">
-        <q-card-section class="dialog-header bg-negative text-white">
-          <div class="row items-center">
-            <div class="col">
-              <div class="text-h6">Detalhes do Bug</div>
+    <q-dialog v-model="showBugDetailsDialog" persistent class="bug-dialog-wrapper">
+      <q-card class="bug-details-card-modal">
+        <q-card-section class="bug-details-header-modal" :style="{ backgroundColor: getBugSeverityColor(selectedBug?.severity) }">
+          <div class="bug-dialog-header-content">
+            <div class="bug-dialog-icon-wrapper">
+              <q-icon name="bug_report" size="36px" color="white" />
             </div>
-            <q-btn flat round icon="close" v-close-popup />
-          </div>
-        </q-card-section>
-
-        <q-card-section v-if="selectedBug">
-          <div class="q-mb-md">
-            <div class="text-h6 q-mb-sm">{{ selectedBug.title }}</div>
-            <div class="row q-gutter-sm">
-              <q-chip
-                :color="getBugSeverityColor(selectedBug.severity)"
-                text-color="white"
-                :label="getSeverityLabel(selectedBug.severity)"
-              />
-              <q-chip
-                :color="getBugStatusColor(selectedBug.status)"
-                text-color="white"
-                :label="getStatusLabel(selectedBug.status)"
-              />
-            </div>
-          </div>
-
-          <q-separator class="q-mb-md" />
-
-          <div class="q-mb-md">
-            <div class="text-subtitle2 text-grey-7 q-mb-xs">Descrição</div>
-            <div class="text-body1">{{ selectedBug.description || 'Sem descrição' }}</div>
-          </div>
-
-          <div class="q-mb-md">
-            <div class="text-subtitle2 text-grey-7 q-mb-xs">Cenário Relacionado</div>
-            <q-chip outline color="primary" icon="bug_report">
-              {{ selectedBug.scenario?.title || 'Sem cenário' }}
-            </q-chip>
-          </div>
-
-          <div class="row q-col-gutter-md">
-            <div class="col-6">
-              <div class="text-subtitle2 text-grey-7 q-mb-xs">Criado por</div>
-              <div class="row items-center q-gutter-sm">
-                <q-avatar size="32px" color="primary" text-color="white">
-                  {{ getInitials(selectedBug.creator?.name || selectedBug.creator?.email) }}
-                </q-avatar>
-                <span>{{ selectedBug.creator?.name || selectedBug.creator?.email || 'Desconhecido' }}</span>
+            <div class="bug-dialog-title-section">
+              <div class="bug-dialog-title">{{ selectedBug?.title }}</div>
+              <div class="bug-dialog-chips">
+                <q-chip
+                  :color="getBugSeverityColor(selectedBug?.severity)"
+                  text-color="white"
+                  :label="getSeverityLabel(selectedBug?.severity)"
+                  dense
+                  size="sm"
+                />
+                <q-chip
+                  :color="getBugStatusColor(selectedBug?.status)"
+                  text-color="white"
+                  :label="getStatusLabel(selectedBug?.status)"
+                  dense
+                  size="sm"
+                />
               </div>
             </div>
-            <div class="col-6">
-              <div class="text-subtitle2 text-grey-7 q-mb-xs">Criado em</div>
-              <div>{{ formatDate(selectedBug.createdAt) }}</div>
+            <q-btn 
+              flat 
+              round 
+              icon="close" 
+              color="white" 
+              size="md"
+              class="bug-dialog-close-btn"
+              v-close-popup 
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section v-if="selectedBug" class="bug-details-content-modal">
+          <!-- Descrição -->
+          <div class="detail-section-modal">
+            <div class="section-label-modal">
+              <q-icon name="description" size="22px" />
+              <span>Descrição</span>
+            </div>
+            <div class="section-content-modal">
+              <div class="bug-description-text-modal">
+                {{ selectedBug.description || 'Sem descrição' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-separator"></div>
+
+          <!-- Cenário Relacionado -->
+          <div class="detail-section-modal">
+            <div class="section-label-modal">
+              <q-icon name="assignment" size="22px" />
+              <span>Cenário Relacionado</span>
+            </div>
+            <div class="section-content-modal">
+              <q-chip outline color="primary" icon="assignment" size="md" class="scenario-chip">
+                {{ selectedBug.scenario?.title || 'Sem cenário' }}
+              </q-chip>
+            </div>
+          </div>
+
+          <div class="detail-separator" v-if="selectedBug.attachments && selectedBug.attachments.length > 0"></div>
+
+          <!-- Anexos -->
+          <div class="detail-section-modal" v-if="selectedBug.attachments && selectedBug.attachments.length > 0">
+            <div class="section-label-modal">
+              <q-icon name="attach_file" size="22px" />
+              <span>Anexos ({{ selectedBug.attachments.length }})</span>
+            </div>
+            <div class="section-content-modal">
+              <div class="attachments-grid-modal">
+                <div 
+                  v-for="attachment in selectedBug.attachments" 
+                  :key="attachment.id"
+                  class="attachment-card-modal"
+                >
+                  <div class="attachment-icon-wrapper-modal" :style="{ backgroundColor: getAttachmentColor(attachment.mimeType) + '15' }">
+                    <q-icon 
+                      :name="getAttachmentIcon(attachment.mimeType)" 
+                      size="36px"
+                      :color="getAttachmentColor(attachment.mimeType)"
+                    />
+                  </div>
+                  <div class="attachment-info-modal">
+                    <div class="attachment-name-modal">{{ attachment.originalName }}</div>
+                    <div class="attachment-meta-modal">
+                      <span class="attachment-size">{{ formatFileSize(attachment.size) }}</span>
+                      <q-chip 
+                        :color="getAttachmentColor(attachment.mimeType)" 
+                        text-color="white"
+                        size="xs"
+                        dense
+                      >
+                        {{ getFileTypeLabel(attachment.mimeType) }}
+                      </q-chip>
+                    </div>
+                  </div>
+                  <q-btn
+                    flat
+                    round
+                    icon="download"
+                    :color="getAttachmentColor(attachment.mimeType)"
+                    size="md"
+                    @click="downloadBugAttachment(attachment)"
+                    class="download-btn-modal"
+                  >
+                    <q-tooltip>Baixar anexo</q-tooltip>
+                  </q-btn>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-separator"></div>
+
+          <!-- Informações Adicionais -->
+          <div class="info-grid-modal">
+            <div class="info-item-modal">
+              <div class="info-label-modal">
+                <q-icon name="person" size="20px" />
+                <span>Criado por</span>
+              </div>
+              <div class="info-content-modal">
+                <div class="creator-info">
+                  <q-avatar size="44px" color="primary" text-color="white">
+                    {{ getInitials(selectedBug.creator?.name || selectedBug.creator?.email) }}
+                  </q-avatar>
+                  <div class="creator-details">
+                    <div class="creator-name">{{ selectedBug.creator?.name || 'Desconhecido' }}</div>
+                    <div class="creator-email">{{ selectedBug.creator?.email }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="info-item-modal">
+              <div class="info-label-modal">
+                <q-icon name="schedule" size="20px" />
+                <span>Data de Criação</span>
+              </div>
+              <div class="info-content-modal">
+                <div class="date-text">{{ formatDate(selectedBug.createdAt) }}</div>
+              </div>
             </div>
           </div>
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Fechar" color="primary" v-close-popup />
+        <q-card-actions class="bug-details-actions-modal">
+          <q-btn flat label="Fechar" color="grey-7" v-close-popup class="action-btn" />
           <q-btn 
             v-if="selectedBug?.status !== 'RESOLVED' && selectedBug?.status !== 'CLOSED'"
+            unelevated
             label="Marcar como Resolvido" 
-            color="positive" 
+            color="positive"
+            icon="check_circle"
+            class="action-btn"
             @click="resolveBug(selectedBug); showBugDetailsDialog = false" 
           />
-          <q-btn label="Editar" color="primary" @click="editBugFromDetails" />
+          <q-btn 
+            unelevated
+            label="Editar" 
+            color="primary"
+            icon="edit"
+            class="action-btn"
+            @click="editBugFromDetails" 
+          />
         </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Reject Package Dialog -->
+    <q-dialog v-model="showRejectDialog" persistent>
+      <q-card class="reject-dialog glass-card" style="min-width: 500px; max-width: 600px">
+        <q-card-section class="dialog-header">
+          <div class="dialog-header-content">
+            <h3 class="dialog-title">Reprovar Pacote</h3>
+            <q-btn
+              flat
+              round
+              icon="close"
+              @click="showRejectDialog = false; rejectionReason = ''"
+              class="close-btn"
+              color="white"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="dialog-body">
+          <div class="reject-warning">
+            <q-icon name="warning" size="48px" color="negative" />
+            <p class="warning-text">
+              Você está prestes a reprovar o pacote <strong>{{ packageData?.title }}</strong>.
+            </p>
+            <p class="warning-text">
+              Por favor, informe o motivo da reprovação. O testador responsável será notificado por e-mail.
+            </p>
+          </div>
+
+          <q-form @submit.prevent="handleReject" class="reject-form">
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="description" class="label-icon" />
+                Motivo da Reprovação *
+              </label>
+              <q-input
+                v-model="rejectionReason"
+                placeholder="Descreva o motivo da reprovação..."
+                filled
+                dark
+                label-color="white"
+                input-class="text-white"
+                type="textarea"
+                rows="6"
+                :rules="[val => !!val && val.trim().length > 0 || 'Motivo da reprovação é obrigatório']"
+                class="form-input"
+              />
+            </div>
+
+            <div class="dialog-actions-form">
+              <q-btn
+                flat
+                label="Cancelar"
+                @click="showRejectDialog = false; rejectionReason = ''"
+                class="cancel-btn"
+                color="white"
+              />
+              <q-btn
+                type="submit"
+                label="Reprovar"
+                color="negative"
+                :loading="rejecting"
+                class="reject-btn"
+                unelevated
+              />
+            </div>
+          </q-form>
+        </q-card-section>
       </q-card>
     </q-dialog>
 
@@ -1033,6 +1263,13 @@ const scenarioEditForm = ref({
   testadorId: null as number | null,
   aprovadorId: null as number | null
 })
+
+// Approval/Rejection state
+const approving = ref(false)
+const rejecting = ref(false)
+const sendingToTest = ref(false)
+const showRejectDialog = ref(false)
+const rejectionReason = ref('')
 
 // Computed
 const projectId = computed(() => parseInt(route.params.projectId as string))
@@ -1386,22 +1623,62 @@ const getMonthName = (monthIndex: number): string => {
   return months[monthIndex]
 }
 
+// Flag para evitar múltiplas chamadas simultâneas
+const isLoadingPackageDetails = ref(false)
+
 // Methods
 const loadPackageDetails = async () => {
+  // Evitar múltiplas chamadas simultâneas
+  if (isLoadingPackageDetails.value) {
+    return
+  }
+  
   try {
+    isLoadingPackageDetails.value = true
     loading.value = true
     error.value = ''
     
+    console.log('Carregando detalhes do pacote:', { projectId: projectId.value, packageId: packageId.value })
+    
     const data = await packageService.getPackageDetails(projectId.value, packageId.value)
+    
+    console.log('Dados do pacote recebidos:', data)
+    
+    if (!data) {
+      throw new Error('Nenhum dado retornado do servidor')
+    }
+    
     packageData.value = data
     
     // Carregar bugs reais do pacote
     await loadPackageBugs()
   } catch (err: any) {
-    error.value = err.message || 'Erro ao carregar detalhes do pacote'
     console.error('Error loading package details:', err)
+    
+    // Formatar mensagem de erro mais detalhada
+    let errorMessage = 'Erro ao carregar detalhes do pacote'
+    
+    if (err.response) {
+      // Erro da resposta HTTP
+      errorMessage = err.response.data?.message || err.response.data?.error || errorMessage
+      console.error('Erro HTTP:', err.response.status, errorMessage)
+    } else if (err.request) {
+      // Erro de rede/conexão
+      errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
+      console.error('Erro de rede:', err.request)
+    } else if (err.message) {
+      errorMessage = err.message
+    }
+    
+    error.value = errorMessage
+    Notify.create({
+      type: 'negative',
+      message: errorMessage,
+      position: 'top'
+    })
   } finally {
     loading.value = false
+    isLoadingPackageDetails.value = false
   }
 }
 
@@ -1429,6 +1706,16 @@ const goToCreateScenario = () => {
 }
 
 const editPackage = () => {
+  // RB2.2: Bloquear edições quando CONCLUIDO
+  if (packageData.value?.status === 'CONCLUIDO') {
+    Notify.create({
+      type: 'warning',
+      message: 'Pacote CONCLUIDO não pode ser editado',
+      position: 'top'
+    })
+    return
+  }
+
   // Preencher o formulário com os dados atuais
   editForm.value = {
     title: packageData.value?.title || '',
@@ -1440,6 +1727,100 @@ const editPackage = () => {
     environment: packageData.value?.environment || ''
   }
   showEditDialog.value = true
+}
+
+// Approval handlers
+const handleApprove = async () => {
+  try {
+    approving.value = true
+    
+    await packageService.approvePackage(projectId.value, packageId.value)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Pacote aprovado com sucesso!',
+      position: 'top'
+    })
+    
+    // Recarregar dados
+    await loadPackageDetails()
+  } catch (error: any) {
+    console.error('Erro ao aprovar pacote:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || 'Erro ao aprovar pacote',
+      position: 'top'
+    })
+  } finally {
+    approving.value = false
+  }
+}
+
+const handleReject = async () => {
+  if (!rejectionReason.value || rejectionReason.value.trim().length === 0) {
+    Notify.create({
+      type: 'warning',
+      message: 'Por favor, informe o motivo da reprovação',
+      position: 'top'
+    })
+    return
+  }
+
+  try {
+    rejecting.value = true
+    
+    await packageService.rejectPackage(
+      projectId.value,
+      packageId.value,
+      rejectionReason.value.trim()
+    )
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Pacote reprovado. Notificação enviada ao testador.',
+      position: 'top'
+    })
+    
+    // Fechar diálogo e recarregar
+    showRejectDialog.value = false
+    rejectionReason.value = ''
+    await loadPackageDetails()
+  } catch (error: any) {
+    console.error('Erro ao reprovar pacote:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || 'Erro ao reprovar pacote',
+      position: 'top'
+    })
+  } finally {
+    rejecting.value = false
+  }
+}
+
+const handleSendToTest = async () => {
+  try {
+    sendingToTest.value = true
+    
+    await packageService.sendPackageToTest(projectId.value, packageId.value)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Pacote reenviado para teste!',
+      position: 'top'
+    })
+    
+    // Recarregar dados
+    await loadPackageDetails()
+  } catch (error: any) {
+    console.error('Erro ao reenviar pacote:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || 'Erro ao reenviar pacote',
+      position: 'top'
+    })
+  } finally {
+    sendingToTest.value = false
+  }
 }
 
 const confirmDelete = () => {
@@ -1736,6 +2117,98 @@ const getBugCount = () => {
   return bugs.value.length
 }
 
+const truncateText = (text: string, maxLength: number) => {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
+}
+
+const downloadBugAttachment = async (attachment: any) => {
+  try {
+    const api = (await import('../services/api')).default
+    const baseURL = api.defaults.baseURL || 'http://localhost:3000/api'
+    
+    // Construir URL completa do anexo
+    let fileUrl = attachment.url
+    if (!fileUrl.startsWith('http')) {
+      // Remover /api se estiver presente e adicionar a URL do anexo
+      const cleanBaseURL = baseURL.replace('/api', '')
+      fileUrl = fileUrl.startsWith('/') 
+        ? `${cleanBaseURL}${fileUrl}`
+        : `${cleanBaseURL}/${fileUrl}`
+    }
+    
+    // Obter token do localStorage
+    const token = localStorage.getItem('token')
+    
+    // Fazer download do arquivo
+    const response = await fetch(fileUrl, {
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : ''
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Erro ao baixar arquivo')
+    }
+    
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = attachment.originalName || attachment.filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Anexo baixado com sucesso!',
+      position: 'top'
+    })
+  } catch (err: any) {
+    console.error('Erro ao baixar anexo:', err)
+    Notify.create({
+      type: 'negative',
+      message: 'Erro ao baixar anexo',
+      position: 'top'
+    })
+  }
+}
+
+const getAttachmentIcon = (mimeType: string) => {
+  if (mimeType?.includes('pdf')) return 'picture_as_pdf'
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return 'description'
+  if (mimeType?.includes('powerpoint') || mimeType?.includes('presentation')) return 'slideshow'
+  if (mimeType?.includes('excel') || mimeType?.includes('spreadsheet')) return 'table_chart'
+  return 'attach_file'
+}
+
+const getAttachmentColor = (mimeType: string) => {
+  if (mimeType?.includes('pdf')) return 'negative'
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return 'primary'
+  if (mimeType?.includes('powerpoint') || mimeType?.includes('presentation')) return 'warning'
+  if (mimeType?.includes('excel') || mimeType?.includes('spreadsheet')) return 'positive'
+  return 'grey-7'
+}
+
+const getFileTypeLabel = (mimeType: string) => {
+  if (mimeType?.includes('pdf')) return 'PDF'
+  if (mimeType?.includes('word') || mimeType?.includes('document')) return 'Word'
+  if (mimeType?.includes('powerpoint') || mimeType?.includes('presentation')) return 'PowerPoint'
+  if (mimeType?.includes('excel') || mimeType?.includes('spreadsheet')) return 'Excel'
+  return 'Arquivo'
+}
+
+const formatFileSize = (bytes: number) => {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
 const getBugSeverityColor = (severity: string) => {
   const colors: Record<string, string> = {
     'CRITICAL': 'negative',
@@ -1789,7 +2262,11 @@ const getStatusLabel = (status: string) => {
     'CREATED': 'Criado',
     'EXECUTED': 'Executado',
     'PASSED': 'Concluído',
-    'FAILED': 'Falhou'
+    'FAILED': 'Falhou',
+    // New package approval status
+    'EM_TESTE': 'Em Teste',
+    'CONCLUIDO': 'Concluído',
+    'REPROVADO': 'Reprovado'
   }
   return labels[status] || status
 }
@@ -1845,7 +2322,14 @@ const getStatusColor = (status: string) => {
     'CRIADO': 'grey',
     'EM_EXECUCAO': 'warning',
     'APROVADO': 'positive',
-    'REJEITADO': 'negative'
+    'REJEITADO': 'negative',
+    'CREATED': 'grey',
+    'EXECUTED': 'blue',
+    'PASSED': 'positive',
+    'FAILED': 'negative',
+    'EM_TESTE': 'blue',
+    'CONCLUIDO': 'positive',
+    'REPROVADO': 'negative'
   }
   return colors[status] || 'grey'
 }
@@ -1855,55 +2339,89 @@ const formatDate = (date: string | Date) => {
   return new Date(date).toLocaleDateString('pt-BR')
 }
 
+// Flag para evitar múltiplas chamadas simultâneas de membros
+const isLoadingMembers = ref(false)
+
 // Load members
 const loadMembers = async () => {
+  // Evitar múltiplas chamadas simultâneas
+  if (isLoadingMembers.value) {
+    return
+  }
+  
   try {
+    isLoadingMembers.value = true
     members.value = await getProjectMembers(projectId.value)
   } catch (error: any) {
     console.error('Error loading members:', error)
     members.value = []
+  } finally {
+    isLoadingMembers.value = false
   }
 }
 
-// Handler para recarregar quando a página volta a ficar visível
+// Flag para controlar se os dados já foram carregados inicialmente
+const hasInitiallyLoaded = ref(false)
+
+// Handler para recarregar quando a página volta a ficar visível (com debounce)
+let visibilityTimeout: NodeJS.Timeout | null = null
 const handleVisibilityChange = () => {
-  if (document.visibilityState === 'visible') {
-    loadPackageDetails()
-    loadMembers()
+  if (document.visibilityState === 'visible' && hasInitiallyLoaded.value) {
+    // Limpar timeout anterior se existir
+    if (visibilityTimeout) {
+      clearTimeout(visibilityTimeout)
+    }
+    // Adicionar debounce de 1 segundo para evitar múltiplas chamadas
+    visibilityTimeout = setTimeout(() => {
+      loadPackageDetails()
+      loadMembers()
+    }, 1000)
   }
 }
 
 // Lifecycle
 onMounted(() => {
   loadPackageDetails()
-  loadMembers()
+  loadMembers().then(() => {
+    hasInitiallyLoaded.value = true
+  })
   
   // Adicionar listener para quando a página volta a ficar visível
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
-// Recarregar dados quando a página é ativada (usuário volta para ela)
+// Recarregar dados quando a página é ativada apenas se os dados ainda não foram carregados
 onActivated(() => {
-  loadPackageDetails()
-  loadMembers()
+  if (!hasInitiallyLoaded.value) {
+    loadPackageDetails()
+    loadMembers().then(() => {
+      hasInitiallyLoaded.value = true
+    })
+  }
 })
 
-// Limpar listener
+// Limpar listener e timeout
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange)
+  if (visibilityTimeout) {
+    clearTimeout(visibilityTimeout)
+  }
 })
 </script>
 
 <style scoped>
 .modern-package-details {
-  background: #f8fafc;
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
   min-height: 100vh;
+  width: 100%;
 }
 
 /* Modern Header */
 .modern-header {
   position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
   padding: 0;
   overflow: hidden;
@@ -2053,7 +2571,7 @@ onBeforeUnmount(() => {
 .loading-text {
   margin-top: 16px;
   font-size: 16px;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .error-title {
@@ -2063,7 +2581,7 @@ onBeforeUnmount(() => {
 
 .error-message {
   margin: 0 0 24px 0;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .retry-btn {
@@ -2073,8 +2591,7 @@ onBeforeUnmount(() => {
 /* Main Content */
 .main-content {
   padding: 32px;
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 /* Metrics Dashboard */
@@ -2089,11 +2606,12 @@ onBeforeUnmount(() => {
 }
 
 .metric-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   gap: 16px;
@@ -2128,27 +2646,27 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .metric-card.primary .metric-icon {
-  background: #dbeafe;
-  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
 }
 
 .metric-card.success .metric-icon {
-  background: #d1fae5;
-  color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
 }
 
 .metric-card.warning .metric-icon {
-  background: #fef3c7;
-  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
 }
 
 .metric-card.info .metric-icon {
-  background: #ede9fe;
-  color: #8b5cf6;
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
 }
 
 .metric-content {
@@ -2158,29 +2676,34 @@ onBeforeUnmount(() => {
 .metric-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1e293b;
+  color: white;
   line-height: 1;
   margin-bottom: 4px;
 }
 
 .metric-label {
   font-size: 14px;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
 }
 
 /* Content Tabs */
 .content-tabs {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px 16px 0 0;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   margin-bottom: 0;
 }
 
 .tab-panels {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 0 0 16px 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .tab-panel {
@@ -2198,7 +2721,7 @@ onBeforeUnmount(() => {
 .section-title {
   font-size: 24px;
   font-weight: 700;
-  color: #1e293b;
+  color: white;
   margin: 0;
 }
 
@@ -2222,12 +2745,12 @@ onBeforeUnmount(() => {
   margin: 24px 0 8px 0;
   font-size: 20px;
   font-weight: 600;
-  color: #374151;
+  color: white;
 }
 
 .empty-description {
   margin: 0 0 32px 0;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 16px;
   line-height: 1.5;
 }
@@ -2246,11 +2769,12 @@ onBeforeUnmount(() => {
 }
 
 .scenario-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
@@ -2274,14 +2798,14 @@ onBeforeUnmount(() => {
 .scenario-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: white;
   margin: 0;
   flex: 1;
   margin-right: 12px;
 }
 
 .scenario-description {
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
   line-height: 1.5;
   margin: 0 0 16px 0;
@@ -2299,7 +2823,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .scenario-actions {
@@ -2316,11 +2840,12 @@ onBeforeUnmount(() => {
 }
 
 .chart-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .chart-card.full-width {
@@ -2337,12 +2862,12 @@ onBeforeUnmount(() => {
 .chart-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: white;
   margin: 0;
 }
 
 .chart-icon {
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 24px;
 }
 
@@ -2384,9 +2909,11 @@ onBeforeUnmount(() => {
   gap: 16px;
   margin-bottom: 24px;
   padding: 16px;
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .filter-select {
@@ -2401,11 +2928,12 @@ onBeforeUnmount(() => {
 }
 
 .bug-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
@@ -2437,12 +2965,12 @@ onBeforeUnmount(() => {
 .bug-title {
   font-size: 18px;
   font-weight: 600;
-  color: #1e293b;
+  color: white;
   margin: 0;
 }
 
 .bug-description {
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
   line-height: 1.5;
   margin: 0 0 12px 0;
@@ -2464,13 +2992,478 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .bug-actions {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+}
+
+/* Bug Details Dialog - Modal Moderno */
+.bug-dialog-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bug-details-card-modal {
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  max-width: 850px;
+  width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+}
+
+.bug-details-header-modal {
+  padding: 32px 40px;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.bug-details-header-modal::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.bug-dialog-header-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.bug-dialog-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.bug-dialog-title-section {
+  flex: 1;
+  min-width: 0;
+}
+
+.bug-dialog-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 12px;
+  line-height: 1.3;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.bug-dialog-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bug-dialog-close-btn {
+  margin-top: -8px;
+  margin-right: -8px;
+  background: rgba(255, 255, 255, 0.2) !important;
+}
+
+.bug-details-content-modal {
+  padding: 36px 40px;
+  max-height: calc(90vh - 200px);
+  overflow-y: auto;
+  background: #ffffff;
+  flex: 1;
+}
+
+.bug-details-content-modal::-webkit-scrollbar {
+  width: 10px;
+}
+
+.bug-details-content-modal::-webkit-scrollbar-track {
+  background: #f5f5f5;
+  border-radius: 5px;
+}
+
+.bug-details-content-modal::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 5px;
+}
+
+.bug-details-content-modal::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+.detail-section-modal {
+  margin-bottom: 28px;
+}
+
+.detail-separator {
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+  margin: 24px 0;
+}
+
+.section-label-modal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #1f2937;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.section-content-modal {
+  padding-left: 44px;
+}
+
+.bug-description-text-modal {
+  color: #4b5563;
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  padding: 20px;
+  border-radius: 12px;
+  border-left: 5px solid #3b82f6;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  word-break: break-word;
+}
+
+.scenario-chip {
+  font-size: 14px;
+  padding: 8px 16px;
+}
+
+.attachments-grid-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.attachment-card-modal {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fafbfc 0%, #ffffff 100%);
+  border-radius: 14px;
+  border: 2px solid #e5e7eb;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.attachment-card-modal:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f3f4f6 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);
+  transform: translateY(-3px);
+}
+
+.attachment-icon-wrapper-modal {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+}
+
+.attachment-info-modal {
+  flex: 1;
+  min-width: 0;
+}
+
+.attachment-name-modal {
+  font-weight: 600;
+  font-size: 16px;
+  color: #1f2937;
+  margin-bottom: 10px;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.attachment-meta-modal {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 13px;
+}
+
+.attachment-size {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.download-btn-modal {
+  transition: all 0.2s ease;
+}
+
+.download-btn-modal:hover {
+  transform: scale(1.15);
+  background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.info-grid-modal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.info-item-modal {
+  padding: 20px;
+  background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.info-label-modal {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-content-modal {
+  padding-left: 30px;
+}
+
+.creator-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.creator-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.creator-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.creator-email {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.date-text {
+  font-weight: 600;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.bug-details-actions-modal {
+  padding: 24px 40px;
+  border-top: 2px solid #e5e7eb;
+  background: linear-gradient(to bottom, #fafbfc, #ffffff);
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
+}
+
+.action-btn {
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Approval Info Styles */
+.approval-info {
+  margin-top: 24px;
+  padding-top: 16px;
+}
+
+.approval-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border-left: 4px solid;
+}
+
+.approval-item.approved {
+  border-left-color: #4caf50;
+}
+
+.approval-item.rejected {
+  border-left-color: #f44336;
+}
+
+.approval-details {
+  flex: 1;
+  color: white;
+}
+
+.approval-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 4px;
+}
+
+.approval-value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.approval-date {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.rejection-reason {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.rejection-reason strong {
+  color: white;
+}
+
+/* Reject Dialog Styles */
+.reject-dialog {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.reject-warning {
+  text-align: center;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.warning-text {
+  color: white;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+
+.reject-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dialog-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+.dialog-body {
+  padding: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: white;
+  font-size: 14px;
+}
+
+.label-icon {
+  font-size: 18px;
+}
+
+.form-input {
+  width: 100%;
+}
+
+.form-input :deep(.q-field__control) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px;
+}
+
+.form-input :deep(.q-field__native) {
+  color: white !important;
+}
+
+.form-input :deep(.q-field__label) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.form-input :deep(.q-field__messages) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.form-input :deep(.q-field__input) {
+  color: white !important;
+}
+
+.dialog-actions-form {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Dialog Styles */

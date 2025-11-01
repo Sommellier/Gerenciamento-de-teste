@@ -20,9 +20,16 @@ export const auth: RequestHandler = (req, res, next) => {
       return
     }
 
-    const payload = jwt.verify(token, secret) as JwtPayload
+    const payload = jwt.verify(token, secret) as any
     if (!payload?.userId || !Number.isInteger(payload.userId)) {
       res.status(401).json({ message: 'Token inválido' })
+      return
+    }
+
+    // Verificar se é um access token válido
+    // Se o token tiver campo type, deve ser 'access'
+    if (payload.type && payload.type !== 'access') {
+      res.status(401).json({ message: 'Tipo de token inválido' })
       return
     }
 

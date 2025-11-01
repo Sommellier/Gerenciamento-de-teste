@@ -64,7 +64,7 @@ export interface ExecutionHistory {
 class ExecutionService {
   // Comentários
   async addStepComment(stepId: number, text: string, mentions?: number[]): Promise<StepComment> {
-    const response = await api.post(`/steps/${stepId}/comments`, {
+    const response = await api.post<{ comment: StepComment }>(`/steps/${stepId}/comments`, {
       text,
       mentions
     })
@@ -72,7 +72,7 @@ class ExecutionService {
   }
 
   async getStepComments(stepId: number): Promise<StepComment[]> {
-    const response = await api.get(`/steps/${stepId}/comments`)
+    const response = await api.get<{ comments: StepComment[] }>(`/steps/${stepId}/comments`)
     return response.data.comments
   }
 
@@ -81,7 +81,7 @@ class ExecutionService {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await api.post(`/steps/${stepId}/attachments`, formData, {
+    const response = await api.post<{ attachment: StepAttachment }>(`/steps/${stepId}/attachments`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -90,8 +90,12 @@ class ExecutionService {
   }
 
   async getStepAttachments(stepId: number): Promise<StepAttachment[]> {
-    const response = await api.get(`/steps/${stepId}/attachments`)
+    const response = await api.get<{ attachments: StepAttachment[] }>(`/steps/${stepId}/attachments`)
     return response.data.attachments
+  }
+
+  async deleteStepAttachment(stepId: number, attachmentId: number): Promise<void> {
+    await api.delete(`/steps/${stepId}/attachments/${attachmentId}`)
   }
 
   // Bugs
@@ -104,22 +108,22 @@ class ExecutionService {
       relatedStepId?: number
     }
   ): Promise<Bug> {
-    const response = await api.post(`/scenarios/${scenarioId}/bugs`, data)
+    const response = await api.post<{ bug: Bug }>(`/scenarios/${scenarioId}/bugs`, data)
     return response.data.bug
   }
 
   async getBugs(scenarioId: number): Promise<Bug[]> {
-    const response = await api.get(`/scenarios/${scenarioId}/bugs`)
+    const response = await api.get<{ bugs: Bug[] }>(`/scenarios/${scenarioId}/bugs`)
     return response.data.bugs
   }
 
   async getPackageBugs(projectId: number, packageId: number): Promise<Bug[]> {
-    const response = await api.get(`/projects/${projectId}/packages/${packageId}/bugs`)
+    const response = await api.get<{ bugs: Bug[] }>(`/projects/${projectId}/packages/${packageId}/bugs`)
     return response.data.bugs
   }
 
   async updateBug(bugId: number, data: Partial<{ title: string; description?: string; severity: string; status: string }>): Promise<Bug> {
-    const response = await api.put(`/bugs/${bugId}`, data)
+    const response = await api.put<{ bug: Bug }>(`/bugs/${bugId}`, data)
     return response.data.bug
   }
 
@@ -127,9 +131,22 @@ class ExecutionService {
     await api.delete(`/bugs/${bugId}`)
   }
 
+  // Anexos de bugs
+  async uploadBugAttachment(bugId: number, file: File): Promise<any> {
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await api.post<{ attachment: any }>(`/bugs/${bugId}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    return response.data.attachment
+  }
+
   // Atualizar status da etapa
   async updateStepStatus(stepId: number, status: string, actualResult?: string): Promise<any> {
-    const response = await api.put(`/execution/steps/${stepId}/status`, {
+    const response = await api.put<{ step: any }>(`/execution/steps/${stepId}/status`, {
       status,
       actualResult
     })
@@ -143,7 +160,7 @@ class ExecutionService {
     description?: string,
     metadata?: any
   ): Promise<ExecutionHistory> {
-    const response = await api.post(`/scenarios/${scenarioId}/history`, {
+    const response = await api.post<{ history: ExecutionHistory }>(`/scenarios/${scenarioId}/history`, {
       action,
       description,
       metadata
@@ -152,7 +169,7 @@ class ExecutionService {
   }
 
   async getHistory(scenarioId: number): Promise<ExecutionHistory[]> {
-    const response = await api.get(`/scenarios/${scenarioId}/history`)
+    const response = await api.get<{ history: ExecutionHistory[] }>(`/scenarios/${scenarioId}/history`)
     return response.data.history
   }
 }

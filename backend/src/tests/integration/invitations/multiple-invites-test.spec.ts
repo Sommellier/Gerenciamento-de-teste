@@ -17,17 +17,30 @@ jest.mock('../../../utils/email.util', () => ({
   sendEmail: jest.fn().mockResolvedValue(undefined)
 }))
 
+// Mock do rate limiter
+jest.mock('../../../infrastructure/rateLimiter', () => ({
+  generalLimiter: (_req: any, _res: any, next: any) => next(),
+  publicLimiter: (_req: any, _res: any, next: any) => next(),
+  loginLimiter: (_req: any, _res: any, next: any) => next(),
+  uploadLimiter: (_req: any, _res: any, next: any) => next(),
+  inviteLimiter: (_req: any, _res: any, next: any) => next(),
+}))
+
+// Importar o servidor uma vez para evitar problemas de cache
+let appInstance: Express | null = null
+
 function makeApp(setUser?: (req: any, _res: any, next: any) => void) {
-  const app = require('../../../server').default as Express
-  if (setUser) {
-    app.use(setUser)
+  // Criar instância apenas uma vez
+  if (!appInstance) {
+    appInstance = require('../../../server').default as Express
   }
-  return app
+  // Não aplicar setUser no app compartilhado - usar autenticação real
+  return appInstance
 }
 
 function createToken(userId: number) {
   const secret = process.env.JWT_SECRET || 'test-secret'
-  return jwt.sign({ userId }, secret, { expiresIn: '1h' })
+  return jwt.sign({ userId, type: 'access' }, secret, { expiresIn: '1h' })
 }
 
 describe('Multiple Invites Test', () => {
@@ -94,13 +107,25 @@ describe('Multiple Invites Test', () => {
         .post(`/api/projects/${project.id}/invites`)
         .set('Authorization', `Bearer ${token}`)
         .send(invite)
+      
+      // Log para debug se houver erro
+      if (response.status !== 201) {
+        console.error('Erro ao criar convite:', {
+          email: invite.email,
+          role: invite.role,
+          status: response.status,
+          body: response.body
+        })
+      }
+      
       responses.push(response)
     }
 
     // Verificar se todos os convites foram criados com sucesso
     for (let i = 0; i < responses.length; i++) {
       expect(responses[i].status).toBe(201)
-      expect(responses[i].body.email).toBe(invites[i].email)
+      // Email é normalizado para lowercase no backend
+      expect(responses[i].body.email.toLowerCase()).toBe(invites[i].email.toLowerCase())
       expect(responses[i].body.role).toBe(invites[i].role)
       expect(responses[i].body.status).toBe('PENDING')
     }
@@ -112,9 +137,10 @@ describe('Multiple Invites Test', () => {
 
     expect(dbInvites).toHaveLength(5)
     
-    // Verificar se cada convite tem o email e role corretos
+    // Verificar se cada convite tem o email e role corretos (email normalizado)
     for (const invite of invites) {
-      const dbInvite = dbInvites.find(i => i.email === invite.email)
+      const normalizedEmail = invite.email.toLowerCase().trim()
+      const dbInvite = dbInvites.find(i => i.email === normalizedEmail)
       expect(dbInvite).toBeTruthy()
       expect(dbInvite?.role).toBe(invite.role)
       expect(dbInvite?.status).toBe('PENDING')

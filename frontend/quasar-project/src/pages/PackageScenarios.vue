@@ -52,7 +52,10 @@
                 <q-input
                   v-model="scenarioForm.name"
                   placeholder="Digite o nome do cenário de teste"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
+                  input-class="text-white"
                   :rules="nameRules"
                   class="form-input"
                   hint="Ex: Login com credenciais válidas"
@@ -68,7 +71,10 @@
                 <q-input
                   v-model="scenarioForm.description"
                   placeholder="Descreva o objetivo e contexto do cenário"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
+                  input-class="text-white"
                   type="textarea"
                   rows="3"
                   class="form-input"
@@ -86,7 +92,9 @@
                   v-model="scenarioForm.tester"
                   :options="testerOptions"
                   placeholder="Selecione o testador responsável"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   :rules="testerRules"
                   class="form-input"
                   emit-value
@@ -121,7 +129,9 @@
                   v-model="scenarioForm.type"
                   :options="typeOptions"
                   placeholder="Selecione o tipo do cenário"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   :rules="typeRules"
                   class="form-input"
                   emit-value
@@ -143,7 +153,9 @@
                   v-model="scenarioForm.priority"
                   :options="priorityOptions"
                   placeholder="Selecione a prioridade do cenário"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   :rules="priorityRules"
                   class="form-input"
                   emit-value
@@ -165,7 +177,9 @@
                   v-model="scenarioForm.approver"
                   :options="approverOptions"
                   placeholder="Selecione o aprovador responsável"
-                  outlined
+                  filled
+                  dark
+                  label-color="white"
                   :rules="approverRules"
                   class="form-input"
                   emit-value
@@ -396,6 +410,13 @@ async function loadMembers() {
       // Garantir que é um array
       if (Array.isArray(projectMembers)) {
         members.value = projectMembers
+
+        // Padrão: se houver DONO, pré-selecionar como testador e aprovador
+        const owner = members.value.find(m => m.role === 'OWNER')
+        if (owner) {
+          scenarioForm.value.tester = owner.id
+          scenarioForm.value.approver = owner.id
+        }
       } else {
         members.value = []
       }
@@ -424,10 +445,15 @@ async function createScenario() {
     }
 
     // Verificar se testador e aprovador são diferentes
+    // Exceção: permitir se o selecionado for o DONO (OWNER)
     if (scenarioForm.value.tester === scenarioForm.value.approver) {
-      errorMessage.value = 'O testador e o aprovador devem ser pessoas diferentes'
-      showErrorDialog.value = true
-      return
+      const selected = members.value.find(m => m.id === scenarioForm.value.tester)
+      const isOwner = selected?.role === 'OWNER'
+      if (!isOwner) {
+        errorMessage.value = 'O testador e o aprovador devem ser pessoas diferentes'
+        showErrorDialog.value = true
+        return
+      }
     }
 
     const projectId = Number(route.params.projectId)
@@ -477,9 +503,11 @@ onMounted(() => {
 <style scoped>
 .modern-package-scenarios {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
   position: relative;
   overflow: hidden;
+  padding: 24px 32px;
+  width: 100%;
 }
 
 /* Animated Background */
@@ -496,7 +524,7 @@ onMounted(() => {
 .bg-orb {
   position: absolute;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   animation: float 6s ease-in-out infinite;
 }
 
@@ -537,9 +565,8 @@ onMounted(() => {
 .main-container {
   position: relative;
   z-index: 1;
-  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
-  padding: 32px 24px;
 }
 
 /* Page Header */
@@ -596,11 +623,11 @@ onMounted(() => {
 
 /* Create Scenario Card */
 .create-scenario-card {
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border-radius: 24px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
   animation: slideUp 0.6s ease-out;
 }
@@ -617,7 +644,9 @@ onMounted(() => {
 }
 
 .card-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding: 32px;
   color: white;
   display: flex;
@@ -654,6 +683,7 @@ onMounted(() => {
 
 .card-body {
   padding: 40px 32px;
+  background: transparent;
 }
 
 /* Form Styles */
@@ -675,11 +705,12 @@ onMounted(() => {
   gap: 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #374151;
+  color: white;
 }
 
 .label-icon {
   color: #667eea;
+  opacity: 0.9;
 }
 
 .form-input {
@@ -688,20 +719,39 @@ onMounted(() => {
 
 .form-input :deep(.q-field__control) {
   border-radius: 12px;
-  background: #f8fafc;
-  border: 2px solid #e2e8f0;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
 }
 
 .form-input :deep(.q-field__control:hover) {
-  border-color: #667eea;
-  background: #ffffff;
+  border-color: rgba(102, 126, 234, 0.5);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .form-input :deep(.q-field--focused .q-field__control) {
   border-color: #667eea;
-  background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.form-input :deep(.q-field__label) {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.form-input :deep(.q-field__native),
+.form-input :deep(.q-field__input) {
+  color: #ffffff !important;
+}
+
+.form-input :deep(.q-field__messages),
+.form-input :deep(.q-field__bottom .q-field__counter) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.form-input :deep(.q-select__dropdown-icon),
+.form-input :deep(.q-icon) {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 /* Form Actions */
@@ -711,14 +761,14 @@ onMounted(() => {
   justify-content: flex-end;
   margin-top: 40px;
   padding-top: 32px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .cancel-btn {
   padding: 16px 32px;
   border-radius: 12px;
   font-weight: 600;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .create-btn {

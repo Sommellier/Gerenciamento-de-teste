@@ -127,44 +127,44 @@ class ScenarioService {
     })
 
     const response = await api.get(`/packages/${packageId}/scenarios?${params}`)
-    return response.data
+    return response.data as ScenarioListResponse
   }
 
   // Criar novo cenário
   async createScenario(packageId: number, data: any): Promise<{ message: string; scenario: TestScenario }> {
     const projectId = data.projectId
     const response = await api.post(`/projects/${projectId}/packages/${packageId}/scenarios`, data)
-    return response.data
+    return response.data as { message: string; scenario: TestScenario }
   }
 
   // Obter cenário por ID
   async getScenarioById(scenarioId: number): Promise<{ message: string; scenario: TestScenario }> {
     const response = await api.get(`/scenarios/${scenarioId}`)
-    return response.data
+    return response.data as { message: string; scenario: TestScenario }
   }
 
   // Atualizar cenário
   async updateScenario(scenarioId: number, data: Partial<CreateScenarioData>): Promise<{ message: string; scenario: TestScenario }> {
     const response = await api.put(`/scenarios/${scenarioId}`, data)
-    return response.data
+    return response.data as { message: string; scenario: TestScenario }
   }
 
   // Deletar cenário
   async deleteScenario(scenarioId: number): Promise<{ message: string }> {
     const response = await api.delete(`/scenarios/${scenarioId}`)
-    return response.data
+    return response.data as { message: string }
   }
 
   // Executar cenário
   async executeScenario(scenarioId: number, data: { status: 'PASSED' | 'FAILED' | 'BLOCKED'; notes?: string }): Promise<{ message: string; execution: ScenarioExecution }> {
     const response = await api.post(`/scenarios/${scenarioId}/executions`, data)
-    return response.data
+    return response.data as { message: string; execution: ScenarioExecution }
   }
 
   // Duplicar cenário
   async duplicateScenario(scenarioId: number): Promise<{ message: string; scenario: TestScenario }> {
     const response = await api.post(`/scenarios/${scenarioId}/duplicate`)
-    return response.data
+    return response.data as { message: string; scenario: TestScenario }
   }
 
   // Upload de evidência
@@ -177,7 +177,7 @@ class ScenarioService {
         'Content-Type': 'multipart/form-data'
       }
     })
-    return response.data
+    return response.data as { message: string; evidence: ScenarioEvidence }
   }
 
   // Exportar cenários para CSV
@@ -185,7 +185,7 @@ class ScenarioService {
     const response = await api.get(`/packages/${packageId}/scenarios/export.csv`, {
       responseType: 'blob'
     })
-    return response.data
+    return response.data as Blob
   }
 
   // Gerar relatório PDF
@@ -193,7 +193,7 @@ class ScenarioService {
     const response = await api.get(`/packages/${packageId}/scenarios/report.pdf`, {
       responseType: 'blob'
     })
-    return response.data
+    return response.data as Blob
   }
 }
 

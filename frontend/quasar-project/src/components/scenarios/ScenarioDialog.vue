@@ -362,6 +362,13 @@ const loadMembers = async () => {
       // Buscar membros reais do projeto
       const projectMembers = await getProjectMembers(projectId)
       members.value = projectMembers
+
+      // Padrão: se houver DONO, pré-selecionar como testador e aprovador
+      const owner = members.value.find(m => m.role === 'OWNER')
+      if (owner && !isEditing.value) {
+        formData.value.tester = owner.id
+        formData.value.approver = owner.id
+      }
     }
   } catch (error) {
     console.error('Erro ao carregar membros:', error)
@@ -404,12 +411,17 @@ const onSubmit = async () => {
     }
 
     // Verificar se testador e aprovador são diferentes
+    // Exceção: permitir se o selecionado for o DONO (OWNER)
     if (formData.value.tester === formData.value.approver) {
-      Notify.create({
-        type: 'negative',
-        message: 'O testador e o aprovador devem ser pessoas diferentes'
-      })
-      return
+      const selected = members.value.find(m => m.id === formData.value.tester)
+      const isOwner = selected?.role === 'OWNER'
+      if (!isOwner) {
+        Notify.create({
+          type: 'negative',
+          message: 'O testador e o aprovador devem ser pessoas diferentes'
+        })
+        return
+      }
     }
 
     const projectId = Number(route.params.projectId)

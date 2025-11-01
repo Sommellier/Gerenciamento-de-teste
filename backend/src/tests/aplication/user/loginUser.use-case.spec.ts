@@ -54,14 +54,23 @@ describe('loginUser', () => {
           name: 'Test User',
           email: 'test@example.com'
         },
-        token: 'mock_jwt_token'
+        accessToken: 'mock_jwt_token',
+        refreshToken: 'mock_jwt_token'
       })
       expect(result.user).not.toHaveProperty('password')
       expect(mockedBcrypt.compare).toHaveBeenCalledWith('password123', hashedPassword)
+      expect(mockedJwt.sign).toHaveBeenCalledTimes(2)
+      // Verificar chamada do access token
       expect(mockedJwt.sign).toHaveBeenCalledWith(
-        { userId: user.id, email: user.email },
+        { userId: user.id, email: user.email, type: 'access' },
         process.env.JWT_SECRET,
         { expiresIn: '1h' }
+      )
+      // Verificar chamada do refresh token
+      expect(mockedJwt.sign).toHaveBeenCalledWith(
+        { userId: user.id, email: user.email, type: 'refresh' },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
       )
     })
 
