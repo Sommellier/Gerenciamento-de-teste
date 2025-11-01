@@ -117,6 +117,11 @@ app.use('/api', packageRoutes)
 app.use('/api', executionRoutes)
 app.use('/api', ectRoutes)
 
+// Health check endpoint para Azure App Service
+app.get('/health', (req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
+})
+
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   // Log erro completo apenas em desenvolvimento
   if (process.env.NODE_ENV !== 'production') {
