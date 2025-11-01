@@ -139,7 +139,8 @@
               color="primary"
               icon="add"
               label="Adicionar Etapa"
-              @click="showAddStepDialog = true"
+              @click="handleAddStep"
+              :disable="scenario?.status === 'PASSED'"
               unelevated
             />
           </div>
@@ -167,6 +168,7 @@
                   icon="edit"
                   size="sm"
                   @click="editStep(step)"
+                  :disable="scenario?.status === 'PASSED'"
                   color="primary"
                 >
                   <q-tooltip>Editar etapa</q-tooltip>
@@ -177,6 +179,7 @@
                   icon="delete"
                   size="sm"
                   @click="deleteStep(step.id)"
+                  :disable="scenario?.status === 'PASSED'"
                   color="negative"
                 >
                   <q-tooltip>Excluir etapa</q-tooltip>
@@ -194,12 +197,193 @@
               color="primary"
               icon="add"
               label="Adicionar Primeira Etapa"
-              @click="showAddStepDialog = true"
+              @click="handleAddStep"
+              :disable="scenario?.status === 'PASSED'"
             />
           </div>
         </q-card-section>
       </q-card>
     </div>
+
+    <!-- Edit Scenario Dialog -->
+    <q-dialog v-model="showEditDialog" persistent>
+      <q-card class="edit-dialog glass-card">
+        <q-card-section class="dialog-header">
+          <div class="dialog-header-content">
+            <h3 class="dialog-title">Editar Cenário</h3>
+            <q-btn
+              flat
+              round
+              icon="close"
+              @click="showEditDialog = false"
+              class="close-btn"
+              color="white"
+            />
+          </div>
+        </q-card-section>
+
+        <q-card-section class="dialog-body">
+          <q-form @submit.prevent="saveScenarioEdit" class="edit-form">
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="title" class="label-icon" />
+                Título do Cenário *
+              </label>
+              <q-input
+                v-model="editForm.title"
+                placeholder="Digite o título do cenário"
+                filled
+                dark
+                label-color="white"
+                input-class="text-white"
+                :rules="[val => !!val || 'Título é obrigatório']"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="description" class="label-icon" />
+                Descrição
+              </label>
+              <q-input
+                v-model="editForm.description"
+                placeholder="Descreva o cenário de teste"
+                filled
+                dark
+                label-color="white"
+                input-class="text-white"
+                type="textarea"
+                rows="3"
+                class="form-input"
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="category" class="label-icon" />
+                Tipo *
+              </label>
+              <q-select
+                v-model="editForm.type"
+                :options="typeOptions"
+                placeholder="Selecione o tipo"
+                filled
+                dark
+                label-color="white"
+                :rules="[val => !!val || 'Tipo é obrigatório']"
+                class="form-input"
+                emit-value
+                map-options
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="flag" class="label-icon" />
+                Prioridade *
+              </label>
+              <q-select
+                v-model="editForm.priority"
+                :options="priorityOptions"
+                placeholder="Selecione a prioridade"
+                filled
+                dark
+                label-color="white"
+                :rules="[val => !!val || 'Prioridade é obrigatória']"
+                class="form-input"
+                emit-value
+                map-options
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="person" class="label-icon" />
+                Testador Responsável *
+              </label>
+              <q-select
+                v-model="editForm.testadorId"
+                :options="testerOptions"
+                placeholder="Selecione o testador"
+                filled
+                dark
+                label-color="white"
+                :rules="[val => !!val || 'Testador é obrigatório']"
+                class="form-input"
+                emit-value
+                map-options
+              >
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section avatar>
+                      <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
+                        {{ getInitials(scope.opt.label) }}
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                      <q-item-label caption>{{ scope.opt.email }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                <q-icon name="verified_user" class="label-icon" />
+                Aprovador Responsável *
+              </label>
+              <q-select
+                v-model="editForm.aprovadorId"
+                :options="approverOptions"
+                placeholder="Selecione o aprovador"
+                filled
+                dark
+                label-color="white"
+                :rules="[val => !!val || 'Aprovador é obrigatório']"
+                class="form-input"
+                emit-value
+                map-options
+              >
+                <template v-slot:option="scope">
+                  <q-item v-bind="scope.itemProps">
+                    <q-item-section avatar>
+                      <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
+                        {{ getInitials(scope.opt.label) }}
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ scope.opt.label }}</q-item-label>
+                      <q-item-label caption>{{ scope.opt.email }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </q-select>
+            </div>
+
+            <div class="dialog-actions-form">
+              <q-btn
+                flat
+                label="Cancelar"
+                @click="showEditDialog = false"
+                class="cancel-btn"
+                color="white"
+              />
+              <q-btn
+                type="submit"
+                label="Salvar Alterações"
+                color="primary"
+                :loading="savingScenario"
+                class="save-btn"
+                unelevated
+              />
+            </div>
+          </q-form>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
 
     <!-- Add/Edit Step Dialog -->
     <q-dialog v-model="showAddStepDialog" persistent>
@@ -258,14 +442,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Notify } from 'quasar'
+import { Notify, useQuasar } from 'quasar'
 import { scenarioService } from '../services/scenario.service'
 import { ectService } from '../services/ect.service'
+import { getProjectMembers, type ProjectMember } from '../services/project.service'
 
 const route = useRoute()
 const router = useRouter()
+const $q = useQuasar()
 
 // State
 const loading = ref(true)
@@ -275,10 +461,22 @@ const showAddStepDialog = ref(false)
 const editingStep = ref<any>(null)
 const savingStep = ref(false)
 const generatingECT = ref(false)
+const showEditDialog = ref(false)
+const savingScenario = ref(false)
+const members = ref<ProjectMember[]>([])
 
 const stepForm = ref({
   action: '',
   expected: ''
+})
+
+const editForm = ref({
+  title: '',
+  description: '',
+  type: '',
+  priority: '',
+  testadorId: null as number | null,
+  aprovadorId: null as number | null
 })
 
 // Methods
@@ -305,10 +503,19 @@ async function loadScenario() {
 }
 
 function editScenario() {
-  Notify.create({
-    type: 'info',
-    message: 'Função de edição em desenvolvimento'
-  })
+  if (!scenario.value) return
+  
+  // Preencher o formulário com os dados do cenário
+  editForm.value = {
+    title: scenario.value.title,
+    description: scenario.value.description || '',
+    type: scenario.value.type || '',
+    priority: scenario.value.priority || '',
+    testadorId: scenario.value.testador?.id || scenario.value.ownerUserId || null,
+    aprovadorId: scenario.value.aprovador?.id || null
+  }
+  
+  showEditDialog.value = true
 }
 
 function executeScenario() {
@@ -378,7 +585,27 @@ async function generateECT() {
   }
 }
 
+function handleAddStep() {
+  if (scenario.value?.status === 'PASSED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível adicionar etapas em um cenário concluído',
+      timeout: 3000
+    })
+    return
+  }
+  showAddStepDialog.value = true
+}
+
 function editStep(step: any) {
+  if (scenario.value?.status === 'PASSED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível editar etapas em um cenário concluído',
+      timeout: 3000
+    })
+    return
+  }
   editingStep.value = step
   stepForm.value = {
     action: step.action,
@@ -397,6 +624,16 @@ function closeStepDialog() {
 }
 
 async function saveStep() {
+  // Validar se o cenário está concluído
+  if (scenario.value?.status === 'PASSED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível adicionar ou editar etapas em um cenário concluído',
+      timeout: 3000
+    })
+    return
+  }
+
   try {
     savingStep.value = true
     
@@ -449,6 +686,16 @@ async function saveStep() {
 }
 
 async function deleteStep(stepId: number) {
+  // Validar se o cenário está concluído
+  if (scenario.value?.status === 'PASSED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível excluir etapas em um cenário concluído',
+      timeout: 3000
+    })
+    return
+  }
+
   if (!confirm('Tem certeza que deseja excluir esta etapa?')) {
     return
   }
@@ -475,6 +722,123 @@ async function deleteStep(stepId: number) {
       type: 'negative',
       message: err.response?.data?.message || 'Erro ao excluir etapa'
     })
+  }
+}
+
+// Opções dos selects
+const typeOptions = [
+  { label: 'Funcional', value: 'FUNCTIONAL' },
+  { label: 'Regressão', value: 'REGRESSION' },
+  { label: 'Smoke', value: 'SMOKE' },
+  { label: 'End-to-End', value: 'E2E' }
+]
+
+const priorityOptions = [
+  { label: 'Baixa', value: 'LOW' },
+  { label: 'Média', value: 'MEDIUM' },
+  { label: 'Alta', value: 'HIGH' },
+  { label: 'Crítica', value: 'CRITICAL' }
+]
+
+// Membros que podem ser testadores
+const testerOptions = computed(() => {
+  if (!Array.isArray(members.value)) return []
+  return members.value
+    .filter(member => {
+      const role = member.role
+      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'TESTER'
+    })
+    .map(member => ({
+      label: member.name || member.email,
+      value: member.id,
+      email: member.email
+    }))
+})
+
+// Membros que podem ser aprovadores
+const approverOptions = computed(() => {
+  if (!Array.isArray(members.value)) return []
+  return members.value
+    .filter(member => {
+      const role = member.role
+      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'APPROVER'
+    })
+    .map(member => ({
+      label: member.name || member.email,
+      value: member.id,
+      email: member.email
+    }))
+})
+
+// Carregar membros do projeto
+async function loadMembers() {
+  try {
+    const projectId = Number(route.params.projectId)
+    if (projectId) {
+      members.value = await getProjectMembers(projectId)
+    }
+  } catch (error) {
+    console.error('Erro ao carregar membros:', error)
+  }
+}
+
+// Salvar edição do cenário
+async function saveScenarioEdit() {
+  if (!scenario.value) return
+
+  // Validação
+  if (!editForm.value.title || !editForm.value.type || !editForm.value.priority) {
+    Notify.create({
+      type: 'negative',
+      message: 'Por favor, preencha todos os campos obrigatórios'
+    })
+    return
+  }
+
+  // Verificar se testador e aprovador são diferentes (exceto se for OWNER)
+  if (editForm.value.testadorId === editForm.value.aprovadorId && editForm.value.testadorId) {
+    const selected = members.value.find(m => m.id === editForm.value.testadorId)
+    const isOwner = selected?.role === 'OWNER'
+    if (!isOwner) {
+      Notify.create({
+        type: 'negative',
+        message: 'O testador e o aprovador devem ser pessoas diferentes'
+      })
+      return
+    }
+  }
+
+  try {
+    savingScenario.value = true
+    
+    const scenarioId = Number(route.params.scenarioId)
+    
+    await scenarioService.updateScenario(scenarioId, {
+      title: editForm.value.title,
+      description: editForm.value.description,
+      type: editForm.value.type as any,
+      priority: editForm.value.priority as any,
+      testadorId: editForm.value.testadorId,
+      aprovadorId: editForm.value.aprovadorId
+    })
+
+    // Recarregar o cenário
+    await loadScenario()
+    
+    showEditDialog.value = false
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Cenário atualizado com sucesso!'
+    })
+  } catch (err: any) {
+    console.error('Erro ao atualizar cenário:', err)
+    Notify.create({
+      type: 'negative',
+      message: err.response?.data?.message || 'Erro ao atualizar cenário'
+    })
+  } finally {
+    savingScenario.value = false
   }
 }
 
@@ -567,18 +931,20 @@ function formatDate(date: string) {
 // Lifecycle
 onMounted(() => {
   loadScenario()
+  loadMembers()
 })
 </script>
 
 <style scoped>
 .scenario-details-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 32px;
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
+  padding: 24px 32px;
+  width: 100%;
 }
 
 .page-header {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border-radius: 20px;
   padding: 32px 40px;
@@ -588,8 +954,8 @@ onMounted(() => {
   align-items: center;
   flex-wrap: wrap;
   gap: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-left {
@@ -646,10 +1012,13 @@ onMounted(() => {
 
 .loading-container,
 .error-container {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   padding: 60px 24px;
   text-align: center;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .content-container {
@@ -660,10 +1029,18 @@ onMounted(() => {
 
 .info-card,
 .steps-card {
-  background: white;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.08) !important;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .info-card:hover,
@@ -687,7 +1064,7 @@ onMounted(() => {
   font-size: 24px;
   font-weight: 800;
   margin: 0;
-  color: #1e293b;
+  color: white;
   letter-spacing: -0.5px;
 }
 
@@ -715,7 +1092,7 @@ onMounted(() => {
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
 }
 
@@ -724,7 +1101,7 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   font-size: 16px;
-  color: #333;
+  color: white;
 }
 
 .member-info {
@@ -738,7 +1115,7 @@ onMounted(() => {
 
 .member-email {
   font-size: 12px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .steps-list {
@@ -752,17 +1129,19 @@ onMounted(() => {
   display: flex;
   gap: 20px;
   padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
   border-radius: 16px;
   border-left: 5px solid #667eea;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .step-item:hover {
-  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  background: rgba(255, 255, 255, 0.12);
   transform: translateX(8px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.2);
   border-left-color: #764ba2;
 }
 
@@ -791,12 +1170,12 @@ onMounted(() => {
 .step-expected {
   font-size: 15px;
   line-height: 1.7;
-  color: #475569;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .step-action strong,
 .step-expected strong {
-  color: #1e293b;
+  color: white;
   font-weight: 700;
   display: block;
   margin-bottom: 6px;
@@ -814,17 +1193,18 @@ onMounted(() => {
 .empty-steps {
   padding: 60px 24px;
   text-align: center;
-  color: #666;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .empty-steps h3 {
   margin: 16px 0 8px;
   font-size: 20px;
-  color: #333;
+  color: white;
 }
 
 .empty-steps p {
   margin: 0 0 24px;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .step-dialog {
@@ -832,27 +1212,113 @@ onMounted(() => {
   max-width: 600px;
 }
 
+/* Edit Dialog Styles */
+.edit-dialog {
+  min-width: 600px;
+  max-width: 700px;
+}
+
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #eee;
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.dialog-header h3 {
+.dialog-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.dialog-title {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+}
+
+.close-btn {
+  color: white;
+}
+
+.dialog-body {
+  padding: 24px;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .form-group {
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .form-label {
-  display: block;
-  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
-  color: #333;
+  color: white;
+  font-size: 14px;
+}
+
+.label-icon {
+  font-size: 18px;
+}
+
+.form-input {
+  width: 100%;
+}
+
+.form-input :deep(.q-field__control) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px;
+}
+
+.form-input :deep(.q-field__native) {
+  color: white !important;
+}
+
+.form-input :deep(.q-field__label) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.form-input :deep(.q-field__messages) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.form-input :deep(.q-field__input) {
+  color: white !important;
+}
+
+.dialog-actions-form {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cancel-btn {
+  color: white;
+}
+
+.save-btn {
+  font-weight: 600;
+}
+
+/* Step Dialog Styles */
+.step-dialog {
+  min-width: 500px;
+  max-width: 600px;
 }
 
 .dialog-actions {

@@ -56,6 +56,18 @@ export async function createBug({
             id: true,
             title: true
           }
+        },
+        attachments: {
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true
+              }
+            }
+          }
         }
       }
     })

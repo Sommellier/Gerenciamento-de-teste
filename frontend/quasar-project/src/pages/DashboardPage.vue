@@ -14,14 +14,44 @@
         <h1 class="welcome-title">Bem-vindo ao QA Manager</h1>
         <p class="welcome-subtitle">Gerencie seus projetos de teste de forma eficiente</p>
       </div>
-      <!-- Ícone de perfil -->
-      <div class="profile-icon-container" @click="goToProfile">
-        <div class="profile-icon-wrapper">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
+      <!-- Menu de perfil -->
+      <div class="profile-icon-container">
+        <q-btn-dropdown
+          flat
+          round
+          no-caps
+          class="profile-menu-btn"
+          menu-anchor="bottom right"
+          menu-self="top right"
+        >
+          <template v-slot:label>
+            <div class="profile-icon-wrapper">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </template>
+          <q-list dark class="profile-menu-list">
+            <q-item clickable v-close-popup @click="goToProfile" class="profile-menu-item">
+              <q-item-section avatar>
+                <q-icon name="person" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Ver Perfil</q-item-label>
+              </q-item-section>
+            </q-item>
+            <q-separator dark />
+            <q-item clickable v-close-popup @click="handleLogout" class="profile-menu-item logout-item">
+              <q-item-section avatar>
+                <q-icon name="logout" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>Desconectar-se</q-item-label>
+              </q-item-section>
+            </q-item>
+          </q-list>
+        </q-btn-dropdown>
       </div>
     </header>
 
@@ -96,11 +126,46 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+
 const router = useRouter()
+const $q = useQuasar()
+
 const goToProjects = () => router.push('/projects')
 const goToCreate = () => router.push('/create-project')
 const goToInvites = () => router.push('/invites')
 const goToProfile = () => router.push('/profile')
+
+const handleLogout = () => {
+  $q.dialog({
+    title: 'Confirmar Logout',
+    message: 'Tem certeza que deseja desconectar-se?',
+    cancel: true,
+    persistent: true,
+    ok: {
+      label: 'Desconectar',
+      color: 'primary'
+    },
+    cancel: {
+      label: 'Cancelar',
+      color: 'grey',
+      flat: true
+    }
+  }).onOk(() => {
+    // Remover token do localStorage
+    localStorage.removeItem('token')
+    
+    // Redirecionar para login
+    router.push('/login')
+    
+    // Notificar usuário
+    $q.notify({
+      type: 'positive',
+      message: 'Desconectado com sucesso!',
+      position: 'top'
+    })
+  })
+}
 </script>
 
 <style scoped>
@@ -112,7 +177,7 @@ const goToProfile = () => router.push('/profile')
 .dashboard-page {
   min-height: 100vh;
   position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
 }
@@ -192,26 +257,34 @@ const goToProfile = () => router.push('/profile')
   margin: 0;
 }
 
-/* ===== Ícone de Perfil ===== */
+/* ===== Menu de Perfil ===== */
 .profile-icon-container {
   position: absolute;
   top: 2rem;
   right: 2rem;
-  cursor: pointer;
+  z-index: 100;
+}
+
+.profile-menu-btn {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: all 0.3s ease;
+}
+
+.profile-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
 }
 
 .profile-icon-wrapper {
   width: 50px;
   height: 50px;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  transition: all 0.3s ease;
+  border-radius: 50%;
 }
 
 .profile-icon-wrapper svg {
@@ -220,10 +293,41 @@ const goToProfile = () => router.push('/profile')
   color: white;
 }
 
-.profile-icon-container:hover .profile-icon-wrapper {
-  background: rgba(255, 255, 255, 0.3);
-  transform: scale(1.1);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+.profile-menu-list {
+  background: rgba(30, 41, 59, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 200px;
+}
+
+.profile-menu-item {
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0;
+  transition: all 0.2s ease;
+}
+
+.profile-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.logout-item {
+  color: #ef4444;
+}
+
+.logout-item:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.profile-menu-item :deep(.q-item__label) {
+  color: white;
+  font-weight: 500;
+}
+
+.logout-item :deep(.q-item__label) {
+  color: #ef4444;
 }
 
 .welcome-title {
@@ -265,11 +369,11 @@ const goToProfile = () => router.push('/profile')
 /* ===== Cards Modernos ===== */
 .modern-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border-radius: 24px;
   padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   overflow: hidden;

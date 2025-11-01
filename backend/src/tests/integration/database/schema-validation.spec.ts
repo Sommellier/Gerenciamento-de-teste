@@ -3,13 +3,16 @@ import { prisma } from '../../../infrastructure/prisma'
 describe('Database Schema Validation', () => {
   it('deve ter o campo packageId no modelo TestScenario', async () => {
     // Verificar se o campo packageId existe na tabela TestScenario
-    const tableInfo = await prisma.$queryRaw`
-      PRAGMA table_info(TestScenario);
+    // PostgreSQL usa information_schema ao invés de PRAGMA
+    const tableInfo = await prisma.$queryRaw<any[]>`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'TestScenario' AND column_name = 'packageId'
     `
     
-    const packageIdField = (tableInfo as any[]).find(field => field.name === 'packageId')
+    const packageIdField = tableInfo.find(field => field.column_name === 'packageId')
     expect(packageIdField).toBeDefined()
-    expect(packageIdField.name).toBe('packageId')
+    expect(packageIdField.column_name).toBe('packageId')
   })
 
   it('deve permitir criar cenário com packageId', async () => {

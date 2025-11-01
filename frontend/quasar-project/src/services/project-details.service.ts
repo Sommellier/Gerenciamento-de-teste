@@ -176,15 +176,19 @@ export async function getProjectDetails(projectId: number, release?: string): Pr
 
   // Real API call
   try {
-    const response = await api.get(`/projects/${projectId}/details`, {
+    const response = await api.get<ProjectDetails>(`/projects/${projectId}/details`, {
       params: { release }
     })
     console.log('API Response:', response.data)
-    return response.data as ProjectDetails
+    return response.data
   } catch (error) {
     console.error('Erro ao buscar detalhes do projeto:', error)
     throw error
   }
+}
+
+interface CreateTestPackageResponse {
+  testPackage: TestPackage
 }
 
 export async function createTestPackage(projectId: number, testPackage: Omit<TestPackage, 'id' | 'createdAt' | 'updatedAt' | 'status'>): Promise<TestPackage> {
@@ -204,8 +208,27 @@ export async function createTestPackage(projectId: number, testPackage: Omit<Tes
   }
 
   // Real API call
-  const response = await api.post(`/projects/${projectId}/packages`, testPackage)
-  return (response.data as { testPackage: TestPackage }).testPackage
+  const response = await api.post<CreateTestPackageResponse>(`/projects/${projectId}/packages`, testPackage)
+  return response.data.testPackage
+}
+
+interface ProjectMemberItem {
+  id?: number
+  userId?: number
+  user?: {
+    id: number
+    name: string
+    email: string
+    avatar?: string
+  }
+  name?: string
+  email?: string
+  role: string
+  avatar?: string
+}
+
+interface GetProjectMembersResponse {
+  items?: ProjectMemberItem[]
 }
 
 export async function getProjectMembers(projectId: number): Promise<ProjectMember[]> {
@@ -215,19 +238,22 @@ export async function getProjectMembers(projectId: number): Promise<ProjectMembe
   }
 
   // Real API call
-  const response = await api.get(`/projects/${projectId}/members`)
+  const response = await api.get<GetProjectMembersResponse>(`/projects/${projectId}/members`)
   
   // A API retorna { items: [...] }
-  const items = response.data.items || response.data
+  const items = response.data.items || (response.data as unknown as ProjectMemberItem[])
   
   // Mapear para o formato esperado
-  return items.map((item: any) => ({
-    id: item.user?.id || item.userId,
-    name: item.user?.name || item.name,
-    email: item.user?.email || item.email,
-    role: item.role,
-    avatar: item.user?.avatar || item.avatar
-  }))
+  return items.map((item: ProjectMemberItem) => {
+    const avatar = item.user?.avatar || item.avatar
+    return {
+      id: item.user?.id || item.userId || item.id!,
+      name: item.user?.name || item.name!,
+      email: item.user?.email || item.email!,
+      role: item.role as ProjectMember['role'],
+      ...(avatar && { avatar })
+    }
+  })
 }
 
 export async function getAvailableReleases(projectId: number): Promise<string[]> {
@@ -237,6 +263,6 @@ export async function getAvailableReleases(projectId: number): Promise<string[]>
   }
 
   // Real API call
-  const response = await api.get(`/projects/${projectId}/releases`)
-  return response.data as string[]
+  const response = await api.get<string[]>(`/projects/${projectId}/releases`)
+  return response.data
 }

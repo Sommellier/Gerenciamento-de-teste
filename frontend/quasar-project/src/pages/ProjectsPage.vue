@@ -409,20 +409,26 @@ async function loadProjects() {
       })
       
       console.log('Loading projects with params:', params.toString())
-      const response = await api.get(`/projects?${params}`, {
+      const response = await api.get<{
+        items: any[]
+        total: number
+        page: number
+        pageSize: number
+        totalPages: number
+      }>(`/projects?${params}`, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
         }
       })
       console.log('Projects response:', response.data)
-      console.log('Projects items:', response.data.items)
-      console.log('Projects length:', response.data.items?.length)
+      console.log('Projects items:', response.data?.items)
+      console.log('Projects length:', response.data?.items?.length)
       
-      projects.value = response.data.items || []
-      allProjects.value = response.data.items || [] // Armazena todos os projetos
-      totalPages.value = response.data.totalPages || 1
-      totalProjects.value = response.data.total || 0
+      projects.value = response.data?.items || []
+      allProjects.value = response.data?.items || [] // Armazena todos os projetos
+      totalPages.value = response.data?.totalPages || 1
+      totalProjects.value = response.data?.total || 0
       
       console.log('projects.value after assignment:', projects.value)
       console.log('projects.value.length:', projects.value.length)
@@ -432,10 +438,28 @@ async function loadProjects() {
     }
   } catch (err: any) {
     console.error('Error loading projects:', err)
+    
+    // Mensagem de erro mais detalhada
+    let errorMessage = 'Erro ao carregar projetos'
+    
+    if (err.response) {
+      // Erro da resposta HTTP
+      errorMessage = err.response.data?.message || err.response.data?.error || errorMessage
+      console.error('Erro HTTP:', err.response.status, errorMessage)
+      console.error('Response data:', err.response.data)
+    } else if (err.request) {
+      // Erro de rede/conexão
+      errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
+      console.error('Erro de rede:', err.request)
+    } else if (err.message) {
+      errorMessage = err.message
+    }
+    
     $q.notify({
       type: 'negative',
-      message: 'Erro ao carregar projetos',
-      position: 'top'
+      message: errorMessage,
+      position: 'top',
+      timeout: 5000
     })
   } finally {
     console.log('loadProjects finished, setting loading to false')
@@ -514,7 +538,7 @@ async function loadAllProjects() {
         'Pragma': 'no-cache'
       }
     })
-    allProjects.value = response.data.items || []
+    allProjects.value = (response.data as any)?.items || []
   } catch (err: any) {
     console.error('Error loading all projects:', err)
   }
@@ -536,7 +560,7 @@ onMounted(async () => {
 .projects-page {
   min-height: 100vh;
   position: relative;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
 }
@@ -617,11 +641,11 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border-radius: 20px;
   padding: 1.5rem 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-left {
@@ -857,10 +881,10 @@ onMounted(async () => {
 }
 
 .project-card {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
   border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;

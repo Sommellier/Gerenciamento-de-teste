@@ -13,6 +13,8 @@ import { updateBug } from '../../application/use-cases/execution/updateBug.use-c
 import { deleteBug } from '../../application/use-cases/execution/deleteBug.use-case'
 import { registerExecutionHistory } from '../../application/use-cases/execution/registerExecutionHistory.use-case'
 import { getExecutionHistory } from '../../application/use-cases/execution/getExecutionHistory.use-case'
+import { deleteStepAttachment } from '../../application/use-cases/execution/deleteStepAttachment.use-case'
+import { uploadBugAttachment as uploadBugAttachmentUseCase } from '../../application/use-cases/execution/uploadBugAttachment.use-case'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -112,6 +114,22 @@ export class ExecutionController {
       res.json({
         message: 'Anexos recuperados com sucesso',
         attachments
+      })
+    } catch (err: any) {
+      next(err)
+    }
+  }
+
+  // DELETE /steps/:stepId/attachments/:attachmentId
+  async deleteAttachment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId)
+      const userId = await getValidUserId(req)
+
+      await deleteStepAttachment({ attachmentId, userId })
+
+      res.json({
+        message: 'Anexo excluído com sucesso'
       })
     } catch (err: any) {
       next(err)
@@ -282,6 +300,32 @@ export class ExecutionController {
       res.json({
         message: 'Bug atualizado com sucesso',
         bug
+      })
+    } catch (err: any) {
+      next(err)
+    }
+  }
+
+  // POST /bugs/:bugId/attachments
+  async uploadBugAttachment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+    try {
+      const bugId = parseInt(req.params.bugId)
+      const userId = await getValidUserId(req)
+      const file = req.file
+
+      if (!file) {
+        throw new AppError('Arquivo é obrigatório', 400)
+      }
+
+      const attachment = await uploadBugAttachmentUseCase({
+        bugId,
+        file,
+        userId
+      })
+
+      res.status(201).json({
+        message: 'Anexo do bug enviado com sucesso',
+        attachment
       })
     } catch (err: any) {
       next(err)

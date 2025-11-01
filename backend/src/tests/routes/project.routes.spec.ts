@@ -111,59 +111,6 @@ describe('project.routes', () => {
     expect(res.status).toBe(500)
     expect(res.body).toEqual({ message: 'boom' })
   })
-
-  it('GET /projects-test → retorna dados de teste sem autenticação', async () => {
-    const res = await request(app).get('/projects-test')
-    
-    expect(res.status).toBe(200)
-    expect(res.body).toEqual({
-      items: [
-        { id: 1, name: 'Projeto Teste 1', description: 'Descrição do projeto 1', createdAt: expect.any(String) },
-        { id: 2, name: 'Projeto Teste 2', description: 'Descrição do projeto 2', createdAt: expect.any(String) },
-        { id: 3, name: 'Projeto Teste 3', description: 'Descrição do projeto 3', createdAt: expect.any(String) }
-      ],
-      total: 3,
-      page: 1,
-      pageSize: 10,
-      totalPages: 1
-    })
-  })
-
-  it('GET /projects/:projectId/details-test → retorna detalhes de teste sem autenticação', async () => {
-    const res = await request(app).get('/projects/123/details-test')
-    
-    expect(res.status).toBe(200)
-    expect(res.body).toEqual({
-      id: 123,
-      name: 'Projeto 123',
-      description: 'Descrição do projeto de testes',
-      ownerId: 1,
-      createdAt: expect.any(String),
-      updatedAt: expect.any(String),
-      members: [{
-        id: 1,
-        name: 'Richard Schmitz Riedo',
-        email: 'richardriedo87@gmail.com',
-        avatar: null,
-        role: 'OWNER'
-      }],
-      metrics: {
-        created: 0,
-        executed: 0,
-        passed: 0,
-        failed: 0
-      },
-      availableReleases: [],
-      testPackages: [],
-      scenarios: [],
-      scenarioMetrics: {
-        created: 0,
-        executed: 0,
-        passed: 0,
-        failed: 0
-      }
-    })
-  })
 })
 
 

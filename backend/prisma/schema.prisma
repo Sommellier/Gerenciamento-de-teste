@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum Role {
@@ -54,6 +54,9 @@ enum PackageStatus {
   EXECUTED
   PASSED
   FAILED
+  EM_TESTE
+  CONCLUIDO
+  REPROVADO
 }
 
 model User {
@@ -83,7 +86,12 @@ model User {
   stepAttachments  StepAttachment[]           @relation("UserStepAttachments")
   executionHistory ScenarioExecutionHistory[] @relation("UserExecutionHistory")
   bugsCreated      Bug[]                      @relation("UserBugsCreated")
+  bugAttachments   BugAttachment[]            @relation("UserBugAttachments")
   reportApprovals  TestReportApproval[]       @relation("UserReportApprovals")
+  
+  // Relações para aprovação de pacotes
+  packagesApproved TestPackage[]              @relation("PackageApprover")
+  packagesRejected TestPackage[]             @relation("PackageRejector")
 }
 
 model Project {
@@ -298,11 +306,25 @@ model TestPackage {
   release       String // YYYY-MM format
   status        PackageStatus @default(CREATED)
 
+  // ECT URL (obrigatório para aprovação)
+  ectUrl String?
+
+  // Campos de aprovação/reprovação
+  approvedById Int?
+  approvedBy   User? @relation("PackageApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt   DateTime?
+
+  rejectedById Int?
+  rejectedBy   User? @relation("PackageRejector", fields: [rejectedById], references: [id], onDelete: SetNull)
+  rejectedAt   DateTime?
+  rejectionReason String? // Justificativa da reprovação
+
   projectId Int
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   steps     TestPackageStep[]
   scenarios TestScenario[] // Cenários de teste dentro do pacote
+  reports   TestReport[] // Relatórios ECT do pacote
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -311,6 +333,8 @@ model TestPackage {
   @@index([projectId, release])
   @@index([status])
   @@index([assigneeEmail])
+  @@index([approvedById])
+  @@index([rejectedById])
 }
 
 model TestPackageStep {
@@ -406,6 +430,8 @@ model Bug {
   createdBy Int
   creator   User @relation("UserBugsCreated", fields: [createdBy], references: [id], onDelete: Cascade)
 
+  attachments BugAttachment[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -413,6 +439,27 @@ model Bug {
   @@index([projectId])
   @@index([status])
   @@index([severity])
+}
+
+// Anexos de bugs (PDF, Word, PowerPoint)
+model BugAttachment {
+  id           Int    @id @default(autoincrement())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+
+  bugId Int
+  bug   Bug @relation(fields: [bugId], references: [id], onDelete: Cascade)
+
+  uploadedBy Int
+  uploader   User @relation("UserBugAttachments", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([bugId])
+  @@index([uploadedBy])
 }
 
 enum BugSeverity {
@@ -431,7 +478,8 @@ enum BugStatus {
 
 model TestReport {
   id         Int      @id @default(autoincrement())
-  scenarioId Int
+  scenarioId Int? // Pode ser null para relatórios de pacotes
+  packageId  Int? // ID do pacote (para relatórios consolidados)
   fileName   String
   fileSize   Int
   mimeType   String
@@ -440,10 +488,12 @@ model TestReport {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  scenario TestScenario        @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  scenario TestScenario?       @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  package  TestPackage?        @relation(fields: [packageId], references: [id], onDelete: Cascade)
   approval TestReportApproval?
 
   @@index([scenarioId])
+  @@index([packageId])
   @@index([checksum])
 }
 

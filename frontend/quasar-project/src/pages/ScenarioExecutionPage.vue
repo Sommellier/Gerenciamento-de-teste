@@ -36,6 +36,7 @@
             :loading="loading"
             unelevated
             class="action-button"
+            :key="'start-' + executionStatus"
           />
           <q-btn
             v-else-if="executionStatus === 'IN_PROGRESS'"
@@ -46,17 +47,30 @@
             :loading="loading"
             unelevated
             class="action-button"
+            :key="'finish-' + executionStatus"
           />
-          <q-btn
-            v-else-if="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
-            color="white"
-            text-color="primary"
-            icon="arrow_back"
-            label="Voltar"
-            @click="goBackToPackage"
-            unelevated
-            class="action-button"
-          />
+          <template v-else-if="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'">
+            <q-btn
+              color="positive"
+              icon="refresh"
+              label="Reexecutar"
+              @click="restartExecution"
+              :loading="loading"
+              unelevated
+              class="action-button"
+              :key="'restart-' + executionStatus"
+            />
+            <q-btn
+              color="white"
+              text-color="primary"
+              icon="arrow_back"
+              label="Voltar"
+              @click="goBackToPackage"
+              unelevated
+              class="action-button"
+              :key="'back-' + executionStatus"
+            />
+          </template>
           <q-btn
             flat
             icon="bug_report"
@@ -208,6 +222,7 @@
               <q-editor
                 v-model="currentStep.actualResult"
                 :dense="false"
+                :readonly="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                 :toolbar="[
                   ['bold', 'italic', 'underline'],
                   ['unordered', 'ordered'],
@@ -235,6 +250,7 @@
                   icon="check_circle"
                   label="Concluído"
                   @click="setStepStatus('PASSED')"
+                  :disable="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                   class="status-btn"
                 />
                 <q-btn
@@ -244,6 +260,7 @@
                   icon="cancel"
                   label="Reprovado"
                   @click="setStepStatus('FAILED')"
+                  :disable="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                   class="status-btn"
                 />
                 <q-btn
@@ -253,6 +270,7 @@
                   icon="block"
                   label="Bloqueado"
                   @click="setStepStatus('BLOCKED')"
+                  :disable="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                   class="status-btn"
                 />
               </div>
@@ -302,6 +320,7 @@
                   icon="add"
                   label="Adicionar Evidência"
                   @click="$refs.fileInput.click()"
+                  :disable="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                   class="add-attachment-btn"
                 />
                 <input
@@ -348,6 +367,7 @@
                     type="textarea"
                     outlined
                     autogrow
+                    :disable="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                     class="comment-input"
                     @keydown="handleCommentKeydown"
                   >
@@ -387,7 +407,7 @@
                     color="primary"
                     label="Comentar"
                     @click="addComment"
-                    :disable="!newComment.trim()"
+                    :disable="!newComment.trim() || executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                     class="comment-btn"
                   />
                 </div>
@@ -441,7 +461,38 @@
             emit-value
             map-options
             clearable
+            class="q-mb-md"
           />
+
+          <div class="q-mb-md">
+            <q-file
+              v-model="bugForm.attachments"
+              label="Anexos (PDF, Word, PowerPoint, Excel)"
+              outlined
+              multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+              max-file-size="10485760"
+              :hint="`Arquivos permitidos: PDF, Word, PowerPoint, Excel (máx. 10MB cada)`"
+              counter
+            >
+              <template v-slot:prepend>
+                <q-icon name="attach_file" />
+              </template>
+            </q-file>
+            <div v-if="bugForm.attachments && bugForm.attachments.length > 0" class="q-mt-sm">
+              <q-chip
+                v-for="(file, index) in bugForm.attachments"
+                :key="index"
+                removable
+                color="primary"
+                text-color="white"
+                @remove="bugForm.attachments.splice(index, 1)"
+                class="q-mr-xs q-mb-xs"
+              >
+                {{ file.name }}
+              </q-chip>
+            </div>
+          </div>
         </q-card-section>
 
         <q-card-actions class="dialog-actions">
@@ -454,15 +505,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Notify } from 'quasar'
+import { Notify, useQuasar } from 'quasar'
 import { scenarioService } from '../services/scenario.service'
 import { getProjectMembers } from '../services/project-details.service'
 import { executionService } from '../services/execution.service'
 
 const route = useRoute()
 const router = useRouter()
+const $q = useQuasar()
 
 // State
 const loading = ref(false)
@@ -487,7 +539,8 @@ const bugForm = ref({
   title: '',
   description: '',
   severity: 'MEDIUM',
-  relatedStep: null as number | null
+  relatedStep: null as number | null,
+  attachments: [] as File[]
 })
 
 // Computed
@@ -566,20 +619,38 @@ async function loadScenario() {
       await loadStepData(steps.value[0].id, 0)
     }
     
-    // Determinar status da execução baseado no cenário
-    if (scenario.value.status === 'CREATED') {
-      executionStatus.value = 'NOT_STARTED'
-    } else if (scenario.value.status === 'PASSED' || scenario.value.status === 'FAILED') {
-      executionStatus.value = 'COMPLETED'
-    } else if (scenario.value.status === 'EXECUTED') {
-      // Se já foi iniciado, manter como em progresso
-      executionStatus.value = 'IN_PROGRESS'
-    } else {
+    // Determinar status da execução baseado PRIMARIAMENTE no status do cenário
+    // O status do cenário no backend é a fonte de verdade
+    
+    // Primeiro: verificar status concluído
+    if (scenario.value.status === 'PASSED' || scenario.value.status === 'FAILED') {
+      executionStatus.value = scenario.value.status === 'FAILED' ? 'FAILED' : 'COMPLETED'
+    } 
+    // Segundo: verificar se está em execução (prioridade ao status EXECUTED do cenário)
+    else if (scenario.value.status === 'EXECUTED') {
+      // Se o cenário tem status EXECUTED, está em progresso, independente das etapas
       executionStatus.value = 'IN_PROGRESS'
     }
+    // Terceiro: verificar pelas etapas (caso o status do cenário não esteja atualizado)
+    else {
+      const hasCompletedSteps = steps.value.some(s => s.status === 'PASSED' || s.status === 'FAILED' || s.status === 'BLOCKED')
+      const allStepsCompleted = steps.value.length > 0 && steps.value.every(s => s.status && s.status !== 'PENDING')
+      const hasExecutedSteps = steps.value.some(s => s.status && s.status !== 'PENDING')
+      
+      if (allStepsCompleted) {
+        executionStatus.value = 'COMPLETED'
+      } else if (hasCompletedSteps || hasExecutedSteps) {
+        // Se há etapas executadas mas o cenário não está marcado como EXECUTED, ainda está em progresso
+        executionStatus.value = 'IN_PROGRESS'
+      } else {
+        // Cenário criado e nenhuma etapa foi executada ainda
+        executionStatus.value = 'NOT_STARTED'
+      }
+    }
     
-    console.log('Status do cenário carregado:', scenario.value.status)
-    console.log('Status da execução definido:', executionStatus.value)
+    console.log('🔍 Status do cenário carregado:', scenario.value.status)
+    console.log('🔍 Status da execução definido:', executionStatus.value)
+    console.log('🔍 Etapas:', steps.value.map(s => ({ id: s.id, status: s.status })))
   } catch (err: any) {
     console.error('Erro ao carregar cenário:', err)
     Notify.create({
@@ -605,6 +676,12 @@ async function loadStepData(stepId: number, stepIndex: number) {
     if (steps.value[stepIndex]) {
       steps.value[stepIndex].comments = comments
       steps.value[stepIndex].attachments = attachments
+      
+      // Garantir que o status da etapa seja preservado
+      // O status já deve vir do cenário carregado, mas vamos garantir
+      if (!steps.value[stepIndex].status) {
+        steps.value[stepIndex].status = 'PENDING'
+      }
     }
   } catch (err: any) {
     console.error('Erro ao carregar dados da etapa:', err)
@@ -618,16 +695,27 @@ async function startExecution() {
     loading.value = true
     const scenarioId = Number(route.params.scenarioId)
     
+    // Atualizar status local PRIMEIRO para feedback imediato ao usuário
+    executionStatus.value = 'IN_PROGRESS'
+    console.log('✅ Status atualizado para IN_PROGRESS:', executionStatus.value)
+    
+    // Forçar atualização do DOM imediatamente
+    await nextTick()
+    console.log('✅ DOM atualizado, status atual:', executionStatus.value)
+    
     // Atualizar status do cenário no backend para "Em Execução"
     await scenarioService.updateScenario(scenarioId, {
       status: 'EXECUTED' as any
     })
     
-    // Atualizar status local
-    executionStatus.value = 'IN_PROGRESS'
+    // Atualizar status no objeto do cenário localmente
     if (scenario.value) {
       scenario.value.status = 'EXECUTED'
     }
+    
+    // Garantir que o status da execução está correto após todas as atualizações
+    executionStatus.value = 'IN_PROGRESS'
+    await nextTick()
     
     // Registrar no histórico
     await executionService.registerHistory(
@@ -645,6 +733,11 @@ async function startExecution() {
     })
   } catch (err: any) {
     console.error('Erro ao iniciar execução:', err)
+    // Reverter status em caso de erro
+    executionStatus.value = 'NOT_STARTED'
+    if (scenario.value) {
+      scenario.value.status = 'CREATED'
+    }
     Notify.create({
       type: 'negative',
       message: 'Erro ao iniciar execução'
@@ -743,7 +836,99 @@ function previousStep() {
   }
 }
 
+async function restartExecution() {
+  try {
+    loading.value = true
+    const scenarioId = Number(route.params.scenarioId)
+    
+    // Confirmar com o usuário se deseja reexecutar
+    const confirmed = await new Promise<boolean>((resolve) => {
+      $q.dialog({
+        title: 'Reexecutar Cenário',
+        message: 'Tem certeza que deseja reexecutar este cenário? Isso resetará o status de todas as etapas.',
+        cancel: true,
+        persistent: true,
+        ok: {
+          label: 'Reexecutar',
+          color: 'positive'
+        },
+        cancel: {
+          label: 'Cancelar',
+          flat: true
+        }
+      }).onOk(() => resolve(true)).onCancel(() => resolve(false))
+    })
+    
+    if (!confirmed) {
+      loading.value = false
+      return
+    }
+    
+    // Resetar status de todas as etapas para PENDING
+    for (const step of steps.value) {
+      try {
+        await executionService.updateStepStatus(step.id, 'PENDING', '')
+      } catch (err) {
+        console.error('Erro ao resetar etapa:', err)
+      }
+    }
+    
+    // Resetar status local das etapas
+    steps.value = steps.value.map(step => ({
+      ...step,
+      status: 'PENDING',
+      actualResult: ''
+    }))
+    
+    // Voltar para a primeira etapa
+    currentStepIndex.value = 0
+    
+    // Atualizar status do cenário no backend para EXECUTED (em execução)
+    await scenarioService.updateScenario(scenarioId, {
+      status: 'EXECUTED' as any
+    })
+    
+    // Atualizar status local
+    executionStatus.value = 'IN_PROGRESS'
+    if (scenario.value) {
+      scenario.value.status = 'EXECUTED'
+    }
+    
+    // Registrar no histórico
+    await executionService.registerHistory(
+      scenarioId,
+      'RESTARTED',
+      'Execução do cenário reiniciada'
+    )
+    
+    // Recarregar histórico
+    executionHistory.value = await executionService.getHistory(scenarioId)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Cenário reiniciado! Você pode executar novamente.'
+    })
+  } catch (err: any) {
+    console.error('Erro ao reiniciar execução:', err)
+    Notify.create({
+      type: 'negative',
+      message: 'Erro ao reiniciar execução'
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
 async function setStepStatus(status: string) {
+  // Bloquear alteração de status se a execução estiver concluída
+  if (executionStatus.value === 'COMPLETED' || executionStatus.value === 'FAILED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível alterar o status em uma execução concluída. Use "Reexecutar" para iniciar uma nova execução.',
+      timeout: 3000
+    })
+    return
+  }
   if (currentStep.value) {
     const previousStatus = currentStep.value.status
     currentStep.value.status = status
@@ -766,6 +951,23 @@ async function setStepStatus(status: string) {
       const stepIndex = steps.value.findIndex(s => s.id === currentStep.value.id)
       if (stepIndex !== -1) {
         steps.value[stepIndex].status = status
+      }
+      
+      // Se a primeira etapa foi marcada como concluída/reprovada/bloqueada, a execução já iniciou
+      const hasCompletedSteps = steps.value.some(s => s.status === 'PASSED' || s.status === 'FAILED' || s.status === 'BLOCKED')
+      if (hasCompletedSteps && executionStatus.value === 'NOT_STARTED') {
+        executionStatus.value = 'IN_PROGRESS'
+        // Atualizar status do cenário para EXECUTED se ainda não foi
+        if (scenario.value && scenario.value.status === 'CREATED') {
+          try {
+            await scenarioService.updateScenario(scenarioId, {
+              status: 'EXECUTED' as any
+            })
+            scenario.value.status = 'EXECUTED'
+          } catch (err) {
+            console.error('Erro ao atualizar status do cenário:', err)
+          }
+        }
       }
       
       // Registrar no histórico
@@ -805,6 +1007,7 @@ async function setStepStatus(status: string) {
       bugForm.value.title = `Falha na Etapa ${currentStepIndex.value + 1}: ${currentStep.value.action.substring(0, 50)}`
       bugForm.value.description = `**Ação:** ${currentStep.value.action}\n\n**Resultado Esperado:** ${currentStep.value.expected}\n\n**Problema encontrado:** `
       bugForm.value.relatedStep = currentStep.value.id
+      bugForm.value.attachments = []
       showBugDialog.value = true
     }
     
@@ -816,6 +1019,15 @@ async function setStepStatus(status: string) {
 }
 
 async function handleFileUpload(event: any) {
+  // Bloquear upload se a execução estiver concluída
+  if (executionStatus.value === 'COMPLETED' || executionStatus.value === 'FAILED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível adicionar evidências em uma execução concluída. Use "Reexecutar" para iniciar uma nova execução.',
+      timeout: 3000
+    })
+    return
+  }
   const files = Array.from(event.target.files || []) as File[]
   
   for (const file of files) {
@@ -921,6 +1133,16 @@ function selectMention(member: any) {
 }
 
 async function addComment() {
+  // Bloquear adição de comentário se a execução estiver concluída
+  if (executionStatus.value === 'COMPLETED' || executionStatus.value === 'FAILED') {
+    Notify.create({
+      type: 'warning',
+      message: 'Não é possível adicionar comentários em uma execução concluída. Use "Reexecutar" para iniciar uma nova execução.',
+      timeout: 3000
+    })
+    return
+  }
+  
   if (!newComment.value.trim()) return
   
   try {
@@ -991,12 +1213,22 @@ async function createBug() {
   try {
     const scenarioId = Number(route.params.scenarioId)
     
+    // Criar bug primeiro
     const bug = await executionService.createBug(scenarioId, {
       title: bugForm.value.title,
       description: bugForm.value.description,
       severity: bugForm.value.severity as any,
       relatedStepId: bugForm.value.relatedStep || currentStep.value?.id
     })
+    
+    // Fazer upload dos anexos se houver
+    if (bugForm.value.attachments && bugForm.value.attachments.length > 0) {
+      const uploadPromises = bugForm.value.attachments.map((file: File) =>
+        executionService.uploadBugAttachment(bug.id, file)
+      )
+      
+      await Promise.all(uploadPromises)
+    }
     
     // Adicionar bug à lista local
     bugs.value.push(bug)
@@ -1015,7 +1247,8 @@ async function createBug() {
       title: '',
       description: '',
       severity: 'MEDIUM',
-      relatedStep: null
+      relatedStep: null,
+      attachments: []
     }
   } catch (err: any) {
     console.error('Erro ao criar bug:', err)
@@ -1040,12 +1273,33 @@ function downloadAttachment(attachment: any) {
   link.click()
 }
 
-function deleteAttachment(attachmentId: number) {
-  if (currentStep.value.attachments) {
-    currentStep.value.attachments = currentStep.value.attachments.filter((a: any) => a.id !== attachmentId)
+async function deleteAttachment(attachmentId: number) {
+  if (!currentStep.value) return
+  
+  try {
+    await executionService.deleteStepAttachment(currentStep.value.id, attachmentId)
+    
+    // Recarregar os anexos da etapa
+    const attachments = await executionService.getStepAttachments(currentStep.value.id)
+    if (currentStep.value) {
+      currentStep.value.attachments = attachments
+    }
+    
+    // Atualizar também no array de steps
+    const stepIndex = steps.value.findIndex(s => s.id === currentStep.value?.id)
+    if (stepIndex !== -1) {
+      steps.value[stepIndex].attachments = attachments
+    }
+    
     Notify.create({
       type: 'positive',
       message: 'Evidência removida'
+    })
+  } catch (err: any) {
+    console.error('Erro ao excluir evidência:', err)
+    Notify.create({
+      type: 'negative',
+      message: err.response?.data?.message || 'Erro ao excluir evidência'
     })
   }
 }

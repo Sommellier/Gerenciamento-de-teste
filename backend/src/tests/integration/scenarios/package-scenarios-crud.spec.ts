@@ -22,7 +22,7 @@ let authToken: string
 
 const tokenFor = (userId: number) => {
   const secret = process.env.JWT_SECRET || 'test-secret-key-for-jwt-tokens'
-  return jwt.sign({ userId }, secret, { expiresIn: '1h' })
+  return jwt.sign({ userId, type: 'access' }, secret, { expiresIn: '1h' })
 }
 
 beforeAll(async () => {

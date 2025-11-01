@@ -11,7 +11,7 @@ export const ectService = {
   async generateECT(scenarioId: number): Promise<ECTGenerationResponse> {
     try {
       console.log('Gerando ECT para cenário:', scenarioId)
-      const response = await api.post(`/scenarios/${scenarioId}/ect`)
+      const response = await api.post<ECTGenerationResponse>(`/scenarios/${scenarioId}/ect`)
       console.log('ECT gerado com sucesso:', response.data)
       return response.data
     } catch (error: any) {
@@ -24,7 +24,7 @@ export const ectService = {
   async downloadReport(reportId: number): Promise<void> {
     try {
       console.log('Baixando relatório:', reportId)
-      const response = await api.get(`/reports/${reportId}/download`, {
+      const response = await api.get<Blob>(`/reports/${reportId}/download`, {
         responseType: 'blob'
       })
 

@@ -29,15 +29,24 @@ export async function loginUser({ email, password }: LoginInput) {
     throw new AppError('JWT secret not configured', 500)
   }
 
-  const token = jwt.sign(
-    { userId: user.id, email: user.email },
+  // Access token com expiração de 1 hora
+  const accessToken = jwt.sign(
+    { userId: user.id, email: user.email, type: 'access' },
     jwtSecret,
     { expiresIn: '1h' }
+  )
+
+  // Refresh token com expiração de 7 dias
+  const refreshToken = jwt.sign(
+    { userId: user.id, email: user.email, type: 'refresh' },
+    jwtSecret,
+    { expiresIn: '7d' }
   )
 
   const { password: _, ...safeUser } = user
   return {
     user: safeUser,
-    token
+    accessToken,
+    refreshToken
   }
 }

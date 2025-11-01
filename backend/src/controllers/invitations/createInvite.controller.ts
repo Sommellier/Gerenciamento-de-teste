@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { Role } from '@prisma/client'
-import { AppError } from '../../../src/utils/AppError'
+import { AppError } from '../../utils/AppError'
 import { createInvite } from '../../application/use-cases/invitations/createInvite.use-case'
 
 type AuthenticatedRequest = Request & {

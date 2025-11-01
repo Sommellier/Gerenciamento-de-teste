@@ -133,7 +133,8 @@ const router = useRouter()
 const $q = useQuasar()
 
 interface LoginResponse {
-  token: string
+  accessToken: string
+  refreshToken: string
   user: any
 }
 
@@ -155,8 +156,11 @@ async function handleLogin() {
       password: password.value
     })
 
-    const { token, user } = response.data
-    localStorage.setItem('token', token)
+    const { accessToken, refreshToken, user } = response.data
+    localStorage.setItem('token', accessToken) // Usar accessToken como token principal
+    if (refreshToken) {
+      localStorage.setItem('refreshToken', refreshToken)
+    }
     localStorage.setItem('user', JSON.stringify(user))
 
     $q.notify({

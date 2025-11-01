@@ -1,103 +1,167 @@
 <template>
   <q-page class="profile-page">
-    <section class="page-container">
-      <div class="page-content">
-        <!-- Header -->
-        <div class="page-header">
-          <div class="header-left">
+    <div class="profile-container">
+      <!-- Loading -->
+      <div v-if="loading" class="loading-container">
+        <q-spinner-dots size="48px" color="white" />
+        <p>Carregando perfil...</p>
+      </div>
+
+      <!-- Profile Content -->
+      <div v-else class="profile-content">
+        <!-- Header Card -->
+        <q-card class="header-card">
+          <q-card-section class="header-section">
             <q-btn
               flat
               round
               icon="arrow_back"
               @click="goBack"
               class="back-btn"
+              color="white"
+              size="md"
             />
-            <div class="header-title">
-              <h1>Meu Perfil</h1>
-              <p>Gerencie suas informações pessoais</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loading -->
-        <div v-if="loading" class="loading-container">
-          <q-spinner-dots size="40px" color="primary" />
-          <p>Carregando perfil...</p>
-        </div>
-
-        <!-- Profile Content -->
-        <div v-else class="profile-content">
-          <!-- Avatar Section -->
-          <q-card flat bordered class="avatar-card">
-            <q-card-section class="avatar-section">
-              <div class="avatar-container">
-                <q-avatar
-                  :size="avatarSize"
-                  :color="avatarColor"
-                  text-color="white"
-                  class="profile-avatar"
-                >
-                  <img v-if="profile?.avatar" :src="getAvatarUrl(profile.avatar)" />
+            
+            <div class="header-info">
+              <div class="header-avatar">
+                <q-avatar size="80px" class="main-avatar">
+                  <img 
+                    v-if="profile?.avatar" 
+                    :src="getAvatarUrl(profile.avatar)" 
+                    :alt="profile?.name || 'Avatar'"
+                  />
                   <span v-else>{{ getInitials(profile?.name || profile?.email) }}</span>
+                  <q-btn
+                    round
+                    dense
+                    icon="edit"
+                    class="edit-avatar-btn"
+                    @click="triggerFileInput"
+                  >
+                    <q-tooltip>A Alterar foto</q-tooltip>
+                  </q-btn>
                 </q-avatar>
-                <q-btn
-                  round
-                  color="primary"
-                  icon="camera_alt"
-                  class="avatar-edit-btn"
-                  @click="triggerFileInput"
-                >
-                  <q-tooltip>Alterar foto</q-tooltip>
-                </q-btn>
               </div>
-              <div class="avatar-info">
-                <h3>{{ profile?.name || 'Usuário' }}</h3>
-                <p>{{ profile?.email }}</p>
+              
+              <div class="header-text">
+                <h1 class="profile-name">{{ profile?.name || 'Usuário' }}</h1>
+                <div class="email-badge">{{ profile?.email }}</div>
+              </div>
+
+              <div class="header-actions">
                 <q-btn
+                  v-if="!isEditing"
                   flat
-                  color="primary"
                   icon="edit"
-                  label="Alterar foto"
-                  @click="triggerFileInput"
-                  class="change-photo-btn"
+                  label="Editar"
+                  color="white"
+                  @click="startEditing"
+                  class="edit-btn"
+                />
+                <q-btn
+                  v-else
+                  unelevated
+                  icon="check"
+                  label="Salvar"
+                  color="primary"
+                  :loading="submitting"
+                  :disable="!hasChanges"
+                  @click="submitForm"
+                  class="save-btn-header"
                 />
               </div>
-            </q-card-section>
-          </q-card>
+            </div>
+          </q-card-section>
+        </q-card>
 
-          <!-- Profile Form -->
-          <q-card flat bordered class="form-card">
-            <q-card-section class="form-header">
-              <q-icon name="person" size="22px" class="q-mr-sm" />
-              <div class="form-title">Informações Pessoais</div>
-            </q-card-section>
-            <q-separator />
-            <q-card-section>
-              <q-form ref="formRef" @submit="submitForm" class="profile-form">
-                <div class="form-row">
+        <!-- Avatar Upload Section -->
+        <q-card class="avatar-card" v-if="isEditing">
+          <q-card-section class="avatar-section">
+            <div class="avatar-upload-container">
+              <div class="avatar-preview">
+                <q-avatar size="120px" class="preview-avatar">
+                  <img 
+                    v-if="avatarPreview" 
+                    :src="avatarPreview" 
+                    alt="Preview"
+                  />
+                  <img 
+                    v-else-if="profile?.avatar" 
+                    :src="getAvatarUrl(profile.avatar)" 
+                    :alt="profile?.name || 'Avatar'"
+                  />
+                  <span v-else>{{ getInitials(profile?.name || profile?.email) }}</span>
+                </q-avatar>
+                
+                <!-- Upload Progress -->
+                <q-linear-progress 
+                  v-if="uploading"
+                  :value="uploadProgress"
+                  color="primary"
+                  class="upload-progress"
+                />
+                
+                <!-- Upload Status -->
+                <div v-if="uploadError" class="upload-error">
+                  <q-icon name="error" color="negative" />
+                  <span>{{ uploadError }}</span>
+                </div>
+              </div>
+              
+              <div class="avatar-actions">
+                <q-btn
+                  flat
+                  icon="add_a_photo"
+                  label="Selecionar foto"
+                  color="white"
+                  @click="triggerFileInput"
+                  :loading="uploading"
+                />
+              </div>
+              
+              <p class="upload-hint">
+                <q-icon name="info" size="16px" />
+                Formatos: JPG, PNG, GIF • Máximo: 5MB
+              </p>
+            </div>
+          </q-card-section>
+        </q-card>
+
+        <!-- Form Card -->
+        <q-card class="form-card">
+          <q-card-section class="form-header">
+            <q-icon name="person" size="24px" color="white" />
+            <h2 class="form-title">Informações Pessoais</h2>
+          </q-card-section>
+
+          <q-card-section>
+            <q-form ref="formRef" @submit="submitForm" class="profile-form">
+              <div class="form-grid">
+                <!-- Coluna Esquerda -->
+                <div class="form-column">
                   <q-input
                     v-model="name"
                     label="Nome completo"
                     :rules="nameRules"
                     outlined
                     class="form-input"
+                    :disable="!isEditing"
                     :loading="submitting"
+                    autogrow
                   >
                     <template v-slot:prepend>
                       <q-icon name="person" />
                     </template>
                   </q-input>
-                </div>
 
-                <div class="form-row">
                   <q-input
                     v-model="email"
                     label="E-mail"
                     type="email"
-                    :rules="emailRules"
-                    outlined
+                    filled
                     class="form-input"
-                    :loading="submitting"
+                    :readonly="true"
+                    hint="O e-mail não pode ser alterado"
                   >
                     <template v-slot:prepend>
                       <q-icon name="email" />
@@ -105,108 +169,141 @@
                   </q-input>
                 </div>
 
-                <div class="form-row">
-                  <q-input
-                    v-model="currentPassword"
-                    label="Senha atual"
-                    type="password"
-                    outlined
-                    class="form-input"
-                    :loading="submitting"
-                    hint="Necessária para alterar a senha"
-                  >
-                    <template v-slot:prepend>
-                      <q-icon name="lock" />
-                    </template>
-                  </q-input>
-                </div>
-
-                <div class="form-row">
+                <!-- Coluna Direita -->
+                <div class="form-column">
                   <q-input
                     v-model="newPassword"
+                    v-model:visible="showNewPassword"
                     label="Nova senha"
-                    type="password"
+                    :type="showNewPassword ? 'text' : 'password'"
                     :rules="passwordRules"
                     outlined
                     class="form-input"
+                    :disable="!isEditing"
                     :loading="submitting"
-                    hint="Deixe em branco para manter a senha atual"
+                    hint="Mínimo 8 caracteres"
+                    counter
+                    maxlength="100"
                   >
                     <template v-slot:prepend>
                       <q-icon name="lock" />
                     </template>
+                    <template v-slot:append>
+                      <q-icon
+                        :name="showNewPassword ? 'visibility_off' : 'visibility'"
+                        @click="showNewPassword = !showNewPassword"
+                        class="cursor-pointer"
+                      />
+                    </template>
                   </q-input>
-                </div>
 
-                <div class="form-row">
                   <q-input
                     v-model="confirmPassword"
+                    v-model:visible="showConfirmPassword"
                     label="Confirmar nova senha"
-                    type="password"
+                    :type="showConfirmPassword ? 'text' : 'password'"
                     :rules="confirmPasswordRules"
                     outlined
                     class="form-input"
+                    :disable="!isEditing"
                     :loading="submitting"
+                    hint="Confirme sua nova senha"
                   >
                     <template v-slot:prepend>
                       <q-icon name="lock" />
                     </template>
+                    <template v-slot:append>
+                      <q-icon
+                        :name="showConfirmPassword ? 'visibility_off' : 'visibility'"
+                        @click="showConfirmPassword = !showConfirmPassword"
+                        class="cursor-pointer"
+                      />
+                    </template>
                   </q-input>
                 </div>
-
-                <div class="form-actions">
-                  <q-btn
-                    type="submit"
-                    color="primary"
-                    :loading="submitting"
-                    :disable="!isFormValid"
-                    class="save-btn"
-                  >
-                    <q-icon name="save" class="q-mr-sm" />
-                    Salvar Alterações
-                  </q-btn>
-                </div>
-              </q-form>
-            </q-card-section>
-          </q-card>
-
-          <!-- Stats Section -->
-          <q-card flat bordered class="stats-card" v-if="profile?.stats">
-            <q-card-section class="stats-header">
-              <q-icon name="analytics" size="22px" class="q-mr-sm" />
-              <div class="stats-title">Estatísticas</div>
-            </q-card-section>
-            <q-separator />
-            <q-card-section>
-              <div class="stats-grid">
-                <div class="stat-item">
-                  <q-icon name="folder" size="24px" color="primary" />
-                  <div class="stat-content">
-                    <div class="stat-value">{{ profile.stats.projectsOwned }}</div>
-                    <div class="stat-label">Projetos Criados</div>
-                  </div>
-                </div>
-                <div class="stat-item">
-                  <q-icon name="group" size="24px" color="green" />
-                  <div class="stat-content">
-                    <div class="stat-value">{{ profile.stats.projectsParticipating }}</div>
-                    <div class="stat-label">Projetos Participando</div>
-                  </div>
-                </div>
-                <div class="stat-item">
-                  <q-icon name="play_arrow" size="24px" color="orange" />
-                  <div class="stat-content">
-                    <div class="stat-value">{{ profile.stats.testExecutions }}</div>
-                    <div class="stat-label">Testes Executados</div>
-                  </div>
-                </div>
               </div>
+
+              <!-- Form Actions -->
+              <div v-if="isEditing" class="form-actions">
+                <q-btn
+                  flat
+                  label="Cancelar"
+                  @click="cancelEdit"
+                  :disable="submitting"
+                />
+                <q-btn
+                  type="submit"
+                  label="Salvar Alterações"
+                  color="primary"
+                  icon="save"
+                  :loading="submitting"
+                  :disable="!hasChanges || submitting"
+                  unelevated
+                  class="save-btn"
+                />
+              </div>
+            </q-form>
+          </q-card-section>
+        </q-card>
+
+        <!-- Stats Cards -->
+        <div class="stats-container">
+          <q-card 
+            class="stat-card"
+            @click="goToProjects"
+            v-if="profile?.stats"
+          >
+            <q-card-section class="stat-card-content">
+              <q-icon name="folder" size="32px" color="primary" />
+              <div class="stat-card-text">
+                <div class="stat-value">{{ profile.stats.projectsOwned }}</div>
+                <div class="stat-label">Projetos Criados</div>
+              </div>
+              <q-icon name="chevron_right" size="24px" color="grey-5" />
             </q-card-section>
           </q-card>
 
+          <q-card 
+            class="stat-card"
+            @click="goToProjects"
+            v-if="profile?.stats"
+          >
+            <q-card-section class="stat-card-content">
+              <q-icon name="group" size="32px" color="positive" />
+              <div class="stat-card-text">
+                <div class="stat-value">{{ profile.stats.projectsParticipating }}</div>
+                <div class="stat-label">Projetos Participando</div>
+              </div>
+              <q-icon name="chevron_right" size="24px" color="grey-5" />
+            </q-card-section>
+          </q-card>
+
+          <q-card 
+            class="stat-card"
+            @click="goToExecutions"
+            v-if="profile?.stats"
+          >
+            <q-card-section class="stat-card-content">
+              <q-icon name="play_arrow" size="32px" color="orange" />
+              <div class="stat-card-text">
+                <div class="stat-value">{{ profile.stats.testExecutions || 0 }}</div>
+                <div class="stat-label">Testes Executados</div>
+              </div>
+              <q-icon name="chevron_right" size="24px" color="grey-5" />
+            </q-card-section>
+          </q-card>
         </div>
+
+        <!-- Empty Stats State -->
+        <q-card v-if="!profile?.stats" class="empty-stats-card">
+          <q-card-section class="text-center">
+            <q-icon name="bar_chart" size="64px" color="grey-5" />
+            <h3>Nenhuma estatística disponível</h3>
+            <p>Comece a usar a plataforma para ver suas estatísticas aqui</p>
+          </q-card-section>
+        </q-card>
       </div>
-    </section>
+    </div>
 
     <!-- Hidden file input -->
     <input
@@ -219,17 +316,17 @@
 
     <!-- Success dialog -->
     <q-dialog v-model="successDialog">
-      <q-card class="success-dialog">
-        <q-card-section class="success-content">
+      <q-card class="dialog-card">
+        <q-card-section class="dialog-header success">
           <q-icon name="check_circle" size="48px" color="positive" />
           <h3>Perfil atualizado!</h3>
-          <p>{{ successText }}</p>
         </q-card-section>
         <q-card-actions align="center">
           <q-btn
             color="primary"
             label="OK"
             @click="successDialog = false"
+            unelevated
           />
         </q-card-actions>
       </q-card>
@@ -237,27 +334,28 @@
 
     <!-- Error dialog -->
     <q-dialog v-model="errorDialog">
-      <q-card class="error-dialog">
-        <q-card-section class="error-content">
+      <q-card class="dialog-card">
+        <q-card-section class="dialog-header error">
           <q-icon name="error" size="48px" color="negative" />
           <h3>Erro ao atualizar perfil</h3>
+        </q-card-section>
+        <q-card-section>
           <p>{{ errorText }}</p>
         </q-card-section>
         <q-card-actions align="center">
           <q-btn
             color="negative"
-            label="OK"
+            label="Fechar"
             @click="errorDialog = false"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
-
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from '../services/api'
@@ -270,14 +368,28 @@ const $q = useQuasar()
 const profile = ref<any>(null)
 const loading = ref(false)
 const submitting = ref(false)
+const isEditing = ref(false)
+const originalName = ref('')
+
+// Form fields
 const name = ref('')
 const email = ref('')
-const currentPassword = ref('')
 const newPassword = ref('')
 const confirmPassword = ref('')
+
+// Password visibility
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+// Form ref
 const formRef = ref<any>(null)
 const fileInput = ref<any>(null)
 
+// Avatar upload
+const avatarPreview = ref<string | null>(null)
+const uploading = ref(false)
+const uploadProgress = ref(0)
+const uploadError = ref<string | null>(null)
 
 // Dialogs
 const successDialog = ref(false)
@@ -286,9 +398,14 @@ const errorDialog = ref(false)
 const errorText = ref('')
 
 // Computed
-const avatarSize = computed(() => '120px')
-const avatarColor = computed(() => 'primary')
+const hasChanges = computed(() => {
+  if (!isEditing.value) return false
+  return name.value !== originalName.value || 
+         newPassword.value.length > 0 ||
+         avatarPreview.value !== null
+})
 
+// Validation Rules
 const nameRules = [
   (val: string) => !!val || 'Nome é obrigatório',
   (val: string) => val.length >= 2 || 'Nome deve ter pelo menos 2 caracteres',
@@ -304,14 +421,47 @@ const passwordRules = [
   (val: string) => !val || val.length >= 8 || 'Senha deve ter pelo menos 8 caracteres'
 ]
 
-const confirmPasswordRules = [
+const confirmPasswordRules = computed(() => [
   (val: string) => !newPassword.value || val === newPassword.value || 'Senhas não coincidem'
-]
+])
 
+// Watch for password changes to validate in real time
+watch([newPassword, confirmPassword], () => {
+  if (confirmPassword.value && formRef.value) {
+    formRef.value.validate()
+  }
+})
 
 // Methods
 function goBack() {
   router.push('/dashboard')
+}
+
+function goToProjects() {
+  router.push('/projects')
+}
+
+function goToExecutions() {
+  // TODO: Navegar para página de execuções quando criada
+  $q.notify({
+    type: 'info',
+    message: 'Funcionalidade em desenvolvimento',
+    position: 'top'
+  })
+}
+
+function startEditing() {
+  isEditing.value = true
+  originalName.value = name.value
+}
+
+function cancelEdit() {
+  isEditing.value = false
+  name.value = originalName.value
+  newPassword.value = ''
+  confirmPassword.value = ''
+  avatarPreview.value = null
+  uploadError.value = null
 }
 
 function getInitials(nameOrEmail: string) {
@@ -324,14 +474,11 @@ function getInitials(nameOrEmail: string) {
 }
 
 function getAvatarUrl(avatar: string) {
-  console.log('getAvatarUrl called with:', avatar)
+  if (!avatar) return ''
   if (avatar.startsWith('http')) {
-    console.log('Returning full URL:', avatar)
     return avatar
   }
-  const fullUrl = `http://localhost:3000${avatar}`
-  console.log('Returning constructed URL:', fullUrl)
-  return fullUrl
+  return `http://localhost:3000${avatar}`
 }
 
 function triggerFileInput() {
@@ -346,44 +493,47 @@ async function handleFileSelect(event: Event) {
 
   // Validar tipo de arquivo
   if (!file.type.startsWith('image/')) {
-    $q.notify({
-      type: 'negative',
-      message: 'Por favor, selecione uma imagem válida',
-      position: 'top'
-    })
+    uploadError.value = 'Por favor, selecione uma imagem válida (JPG, PNG, GIF)'
     return
   }
 
   // Validar tamanho (5MB)
   if (file.size > 5 * 1024 * 1024) {
-    $q.notify({
-      type: 'negative',
-      message: 'Arquivo muito grande. Tamanho máximo: 5MB',
-      position: 'top'
-    })
+    uploadError.value = 'Arquivo muito grande. Tamanho máximo: 5MB'
     return
   }
 
+  uploadError.value = null
+
+  // Criar preview
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    avatarPreview.value = e.target?.result as string
+  }
+  reader.readAsDataURL(file)
+
+  // Upload automático imediato
   await uploadAvatar(file)
 }
 
 async function uploadAvatar(file: File) {
-  submitting.value = true
+  uploading.value = true
+  uploadProgress.value = 0
+  uploadError.value = null
   
   try {
     const formData = new FormData()
     formData.append('avatar', file)
 
-    const response = await api.post('/upload/avatar', formData)
-
-    console.log('Upload response:', response.data)
-    console.log('Avatar URL:', response.data.user.avatar)
+    const response = await api.post('/upload/avatar', formData, {
+      onUploadProgress: (progressEvent) => {
+        uploadProgress.value = progressEvent.progress || 0
+      }
+    })
 
     // Atualizar perfil local
     profile.value = response.data.user
-    
-    console.log('Updated profile:', profile.value)
-    console.log('Avatar URL after update:', profile.value.avatar)
+    avatarPreview.value = null
     
     $q.notify({
       type: 'positive',
@@ -391,14 +541,15 @@ async function uploadAvatar(file: File) {
       position: 'top'
     })
   } catch (err: any) {
-    console.error('Error uploading avatar:', err)
+    uploadError.value = getCustomErrorMessage(err)
     $q.notify({
       type: 'negative',
-      message: getCustomErrorMessage(err),
+      message: uploadError.value,
       position: 'top'
     })
   } finally {
-    submitting.value = false
+    uploading.value = false
+    uploadProgress.value = 0
   }
 }
 
@@ -411,9 +562,9 @@ async function loadProfile() {
     // Populate form
     name.value = profile.value.name || ''
     email.value = profile.value.email || ''
+    originalName.value = name.value
   } catch (err: any) {
     console.error('Error loading profile:', err)
-    console.error('Error response:', err.response)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar perfil',
@@ -426,25 +577,26 @@ async function loadProfile() {
 }
 
 async function submitForm() {
-  if (!profile.value) return
+  if (!profile.value || !isEditing.value) return
+
+  // Validar formulário
+  if (!await formRef.value?.validate()) {
+    $q.notify({
+      type: 'negative',
+      message: 'Por favor, corrija os erros no formulário',
+      position: 'top'
+    })
+    return
+  }
 
   submitting.value = true
   try {
     const updateData: any = {
-      name: name.value,
-      email: email.value
+      name: name.value
     }
 
     // Só incluir senha se fornecida
     if (newPassword.value) {
-      if (!currentPassword.value) {
-        $q.notify({
-          type: 'negative',
-          message: 'Senha atual é obrigatória para alterar a senha',
-          position: 'top'
-        })
-        return
-      }
       updateData.password = newPassword.value
     }
 
@@ -452,12 +604,19 @@ async function submitForm() {
     
     // Atualizar perfil local
     profile.value = response.data
+    originalName.value = name.value
     
-    successText.value = 'Suas informações foram atualizadas com sucesso!'
-    successDialog.value = true
+    // Feedback de sucesso
+    $q.notify({
+      type: 'positive',
+      message: 'Perfil atualizado com sucesso!',
+      position: 'top'
+    })
+    
+    // Desabilitar modo de edição
+    isEditing.value = false
     
     // Limpar campos de senha
-    currentPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
   } catch (err: any) {
@@ -483,6 +642,9 @@ function getCustomErrorMessage(err: any): string {
     }
     if (message.includes('Password must be at least 8 characters')) {
       return 'Senha deve ter pelo menos 8 caracteres'
+    }
+    if (message.includes('Current password is incorrect')) {
+      return 'Senha atual incorreta'
     }
     return message
   }
@@ -513,155 +675,241 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.profile-page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+/* Global white text for all hints and help text */
+.profile-page :deep(span),
+.profile-page :deep(div.q-field__hint),
+.profile-page :deep(.q-field__bottom),
+.profile-page :deep(.q-field__messages),
+.profile-page :deep(.q-field__counter) {
+  color: #ffffff !important;
 }
 
-.page-container {
-  max-width: 800px;
+.profile-page {
+  min-height: 100vh;
+  background: #0b1220;
+  padding: 24px 48px;
+}
+
+.profile-container {
+  max-width: 1400px;
   margin: 0 auto;
 }
 
-.page-content {
+/* Loading */
+.loading-container {
+  text-align: center;
+  padding: 80px 20px;
+  color: #ffffff;
+}
+
+.loading-container p {
+  margin-top: 20px;
+  font-size: 16px;
+}
+
+/* Profile Content */
+.profile-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
-.page-header {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+/* Header Card */
+.header-card {
+  background: #0f172a;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.header-left {
+.header-section {
+  padding: 16px 24px;
+}
+
+.back-btn {
+  position: absolute;
+  color: #ffffff;
+}
+
+.header-info {
   display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-avatar {
+  flex-shrink: 0;
+}
+
+.main-avatar {
+  position: relative;
+  border: 3px solid rgba(255, 255, 255, 0.06);
+}
+
+.main-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.edit-avatar-btn {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: #7c9aff !important;
+  border: 2px solid #0f172a;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.profile-name {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  opacity: 1;
+}
+
+.email-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #7c9aff1f;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #7c9aff;
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+.edit-btn {
+  color: #ffffff;
+  font-weight: 500;
+  min-width: 100px;
+  background: #111827;
+}
+
+.edit-btn:hover {
+  background: #1f2937;
+}
+
+.save-btn-header {
+  font-weight: 600;
+  min-width: 120px;
+  background: #7c9aff;
+}
+
+.save-btn-header:hover {
+  background: #6b8cff;
+}
+
+/* Avatar Card */
+.avatar-card {
+  background: #0f172a;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+.avatar-section {
+  padding: 24px;
+}
+
+.avatar-upload-container {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 16px;
 }
 
-.back-btn {
-  color: #1976d2;
-  transition: all 0.2s ease;
-}
-
-.back-btn:hover {
-  background: rgba(25, 118, 210, 0.1);
-  transform: translateX(-2px);
-}
-
-.header-title h1 {
-  margin: 0;
-  color: #1a1a1a;
-  font-size: 28px;
-  font-weight: 600;
-}
-
-.header-title p {
-  margin: 4px 0 0 0;
-  color: #666;
-  font-size: 16px;
-}
-
-.loading-container {
-  text-align: center;
-  padding: 60px 20px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.loading-container p {
-  margin-top: 16px;
-  color: #666;
-  font-size: 16px;
-}
-
-.profile-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.avatar-card,
-.form-card,
-.stats-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.avatar-section {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 32px;
-}
-
-.avatar-container {
+.avatar-preview {
   position: relative;
+  margin-bottom: 8px;
+}
+
+.preview-avatar {
+  border: 3px solid rgba(255, 255, 255, 0.06);
+}
+
+.preview-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-progress {
+  width: 120px;
+  margin-top: 8px;
+}
+
+.upload-error {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #ef4444;
+  font-size: 13px;
 }
 
-.profile-avatar {
-  border: 4px solid #fff;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+.avatar-actions {
+  display: flex;
+  gap: 12px;
 }
 
-.avatar-edit-btn {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  transform: translate(25%, 25%);
-}
-
-.avatar-info h3 {
-  margin: 0 0 8px 0;
-  color: #1a1a1a;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.avatar-info p {
-  margin: 0 0 16px 0;
-  color: #666;
-  font-size: 16px;
-}
-
-.change-photo-btn {
-  padding: 8px 16px;
-}
-
-.form-header,
-.stats-header {
+.upload-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #cbd5e1;
   display: flex;
   align-items: center;
-  padding: 20px 24px;
-  background: rgba(25, 118, 210, 0.05);
+  gap: 6px;
 }
 
-.form-title,
-.stats-title {
+/* Form Card */
+.form-card {
+  background: #0f172a;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+}
+
+.form-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #111827;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 16px 16px 0 0;
+}
+
+.form-title {
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #ffffff;
+  opacity: 1;
 }
 
 .profile-form {
   padding: 24px;
 }
 
-.form-row {
-  margin-bottom: 20px;
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .form-input {
@@ -672,94 +920,296 @@ onMounted(() => {
   margin-top: 32px;
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .save-btn {
-  padding: 12px 24px;
-  font-size: 16px;
   font-weight: 600;
+  min-width: 180px;
+  background: #7c9aff;
 }
 
-.stats-grid {
+.save-btn:hover {
+  background: #6b8cff;
+}
+
+/* Stats Container */
+.stats-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 20px;
-  padding: 24px;
 }
 
-.stat-item {
+.stat-card {
+  background: #0f172a;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: #7c9aff4d;
+  box-shadow: 0 8px 32px rgba(124, 154, 255, 0.15);
+}
+
+.stat-card-content {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px;
-  background: rgba(0, 0, 0, 0.02);
-  border-radius: 12px;
-  transition: all 0.2s ease;
+  padding: 24px;
 }
 
-.stat-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-  transform: translateY(-2px);
-}
-
-.stat-content {
+.stat-card-text {
   flex: 1;
 }
 
 .stat-value {
-  font-size: 24px;
+  font-size: 32px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #ffffff;
+  opacity: 1;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 14px;
-  color: #666;
+  color: #cbd5e1;
   font-weight: 500;
 }
 
-.success-dialog,
-.error-dialog {
-  min-width: 300px;
+/* Empty Stats */
+.empty-stats-card {
+  background: #0f172a;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 16px;
 }
 
-.success-content,
-.error-content {
+.empty-stats-card h3 {
+  margin: 16px 0 8px 0;
+  font-size: 18px;
+  color: #ffffff;
+  opacity: 1;
+}
+
+.empty-stats-card p {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+/* Dialog */
+.dialog-card {
+  background: rgba(255, 255, 255, 0.95);
+  min-width: 320px;
+  border-radius: 16px;
+}
+
+.dialog-header {
   text-align: center;
   padding: 32px 24px 24px;
 }
 
-.success-content h3,
-.error-content h3 {
+.dialog-header.success h3,
+.dialog-header.error h3 {
   margin: 16px 0 8px 0;
-  color: #1a1a1a;
+  font-size: 20px;
+  font-weight: 600;
 }
 
-.success-content p,
-.error-content p {
-  margin: 0;
-  color: #666;
+.dialog-header.success h3 {
+  color: #22c55e;
 }
 
+.dialog-header.error h3 {
+  color: #ef4444;
+}
+
+/* Responsive */
 @media (max-width: 768px) {
   .profile-page {
     padding: 16px;
   }
-  
-  .avatar-section {
+
+  .header-info {
     flex-direction: column;
-    text-align: center;
+    align-items: flex-start;
     gap: 16px;
   }
-  
-  .stats-grid {
+
+  .header-actions {
+    align-self: stretch;
+  }
+
+  .edit-btn,
+  .save-btn-header {
+    width: 100%;
+  }
+
+  .form-grid {
     grid-template-columns: 1fr;
   }
-  
-  .form-actions {
-    justify-content: center;
+
+  .stats-container {
+    grid-template-columns: 1fr;
   }
+
+  .stat-card-content {
+    padding: 20px;
+  }
+}
+
+@media (min-width: 769px) {
+  .form-actions {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Accessibility */
+.back-btn:focus-visible,
+.edit-btn:focus-visible,
+.save-btn:focus-visible,
+.save-btn-header:focus-visible {
+  outline: 2px solid #7c9aff66;
+  outline-offset: 2px;
+}
+
+.edit-avatar-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+/* Quasar Input Colors - Slate Theme */
+:deep(.q-field__label) {
+  color: #cbd5e1 !important;
+}
+
+:deep(.q-field__hint) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field__counter) {
+  color: #cbd5e1 !important;
+}
+
+:deep(.q-field--readonly .q-field__control) {
+  color: #ffffff !important;
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:deep(.q-field__native) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field--outlined .q-field__control) {
+  color: #ffffff;
+}
+
+:deep(.q-field--outlined .q-field__native) {
+  color: #ffffff;
+}
+
+:deep(.q-field--outlined .q-field__prepend) {
+  color: #cbd5e1;
+}
+
+:deep(.q-field--outlined .q-field__append) {
+  color: #cbd5e1;
+}
+
+:deep(.q-field--outlined .q-field__inner) {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+:deep(.q-field--outlined .q-field__control:hover) {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+:deep(.q-field--outlined.q-field--focused .q-field__control) {
+  border-color: #7c9aff;
+}
+
+/* Filled Fields */
+:deep(.q-field--filled .q-field__control) {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+:deep(.q-field--filled .q-field__control:hover) {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+
+:deep(.q-field--filled.q-field--focused .q-field__control) {
+  background: #111827;
+  border-color: #7c9aff;
+}
+
+:deep(.q-field--filled .q-field__native) {
+  color: #ffffff;
+}
+
+:deep(.q-field--filled .q-field__hint) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field--outlined .q-field__hint) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field .q-field__hint) {
+  color: #ffffff !important;
+}
+
+/* Force all hints to be white - Maximum specificity */
+:deep(.q-field--filled .q-field__bottom) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field--outlined .q-field__bottom) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field__bottom .q-field__hint) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field__bottom) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field__messages) {
+  color: #ffffff !important;
+}
+
+:deep(.q-field__bottom--animated .q-field__hint) {
+  color: #ffffff !important;
+}
+
+/* Counter */
+:deep(.q-field__counter) {
+  color: #cbd5e1 !important;
+}
+
+/* Force ALL text in hints and counters to be white */
+:deep(.q-field__bottom *),
+:deep(.q-field__messages *),
+:deep(.q-field__hint *),
+:deep(.q-field__counter *) {
+  color: inherit !important;
+}
+
+:deep(.q-field__bottom),
+:deep(.q-field__bottom *) {
+  color: #ffffff !important;
+}
+
+/* Stat Icons */
+.stat-card :deep(.q-icon[color="grey-7"]) {
+  color: #cbd5e1 !important;
 }
 </style>

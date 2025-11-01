@@ -24,6 +24,12 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
             name: true,
             description: true
           }
+        },
+        approvedBy: {
+          select: { id: true, name: true, email: true }
+        },
+        rejectedBy: {
+          select: { id: true, name: true, email: true }
         }
       }
     })
@@ -79,15 +85,45 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
     }
 
     // Processar cenários com tags convertidas
-    const scenarios = packageScenarios.map((scenario: any) => ({
-      ...scenario,
-      tags: scenario.tags ? JSON.parse(scenario.tags) : []
-    }))
+    const scenarios = packageScenarios.map((scenario: any) => {
+      let parsedTags: string[] = []
+      try {
+        if (scenario.tags) {
+          if (typeof scenario.tags === 'string') {
+            parsedTags = JSON.parse(scenario.tags)
+          } else if (Array.isArray(scenario.tags)) {
+            parsedTags = scenario.tags
+          }
+        }
+      } catch (error) {
+        console.warn('Erro ao fazer parse das tags do cenário:', error)
+        parsedTags = []
+      }
+      
+      return {
+        ...scenario,
+        tags: parsedTags
+      }
+    })
 
     // Converter tags de JSON string para array
+    let parsedPackageTags: string[] = []
+    try {
+      if (testPackage.tags) {
+        if (typeof testPackage.tags === 'string') {
+          parsedPackageTags = JSON.parse(testPackage.tags)
+        } else if (Array.isArray(testPackage.tags)) {
+          parsedPackageTags = testPackage.tags
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao fazer parse das tags do pacote:', error)
+      parsedPackageTags = []
+    }
+
     const packageWithParsedTags = {
       ...testPackage,
-      tags: testPackage.tags ? JSON.parse(testPackage.tags) : []
+      tags: parsedPackageTags
     }
 
     // Calcular métricas baseadas nos cenários reais

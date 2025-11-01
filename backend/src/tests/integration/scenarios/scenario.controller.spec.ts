@@ -11,7 +11,7 @@ const unique = (p: string) =>
 
 function tokenFor(id: number) {
   const secret = process.env.JWT_SECRET || 'test-secret'
-  return jwt.sign({ userId: id }, secret, { expiresIn: '1h' })
+  return jwt.sign({ userId: id, type: 'access' }, secret, { expiresIn: '1h' })
 }
 
 const auth: express.RequestHandler = (req, res, next) => {

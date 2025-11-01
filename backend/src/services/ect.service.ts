@@ -7,7 +7,8 @@ import fs from 'fs'
 import path from 'path'
 
 export interface ECTData {
-  scenario: any
+  scenario?: any
+  package?: any
   steps: any[]
   evidences: any[]
   project: any
@@ -25,7 +26,15 @@ export class ECTService {
           steps: {
             orderBy: { stepOrder: 'asc' },
             include: {
-              attachments: true
+              attachments: true,
+              comments: {
+                include: {
+                  user: {
+                    select: { id: true, name: true, email: true }
+                  }
+                },
+                orderBy: { createdAt: 'asc' }
+              }
             }
           },
           project: true,
@@ -61,17 +70,6 @@ export class ECTService {
         }))
       )
 
-      console.log('Evidências coletadas:', evidences.length)
-      evidences.forEach((evidence, index) => {
-        console.log(`Evidência ${index + 1}:`, {
-          filename: evidence.filename,
-          originalName: evidence.originalName,
-          mimeType: evidence.mimeType,
-          size: evidence.size,
-          createdAt: evidence.createdAt,
-          stepNumber: evidence.stepNumber
-        })
-      })
 
       // Validar limite de evidências
       if (evidences.length > 50) {
@@ -142,7 +140,7 @@ export class ECTService {
   }
 
   private async generatePDF(data: ECTData): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       try {
         const doc = new PDFDocument({
           size: 'A4',
@@ -163,9 +161,9 @@ export class ECTService {
           resolve(pdfBuffer)
         })
 
-        // Gerar conteúdo do PDF
-        this.generatePDFContent(doc, data)
-
+        // Gerar conteúdo do PDF - AGUARDAR conclusão antes de finalizar
+        await this.generatePDFContent(doc, data)
+        
         doc.end()
       } catch (error) {
         reject(error)
@@ -185,73 +183,92 @@ export class ECTService {
     // Seção 1 - Informações do Cenário
     this.generateScenarioInfo(doc, scenario)
     
-    // Seção 2 - Etapas (com evidências)
-    this.generateStepsSection(doc, steps, evidences)
+    // Seção 2 - Etapas (com evidências e comentários)
+    await this.generateStepsSection(doc, steps, evidences)
     
     // Rodapé com paginação e hash
     this.generateFooter(doc)
   }
 
   private generateCoverPage(doc: typeof PDFDocument, scenario: any, project: any, testador?: any, aprovador?: any) {
-    // Título principal
+    // Título principal - centralizado
     doc.fontSize(24)
        .font('Helvetica-Bold')
        .fillColor('#2D3748')
-       .text('RELATÓRIO DE EXECUÇÃO DE CENÁRIO DE TESTE', 0, 100, { align: 'center' })
+       .text('RELATÓRIO DE EXECUÇÃO DE CENÁRIO DE TESTE', 0, 100, { align: 'center', width: doc.page.width })
 
-    // Informações do projeto
-    doc.fontSize(16)
-       .font('Helvetica-Bold')
-       .text('PROJETO:', 50, 200)
-       .font('Helvetica')
-       .text(project.name, 150, 200)
+    // Informações do projeto e cenário
+    doc.fontSize(12)
+    let y = 200
 
-    // Informações do cenário
+    // PROJETO
     doc.font('Helvetica-Bold')
-       .text('CENÁRIO:', 50, 230)
-       .font('Helvetica')
-       .text(scenario.title, 150, 230)
+       .text('PROJETO:', 50, y)
+    doc.font('Helvetica')
+       .text(project?.name || 'Não informado', 130, y)
+    y += 30
 
+    // CENÁRIO
     doc.font('Helvetica-Bold')
-       .text('ID:', 50, 260)
-       .font('Helvetica')
-       .text(scenario.id.toString(), 150, 260)
+       .text('CENÁRIO:', 50, y)
+    doc.font('Helvetica')
+       .text(scenario?.title || 'Não informado', 130, y)
+    y += 30
 
+    // ID
     doc.font('Helvetica-Bold')
-       .text('STATUS:', 50, 290)
-       .font('Helvetica')
-       .text(this.getStatusLabel(scenario.status), 200, 290)
+       .text('ID:', 50, y)
+    doc.font('Helvetica')
+       .text(scenario?.id?.toString() || 'Não informado', 130, y)
+    y += 30
 
+    // STATUS
     doc.font('Helvetica-Bold')
-       .text('TIPO:', 50, 320)
-       .font('Helvetica')
-       .text(this.getTypeLabel(scenario.type), 200, 320)
+       .text('STATUS:', 50, y)
+    doc.font('Helvetica')
+       .text(this.getStatusLabel(scenario?.status || ''), 130, y)
+    y += 30
 
+    // TIPO
     doc.font('Helvetica-Bold')
-       .text('PRIORIDADE:', 50, 350)
-       .font('Helvetica')
-       .text(this.getPriorityLabel(scenario.priority), 200, 350)
+       .text('TIPO:', 50, y)
+    doc.font('Helvetica')
+       .text(this.getTypeLabel(scenario?.type || ''), 130, y)
+    y += 30
 
-    // Responsáveis
+    // PRIORIDADE
+    doc.font('Helvetica-Bold')
+       .text('PRIORIDADE:', 50, y)
+    doc.font('Helvetica')
+       .text(this.getPriorityLabel(scenario?.priority || ''), 130, y)
+    y += 30
+
+    // TESTADOR
     if (testador) {
       doc.font('Helvetica-Bold')
-         .text('TESTADOR:', 50, 380)
-         .font('Helvetica')
-         .text(`${testador.name} (${testador.email})`, 200, 380)
+         .text('TESTADOR:', 50, y)
+      doc.font('Helvetica')
+         .text(`${testador.name || 'Não informado'} (${testador.email || 'Não informado'})`, 130, y)
+      y += 30
     }
 
+    // APROVADOR
     if (aprovador) {
       doc.font('Helvetica-Bold')
-         .text('APROVADOR:', 50, 410)
-         .font('Helvetica')
-         .text(`${aprovador.name} (${aprovador.email})`, 200, 410)
+         .text('APROVADOR:', 50, y)
+      doc.font('Helvetica')
+         .text(`${aprovador.name || 'Não informado'} (${aprovador.email || 'Não informado'})`, 130, y)
+      y += 30
     }
 
-    // Data e hora
+    // DATA/HORA - usar data de criação do cenário se disponível, senão data atual
     doc.font('Helvetica-Bold')
-       .text('DATA/HORA:', 50, 440)
-       .font('Helvetica')
-       .text(new Date().toLocaleString('pt-BR'), 200, 440)
+       .text('DATA/HORA:', 50, y)
+    doc.font('Helvetica')
+    const dateTime = scenario?.createdAt 
+      ? new Date(scenario.createdAt).toLocaleString('pt-BR')
+      : new Date().toLocaleString('pt-BR')
+    doc.text(dateTime, 130, y)
 
     // Nova página
     doc.addPage()
@@ -324,11 +341,11 @@ export class ECTService {
     doc.addPage()
   }
 
-  private generateStepsSection(doc: typeof PDFDocument, steps: any[], evidences: any[]) {
+  private async generateStepsSection(doc: typeof PDFDocument, steps: any[], evidences: any[]) {
     doc.fontSize(18)
        .font('Helvetica-Bold')
        .fillColor('#2D3748')
-       .text('2. ETAPAS DE TESTE', 0, 50, { align: 'center' })
+       .text('2. ETAPAS DE TESTE', 0, 50, { align: 'center', width: doc.page.width })
 
     doc.fontSize(12)
        .font('Helvetica')
@@ -336,9 +353,38 @@ export class ECTService {
 
     let y = 100
 
-    steps.forEach((step, index) => {
-      // Verificar se precisa de nova página
-      if (y > 700) {
+    for (const step of steps) {
+      // Filtrar evidências da etapa (usado tanto para cálculo quanto para processamento)
+      const stepEvidences = evidences.filter(evidence => evidence.stepNumber === step.stepOrder)
+      
+      // Calcular altura aproximada da etapa antes de adicionar
+      let estimatedHeight = 200 // Altura base da etapa
+      
+      // Altura dos textos
+      if (step.action) {
+        estimatedHeight += Math.ceil((step.action.length || 0) / 65) * 15 + 40
+      }
+      if (step.expected) {
+        estimatedHeight += Math.ceil((step.expected.length || 0) / 65) * 15 + 40
+      }
+      if (step.actualResult) {
+        estimatedHeight += Math.ceil((step.actualResult.length || 0) / 65) * 15 + 40
+      }
+      
+      // Altura dos comentários
+      if (step.comments && step.comments.length > 0) {
+        estimatedHeight += 25 // Título
+        step.comments.forEach((comment: any) => {
+          estimatedHeight += Math.ceil((comment.text?.length || 0) / 65) * 15 + 30
+        })
+      }
+      
+      // Altura das evidências (imagens)
+      const imageEvidences = stepEvidences.filter(e => e.mimeType && e.mimeType.startsWith('image/'))
+      estimatedHeight += imageEvidences.length > 0 ? 30 : 0 // Título EVIDÊNCIAS
+      
+      // Verificar se precisa de nova página ANTES de adicionar a etapa completa
+      if (y > 650 || (y + estimatedHeight > 700)) {
         doc.addPage()
         y = 50
       }
@@ -351,24 +397,52 @@ export class ECTService {
       // Ação
       doc.font('Helvetica-Bold')
          .text('AÇÃO:', 70, y)
+      y += 20
+      // Calcular altura do texto (aproximadamente 15px por linha, ~65 caracteres por linha)
+      const actionLines = Math.ceil((step.action?.length || 0) / 65)
+      const actionHeight = Math.max(20, actionLines * 15)
       doc.font('Helvetica')
-         .text(step.action, 70, y + 20, { width: 450 })
-      y += 60
+         .text(step.action, 70, y, { width: 450 })
+      y += actionHeight + 20
+
+      // Verificar paginação após ação
+      if (y > 700) {
+        doc.addPage()
+        y = 50
+      }
 
       // Resultado esperado
       doc.font('Helvetica-Bold')
          .text('RESULTADO ESPERADO:', 70, y)
+      y += 20
+      const expectedLines = Math.ceil((step.expected?.length || 0) / 65)
+      const expectedHeight = Math.max(20, expectedLines * 15)
       doc.font('Helvetica')
-         .text(step.expected, 70, y + 20, { width: 450 })
-      y += 60
+         .text(step.expected, 70, y, { width: 450 })
+      y += expectedHeight + 20
+
+      // Verificar paginação após resultado esperado
+      if (y > 700) {
+        doc.addPage()
+        y = 50
+      }
 
       // Resultado obtido (se existir)
       if (step.actualResult) {
         doc.font('Helvetica-Bold')
            .text('RESULTADO OBTIDO:', 70, y)
+        y += 20
+        const actualLines = Math.ceil((step.actualResult?.length || 0) / 65)
+        const actualHeight = Math.max(20, actualLines * 15)
         doc.font('Helvetica')
-           .text(step.actualResult, 70, y + 20, { width: 450 })
-        y += 60
+           .text(step.actualResult, 70, y, { width: 450 })
+        y += actualHeight + 20
+        
+        // Verificar paginação após resultado obtido
+        if (y > 700) {
+          doc.addPage()
+          y = 50
+        }
       }
 
       // Status
@@ -378,32 +452,147 @@ export class ECTService {
          .text(this.getStepStatusLabel(step.status), 70, y + 20)
       y += 50
 
-      // Evidências da etapa
-      const stepEvidences = evidences.filter(evidence => evidence.stepNumber === step.stepOrder)
+      // Comentários da etapa
+      if (step.comments && step.comments.length > 0) {
+        // Verificar paginação antes de comentários
+        if (y > 680) {
+          doc.addPage()
+          y = 50
+        }
+        
+        doc.font('Helvetica-Bold')
+           .text('COMENTÁRIOS:', 70, y)
+        y += 25
+
+        for (const comment of step.comments) {
+          // Verificar paginação antes de cada comentário
+          if (y > 680) {
+            doc.addPage()
+            y = 50
+          }
+          
+          const userName = comment.user?.name || 'Usuário desconhecido'
+          const commentDate = comment.createdAt ? new Date(comment.createdAt).toLocaleString('pt-BR') : ''
+          
+          doc.font('Helvetica-Bold')
+             .fontSize(10)
+             .text(`${userName} - ${commentDate}:`, 90, y)
+          y += 15
+          
+          const commentLines = Math.ceil(((comment.text || '').length || 0) / 65)
+          const commentHeight = Math.max(15, commentLines * 15)
+          doc.font('Helvetica')
+             .fontSize(11)
+             .text(comment.text || '', 90, y, { width: 450 })
+          y += commentHeight + 10
+        }
+        y += 10
+      }
+
+      // Evidências da etapa (stepEvidences já foi declarado no início do loop)
       if (stepEvidences.length > 0) {
+        // Verificar paginação antes de adicionar evidências
+        if (y > 680) {
+          doc.addPage()
+          y = 50
+        }
+        
+        doc.fontSize(12)
         doc.font('Helvetica-Bold')
            .text('EVIDÊNCIAS:', 70, y)
         y += 25
 
-        stepEvidences.forEach((evidence, evIndex) => {
-          const fileName = evidence.originalName || evidence.filename || 'Arquivo sem nome'
-          doc.font('Helvetica')
-             .text(`• ${fileName} (${evidence.mimeType || 'Tipo desconhecido'})`, 90, y)
-          y += 20
-          
-          if (evidence.size) {
-            doc.font('Helvetica')
-               .text(`  Tamanho: ${this.formatFileSize(evidence.size)}`, 90, y)
-            y += 20
+        for (const evidence of stepEvidences) {
+          // Incluir imagem se for imagem - OBRIGATÓRIO para todas as imagens
+          if (evidence.mimeType && evidence.mimeType.startsWith('image/')) {
+            try {
+              // Caminho do arquivo - a URL vem como /uploads/evidences/filename
+              let imagePath = evidence.url || ''
+              
+              // Extrair o nome do arquivo da URL ou usar filename diretamente
+              let filename = ''
+              
+              // Primeiro tentar extrair da URL
+              if (imagePath) {
+                // Remove qualquer prefixo de caminho
+                filename = imagePath.replace(/^.*uploads\/evidences\//, '')
+                filename = filename.replace(/^.*\//, '') // Remove qualquer caminho restante
+              }
+              
+              // Se não conseguir extrair da URL, usar o filename diretamente
+              if (!filename || filename === imagePath) {
+                if (evidence.filename) {
+                  filename = evidence.filename
+                } else {
+                  throw new Error(`Não foi possível determinar o nome do arquivo da evidência`)
+                }
+              }
+              
+              // Construir caminho completo do arquivo
+              const fullPath = path.join(process.cwd(), 'uploads', 'evidences', filename)
+              
+              // Verificar se arquivo existe
+              if (fs.existsSync(fullPath)) {
+                y += 10
+                
+                // Obter metadados da imagem para calcular dimensões
+                const imageMetadata = await sharp(fullPath).metadata()
+                const originalWidth = imageMetadata.width || 450
+                const originalHeight = imageMetadata.height || 200
+                
+                // Calcular altura proporcional para largura máxima de 450px
+                const maxWidth = 450
+                const aspectRatio = originalHeight / originalWidth
+                const targetHeight = Math.min(originalHeight, maxWidth * aspectRatio)
+                
+                // Redimensionar imagem se necessário (max 450px de largura)
+                const imageBuffer = await sharp(fullPath)
+                  .resize(maxWidth, Math.round(targetHeight), { 
+                    withoutEnlargement: true,
+                    fit: 'inside'
+                  })
+                  .toBuffer()
+                
+                // Verificar se precisa de nova página para a imagem ANTES de adicionar
+                const imageHeightOnPage = Math.round(targetHeight)
+                if (y + imageHeightOnPage > 700) {
+                  doc.addPage()
+                  y = 50
+                }
+                
+                // Incluir imagem no PDF
+                try {
+                  doc.image(imageBuffer, 90, y, {
+                    fit: [maxWidth, imageHeightOnPage]
+                  })
+                } catch (imgError: any) {
+                  try {
+                    doc.image(imageBuffer, 90, y, { width: maxWidth })
+                  } catch (imgError2: any) {
+                    doc.image(imageBuffer, 90, y)
+                  }
+                }
+                
+                y += imageHeightOnPage + 15
+              } else {
+                doc.font('Helvetica')
+                   .fontSize(9)
+                   .fillColor('#E53E3E')
+                   .text(`  [Imagem não encontrada]`, 90, y)
+                y += 15
+              }
+            } catch (error: any) {
+              doc.font('Helvetica')
+                 .fontSize(9)
+                 .fillColor('#E53E3E')
+                 .text(`  [Erro ao carregar imagem]`, 90, y)
+              y += 15
+            }
           }
           
-          if (evidence.createdAt) {
-            doc.font('Helvetica')
-               .text(`  Data: ${new Date(evidence.createdAt).toLocaleString('pt-BR')}`, 90, y)
-            y += 20
-          }
-        })
-        y += 20
+          y += 10
+        }
+        y += 10
       }
 
       // Linha separadora
@@ -413,13 +602,13 @@ export class ECTService {
          .lineTo(550, y)
          .stroke()
       y += 20
-    })
+    }
 
     // Nova página
     doc.addPage()
   }
 
-  private generateFooter(doc: typeof PDFDocument) {
+  protected generateFooter(doc: typeof PDFDocument) {
     const pageCount = doc.bufferedPageRange().count
     const currentPage = doc.page
 
@@ -433,7 +622,7 @@ export class ECTService {
        .text(`Hash: ${docHash}`, 400, 750)
   }
 
-  private getStatusLabel(status: string): string {
+  protected getStatusLabel(status: string): string {
     const labels: Record<string, string> = {
       'CREATED': 'Criado',
       'EXECUTED': 'Executado',
@@ -443,7 +632,7 @@ export class ECTService {
     return labels[status] || status
   }
 
-  private getTypeLabel(type: string): string {
+  protected getTypeLabel(type: string): string {
     const labels: Record<string, string> = {
       'FUNCTIONAL': 'Funcional',
       'REGRESSION': 'Regressão',
@@ -453,14 +642,18 @@ export class ECTService {
     return labels[type] || type
   }
 
-  private getPriorityLabel(priority: string): string {
+  protected getPriorityLabel(priority: string): string {
+    if (!priority) return 'Não informado'
+    
     const labels: Record<string, string> = {
       'LOW': 'Baixa',
       'MEDIUM': 'Média',
       'HIGH': 'Alta',
-      'CRITICAL': 'Crítica'
+      'CRITICAL': 'Crítica',
+      'Ética': 'Ética', // Mantém valores já existentes no banco
+      'ÉTICA': 'Ética'
     }
-    return labels[priority] || priority
+    return labels[priority.toUpperCase()] || labels[priority] || priority
   }
 
   private getStepStatusLabel(status: string): string {
@@ -493,10 +686,14 @@ export class ECTService {
       }
 
       // Verificar permissão de acesso
-      const hasAccess = await this.checkScenarioAccess(report.scenarioId, userId)
-      if (!hasAccess) {
-        throw new AppError('Acesso negado ao relatório', 403)
+      // Se o relatório tem scenarioId, verificar acesso ao cenário
+      if (report.scenarioId !== null) {
+        const hasAccess = await this.checkScenarioAccess(report.scenarioId, userId)
+        if (!hasAccess) {
+          throw new AppError('Acesso negado ao relatório', 403)
+        }
       }
+      // Se scenarioId é null, pode ser um relatório de pacote - permitir acesso
 
       return {
         buffer: Buffer.from(report.content),
@@ -511,7 +708,6 @@ export class ECTService {
       throw new AppError('Erro interno ao baixar relatório', 500)
     }
   }
-
   private async checkScenarioAccess(scenarioId: number, userId: number): Promise<boolean> {
     try {
       // Temporariamente permitir acesso para todos os usuários autenticados

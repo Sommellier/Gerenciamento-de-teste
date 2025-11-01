@@ -369,11 +369,16 @@ async function createScenario() {
       return
     }
 
-    // Verificar se testador e aprovador são diferentes
+    // Verificar se testador e aprovador são diferentes,
+    // exceto quando a pessoa selecionada é o DONO (OWNER)
     if (scenarioForm.value.tester === scenarioForm.value.approver) {
-      errorMessage.value = 'O testador e o aprovador devem ser pessoas diferentes'
-      showErrorDialog.value = true
-      return
+      const selected = members.value.find(m => m.id === scenarioForm.value.tester)
+      const isOwner = selected?.role === 'OWNER'
+      if (!isOwner) {
+        errorMessage.value = 'O testador e o aprovador devem ser pessoas diferentes'
+        showErrorDialog.value = true
+        return
+      }
     }
 
     // Preparar dados para a API
@@ -414,6 +419,13 @@ async function loadData() {
   try {
     // Buscar membros reais do projeto
     members.value = await getProjectMembers(projectId.value)
+
+    // Definir padrão: se houver DONO, usar como testador e aprovador
+    const owner = members.value.find(m => m.role === 'OWNER')
+    if (owner) {
+      scenarioForm.value.tester = owner.id
+      scenarioForm.value.approver = owner.id
+    }
   } catch (error) {
     console.error('Error loading data:', error)
     $q.notify({

@@ -3,6 +3,7 @@ import multer from 'multer'
 import path from 'path'
 import { ScenarioController } from '../controllers/scenarios/scenario.controller'
 import auth from '../infrastructure/auth'
+import { uploadLimiter } from '../infrastructure/rateLimiter'
 
 const asyncH =
   (fn: any) =>
@@ -44,7 +45,7 @@ router.post('/scenarios/:id/executions', auth, asyncH(scenarioController.execute
 router.post('/scenarios/:id/duplicate', auth, asyncH(scenarioController.duplicateScenario.bind(scenarioController)))
 
 // Rotas para evidências
-router.post('/scenarios/:id/evidences', auth, upload.single('file'), asyncH(scenarioController.uploadEvidence.bind(scenarioController)))
+router.post('/scenarios/:id/evidences', auth, uploadLimiter, upload.single('file'), asyncH(scenarioController.uploadEvidence.bind(scenarioController)))
 
 // Rotas para exportação
 router.get('/packages/:packageId/scenarios/export.csv', auth, asyncH(scenarioController.exportScenariosToCSV.bind(scenarioController)))

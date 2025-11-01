@@ -1080,9 +1080,16 @@ function isValidEmail(email: string) {
   return emailRegex.test(email)
 }
 
+// Flag para evitar múltiplas chamadas simultâneas
+const isLoadingProjectDetails = ref(false)
+
 async function loadProjectDetails() {
-  if (loading.value) return // Evitar múltiplas chamadas simultâneas
+  // Evitar múltiplas chamadas simultâneas
+  if (isLoadingProjectDetails.value || loading.value) {
+    return
+  }
   
+  isLoadingProjectDetails.value = true
   loading.value = true
   try {
     console.log('Iniciando carregamento de dados...')
@@ -1136,6 +1143,7 @@ async function loadProjectDetails() {
     })
   } finally {
     loading.value = false
+    isLoadingProjectDetails.value = false
   }
 }
 
@@ -1185,7 +1193,7 @@ onMounted(() => {
 <style scoped>
 .project-details-page {
   padding: 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
   min-height: 100vh;
   position: relative;
 }
@@ -1207,11 +1215,11 @@ onMounted(() => {
 .glass-card {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
   box-shadow: 
     0 8px 32px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -2107,5 +2115,38 @@ onMounted(() => {
   .step-item {
     padding: 12px;
   }
+}
+
+/* Input Search - White Text */
+:deep(.search-input .q-field__label) {
+  color: #ffffff !important;
+}
+
+:deep(.search-input .q-field__native) {
+  color: #ffffff !important;
+}
+
+:deep(.search-input .q-field__prepend) {
+  color: #ffffff !important;
+}
+
+:deep(.search-input .q-field__append) {
+  color: #ffffff !important;
+}
+
+:deep(.search-input .q-field__control) {
+  color: #ffffff !important;
+}
+
+:deep(.search-input .q-field--outlined .q-field__inner) {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+:deep(.search-input .q-field--outlined .q-field__control:hover) {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+:deep(.search-input .q-field--outlined.q-field--focused .q-field__control) {
+  border-color: #7c9aff;
 }
 </style>
