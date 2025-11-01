@@ -1,21 +1,27 @@
-# Node.js with Vue
-# Build a Node.js project that uses Vue.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
 - main
 
 pool:
   vmImage: ubuntu-latest
 
+variables:
+  NODE_VERSION: '20.x'
+  OUTPUT_LOCATION: 'dist/spa'
+
 steps:
 - task: NodeTool@0
   inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+    versionSpec: '$(NODE_VERSION)'
+  displayName: 'Use Node $(NODE_VERSION)'
 
 - script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+    npm ci
+    npx quasar build
+  displayName: 'Install & Build (Quasar)'
+
+# Deploy usando SWA CLI (não precisa instalar task do marketplace)
+- script: |
+    npx -y @azure/static-web-apps-cli@1.2.5 deploy $(OUTPUT_LOCATION) \
+      --deployment-token $(SWA_DEPLOYMENT_TOKEN) \
+      --env production
+  displayName: 'Deploy to Azure Static Web Apps (SWA CLI)'
