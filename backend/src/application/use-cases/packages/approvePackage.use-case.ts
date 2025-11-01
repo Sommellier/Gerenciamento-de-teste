@@ -35,21 +35,6 @@ export class ApprovePackageUseCase {
       throw new AppError('Pacote não encontrado', 404)
     }
 
-    // RB1.1: Validar se ECT está disponível (ectUrl válido e acessível)
-    if (!testPackage.ectUrl || testPackage.ectUrl.trim().length === 0) {
-      throw new AppError('ECT é obrigatório para aprovação do pacote', 400)
-    }
-
-    // Validar se URL é acessível (pode fazer uma validação simples ou verificar se o arquivo existe)
-    try {
-      const url = new URL(testPackage.ectUrl)
-      if (!['http:', 'https:'].includes(url.protocol)) {
-        throw new AppError('URL do ECT inválida', 400)
-      }
-    } catch {
-      throw new AppError('URL do ECT inválida ou inacessível', 400)
-    }
-
     // Validar que pacote está em EM_TESTE
     if (testPackage.status !== PackageStatus.EM_TESTE) {
       throw new AppError('Pacote deve estar em EM_TESTE para ser aprovado', 400)

@@ -50,9 +50,13 @@ jobs:
         run: npx prisma generate
         working-directory: ./backend
 
-      - name: Run Migrations
-        run: npx prisma migrate deploy
+      - name: Setup Database Schema
+        run: |
+          # Usar db push para aplicar schema completo, ignorando migrações
+          npx prisma db push --accept-data-loss --skip-generate
         working-directory: ./backend
+        env:
+          DATABASE_URL: postgres://postgres:4422@localhost:5432/qa_test_manager
 
       - name: Run Tests with Coverage
         run: npm run test:coverage -- --runInBand

@@ -563,8 +563,7 @@ export class ECTService {
                 // Incluir imagem no PDF
                 try {
                   doc.image(imageBuffer, 90, y, {
-                    fit: [maxWidth, imageHeightOnPage],
-                    align: 'left'
+                    fit: [maxWidth, imageHeightOnPage]
                   })
                 } catch (imgError: any) {
                   try {

@@ -9,7 +9,6 @@ import { createScenarioInPackageController } from '../controllers/scenarios/crea
 import { approvePackageController } from '../controllers/packages/approvePackage.controller'
 import { rejectPackageController } from '../controllers/packages/rejectPackage.controller'
 import { sendPackageToTestController } from '../controllers/packages/sendToTest.controller'
-import { generatePackageECTController } from '../controllers/packages/generatePackageECT.controller'
 
 const router = Router()
 
@@ -24,9 +23,6 @@ router.delete('/projects/:projectId/packages/:packageId', auth, deletePackageCon
 router.post('/projects/:projectId/packages/:packageId/approve', auth, approvePackageController)
 router.post('/projects/:projectId/packages/:packageId/reject', auth, rejectPackageController)
 router.post('/projects/:projectId/packages/:packageId/send-to-test', auth, sendPackageToTestController)
-
-// Rota para gerar ECT do pacote
-router.post('/projects/:projectId/packages/:packageId/ect', auth, generatePackageECTController)
 
 // Rota para criar cenário dentro de um pacote
 router.post('/projects/:projectId/packages/:packageId/scenarios', auth, createScenarioInPackageController)
