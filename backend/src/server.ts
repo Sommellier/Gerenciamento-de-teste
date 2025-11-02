@@ -73,7 +73,7 @@ const corsOptions: cors.CorsOptions = {
 
 // CORS PRIMEIRO + preflight explícito
 app.use(cors(corsOptions))
-app.options('*', cors(corsOptions))
+app.options('/*splat', cors(corsOptions))
 
 // Segurança
 app.use(
