@@ -1,4 +1,4 @@
-describe('Fluxo de criação de conta @regressao', () => {
+describe('Fluxo de criação de cenario @regressao', () => {
   it('cria uma nova conta com sucesso e validar login', () => {
 
     //Constantes
@@ -11,9 +11,9 @@ describe('Fluxo de criação de conta @regressao', () => {
     cy.visit('http://localhost:9000/')
     cy.login({ email, senha})
     cy.criarCenario(nomeProjeto, descricaoProjeto)
-    cy.validarCriacaoProjeto(descricaoProjeto)
+    cy.validarCriacaoProjeto(nomeProjeto, descricaoProjeto)
     cy.editarCenario(nomeProjetoEditado)
-    cy.deletarCenario(nomeProjeto)
+    cy.deletarCenario(nomeProjetoEditado)
   })
 })
 
