@@ -344,17 +344,16 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #ffffff;
   z-index: -1;
 }
 
 .glass-shell {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: #ffffff;
   border-radius: 20px;
   margin: 20px;
   padding: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid #e5e7eb;
 }
 
 .header-row {
@@ -370,8 +369,12 @@ onMounted(() => {
 }
 
 .back-btn {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.back-btn:hover {
+  background: #e5e7eb;
 }
 
 .header-content {
@@ -379,15 +382,14 @@ onMounted(() => {
 }
 
 .page-title {
-  color: white;
+  color: #1f2937;
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .subtitle {
-  color: rgba(255, 255, 255, 0.9);
+  color: #6b7280;
   font-size: 1.1rem;
   margin-bottom: 30px;
 }
@@ -395,8 +397,9 @@ onMounted(() => {
 .form-card {
   margin: 20px;
   border-radius: 15px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
 }
 
 .form-section {
@@ -421,6 +424,33 @@ onMounted(() => {
 
 .form-input {
   width: 100%;
+}
+
+.form-input :deep(.q-field__label) {
+  color: #374151 !important;
+  font-weight: 500 !important;
+}
+
+.form-input :deep(.q-field__native) {
+  color: #1f2937 !important;
+}
+
+.form-input :deep(.q-field__input) {
+  color: #1f2937 !important;
+}
+
+.form-input :deep(.q-field__control) {
+  background: #ffffff !important;
+  border-color: #d1d5db !important;
+}
+
+.form-input :deep(.q-field--outlined .q-field__control) {
+  border: 1px solid #d1d5db !important;
+}
+
+.form-input :deep(.q-field--focused .q-field__control) {
+  border-color: #667eea !important;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1) !important;
 }
 
 .tags-container {

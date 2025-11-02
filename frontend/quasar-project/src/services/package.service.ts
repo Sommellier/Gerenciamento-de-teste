@@ -40,7 +40,7 @@ export interface TestPackage {
   assigneeEmail?: string
   environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
   release: string
-  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED' | 'EM_TESTE' | 'CONCLUIDO' | 'REPROVADO'
+  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED' | 'EM_TESTE' | 'CONCLUIDO' | 'REPROVADO' | 'APROVADO'
   ectUrl?: string
   approvedBy?: {
     id: number

@@ -6,7 +6,7 @@ export const ScenarioTypeEnum = ['FUNCTIONAL', 'REGRESSION', 'SMOKE', 'E2E'] as 
 export const PriorityEnum = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const
 export const SeverityEnum = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const
 export const EnvironmentEnum = ['DEV', 'QA', 'STAGING', 'PROD'] as const
-export const ScenarioStatusEnum = ['CREATED', 'EXECUTED', 'PASSED', 'FAILED', 'BLOCKED'] as const
+export const ScenarioStatusEnum = ['CREATED', 'EXECUTED', 'PASSED', 'FAILED', 'APPROVED', 'REPROVED'] as const
 export const ExecutionResultEnum = ['PASSED', 'FAILED', 'BLOCKED'] as const
 
 // Interfaces TypeScript
@@ -33,7 +33,7 @@ export interface CreateScenarioData {
   aprovadorId?: number
   dueDate?: string
   preconditions?: string[]
-  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED'
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'APPROVED' | 'REPROVED'
   steps?: ScenarioStep[] // Agora é opcional
 }
 
@@ -47,7 +47,7 @@ export interface ExecuteScenarioData {
 }
 
 export interface ScenarioFilters {
-  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED'
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'APPROVED' | 'REPROVED'
   type?: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
   priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
   tag?: string

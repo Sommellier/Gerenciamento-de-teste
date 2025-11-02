@@ -15,6 +15,11 @@ const corsMock = jest.fn(() => (_req: any, res: any, next: any) => {
     } else if (!origin) {
         // Permitir requisições sem origin (ex: Postman)
         res.header('Access-Control-Allow-Origin', '*')
+    } else if (origin && (origin.includes('localhost') || origin.includes('127.0.0.1'))) {
+        // Em desenvolvimento, permitir localhost em qualquer porta
+        res.header('Access-Control-Allow-Origin', origin)
+    } else if (allowedOrigins.indexOf(origin) !== -1) {
+        res.header('Access-Control-Allow-Origin', origin)
     }
     res.header('Access-Control-Allow-Credentials', 'true')
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
@@ -84,6 +89,44 @@ describe('server.ts (Express app)', () => {
         expect(helmetMock).toHaveBeenCalledTimes(1)
         expect(corsMock).toHaveBeenCalledTimes(1)
         expect(morganMock).toHaveBeenCalledWith('dev')
+    })
+
+    it('health check endpoint retorna status ok', async () => {
+        const res = await request(app).get('/health')
+        expect(res.status).toBe(200)
+        expect(res.body).toHaveProperty('status', 'ok')
+        expect(res.body).toHaveProperty('timestamp')
+        expect(typeof res.body.timestamp).toBe('string')
+    })
+
+    it('CORS permite localhost em desenvolvimento (linhas 54-55)', async () => {
+        const res = await request(app)
+            .get('/api/__health')
+            .set('Origin', 'http://localhost:9999')
+        
+        expect(res.status).toBe(200)
+        // O mock do CORS permite localhost em qualquer porta
+        expect(res.headers['access-control-allow-origin']).toBe('http://localhost:9999')
+    })
+
+    it('CORS permite 127.0.0.1 em desenvolvimento (linhas 54-55)', async () => {
+        const res = await request(app)
+            .get('/api/__health')
+            .set('Origin', 'http://127.0.0.1:8080')
+        
+        expect(res.status).toBe(200)
+        // O mock do CORS permite 127.0.0.1
+        expect(res.headers['access-control-allow-origin']).toBe('http://127.0.0.1:8080')
+    })
+
+    it('CORS permite origin que está em allowedOrigins (linha 58)', async () => {
+        const res = await request(app)
+            .get('/api/__health')
+            .set('Origin', 'http://localhost:9000')
+        
+        expect(res.status).toBe(200)
+        // O mock do CORS permite origin em allowedOrigins
+        expect(res.headers['access-control-allow-origin']).toBe('http://localhost:9000')
     })
 
     it('error handler usa err.statusCode quando presente (ex.: 418)', async () => {

@@ -35,6 +35,8 @@ export interface ProjectMetrics {
   executed: number
   passed: number
   failed: number
+  approved?: number
+  reproved?: number
 }
 
 export interface ProjectDetails {

@@ -55,12 +55,13 @@ describe('ScenarioController', () => {
   let project: any
   let testPackage: any
   let authToken: string
+  let scenarioController: ScenarioController
 
   beforeAll(async () => {
     app = express()
     app.use(express.json())
     
-    const scenarioController = new ScenarioController()
+    scenarioController = new ScenarioController()
     
     app.get('/packages/:packageId/scenarios', auth, scenarioController.getPackageScenarios.bind(scenarioController) as any)
     app.post('/packages/:packageId/scenarios', auth, scenarioController.createScenario.bind(scenarioController) as any)
@@ -71,7 +72,7 @@ describe('ScenarioController', () => {
     app.post('/scenarios/:id/duplicate', auth, scenarioController.duplicateScenario.bind(scenarioController) as any)
     app.post('/scenarios/:id/evidences', auth, scenarioController.uploadEvidence.bind(scenarioController) as any)
     app.get('/packages/:packageId/scenarios/export.csv', auth, scenarioController.exportScenariosToCSV.bind(scenarioController) as any)
-    app.get('/scenarios/:id/report', auth, scenarioController.generateScenarioReport.bind(scenarioController) as any)
+    app.get('/packages/:packageId/scenarios/report.pdf', auth, scenarioController.generateScenarioReport.bind(scenarioController) as any)
     
     app.use(errorHandler)
 
@@ -382,6 +383,38 @@ describe('ScenarioController', () => {
 
       scenario.duplicatedId = response.body.scenario.id
     })
+
+    it('deve tratar erro AppError ao duplicar cenário (linha 216)', async () => {
+      // Mock do scenarioService para simular AppError
+      const originalDuplicateScenario = require('../../../services/scenario.service').ScenarioService.prototype.duplicateScenario
+      require('../../../services/scenario.service').ScenarioService.prototype.duplicateScenario = jest.fn().mockRejectedValue(new AppError('Cenário não encontrado', 404))
+
+      const response = await request(app)
+        .post(`/scenarios/${scenario.id}/duplicate`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(404)
+
+      expect(response.body.message).toBe('Cenário não encontrado')
+
+      // Restaurar mock
+      require('../../../services/scenario.service').ScenarioService.prototype.duplicateScenario = originalDuplicateScenario
+    })
+
+    it('deve tratar erro interno do servidor ao duplicar cenário (linhas 219-220)', async () => {
+      // Mock do scenarioService para simular erro interno
+      const originalDuplicateScenario = require('../../../services/scenario.service').ScenarioService.prototype.duplicateScenario
+      require('../../../services/scenario.service').ScenarioService.prototype.duplicateScenario = jest.fn().mockRejectedValue(new Error('Database connection error'))
+
+      const response = await request(app)
+        .post(`/scenarios/${scenario.id}/duplicate`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(500)
+
+      expect(response.body.message).toBe('Erro interno do servidor')
+
+      // Restaurar mock
+      require('../../../services/scenario.service').ScenarioService.prototype.duplicateScenario = originalDuplicateScenario
+    })
   })
 
   describe('DELETE /scenarios/:id', () => {
@@ -555,13 +588,72 @@ describe('ScenarioController', () => {
       })
     })
 
-    it('deve rejeitar quando arquivo não é fornecido', async () => {
+    it('deve rejeitar quando arquivo não é fornecido (linha 235)', async () => {
       const response = await request(app)
         .post(`/scenarios/${scenario.id}/evidences`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(400)
 
       expect(response.body).toHaveProperty('message', 'Arquivo não fornecido')
+    })
+
+    it('deve rejeitar quando não autenticado (linha 231)', async () => {
+      // Criar um middleware customizado que não seta req.user.id
+      const customAuth: express.RequestHandler = (req, res, next) => {
+        ;(req as any).user = {} // user existe mas não tem id
+        next()
+      }
+
+      const customApp = express()
+      customApp.use(express.json())
+      const scenarioController = new ScenarioController()
+      customApp.post('/scenarios/:id/evidences', customAuth, scenarioController.uploadEvidence.bind(scenarioController) as any)
+      customApp.use(errorHandler)
+
+      const response = await request(customApp)
+        .post(`/scenarios/${scenario.id}/evidences`)
+        .expect(401)
+
+      expect(response.body).toHaveProperty('message', 'Não autenticado')
+    })
+
+    it('deve tratar erro interno do servidor ao enviar evidência', async () => {
+      // Mock do scenarioService para simular erro interno após validação
+      const originalUploadEvidence = require('../../../services/scenario.service').ScenarioService.prototype.uploadEvidence
+      require('../../../services/scenario.service').ScenarioService.prototype.uploadEvidence = jest.fn().mockRejectedValue(new Error('Database connection error'))
+
+      // Criar app com multer configurado
+      const multer = require('multer')
+      const multerMemory = multer({ storage: multer.memoryStorage() })
+      
+      // Criar nova instância do controller para este teste específico
+      const testScenarioController = new ScenarioController()
+      
+      const testApp = express()
+      testApp.use(express.json())
+      testApp.post('/scenarios/:id/evidences', auth, multerMemory.single('file'), testScenarioController.uploadEvidence.bind(testScenarioController) as any)
+      testApp.use(errorHandler)
+
+      const fs = require('fs')
+      const path = require('path')
+      const tempFile = path.join(__dirname, 'temp-test-file.jpg')
+      fs.writeFileSync(tempFile, Buffer.from('fake image data'))
+
+      const response = await request(testApp)
+        .post(`/scenarios/${scenario.id}/evidences`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .attach('file', tempFile)
+        .expect(500)
+
+      expect(response.body.message).toBe('Erro interno do servidor')
+
+      // Limpar arquivo temporário
+      if (fs.existsSync(tempFile)) {
+        fs.unlinkSync(tempFile)
+      }
+
+      // Restaurar mock
+      require('../../../services/scenario.service').ScenarioService.prototype.uploadEvidence = originalUploadEvidence
     })
   })
 
@@ -574,6 +666,30 @@ describe('ScenarioController', () => {
 
       expect(response.headers['content-type']).toContain('text/csv')
       expect(response.headers['content-disposition']).toContain('attachment')
+    })
+
+    it('deve negar acesso sem token', async () => {
+      const response = await request(app)
+        .get(`/packages/${testPackage.id}/scenarios/export.csv`)
+        .expect(401)
+
+      expect(response.body).toHaveProperty('message', 'Token não fornecido')
+    })
+
+    it('deve tratar erro AppError ao exportar (linha 270)', async () => {
+      // Mock do scenarioService para simular AppError
+      const originalExportScenariosToCSV = require('../../../services/scenario.service').ScenarioService.prototype.exportScenariosToCSV
+      require('../../../services/scenario.service').ScenarioService.prototype.exportScenariosToCSV = jest.fn().mockRejectedValue(new AppError('Pacote não encontrado', 404))
+
+      const response = await request(app)
+        .get(`/packages/${testPackage.id}/scenarios/export.csv`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(404)
+
+      expect(response.body.message).toBe('Pacote não encontrado')
+
+      // Restaurar mock
+      require('../../../services/scenario.service').ScenarioService.prototype.exportScenariosToCSV = originalExportScenariosToCSV
     })
 
     it('deve tratar erro interno do servidor', async () => {
@@ -593,7 +709,7 @@ describe('ScenarioController', () => {
     })
   })
 
-  describe('GET /scenarios/:id/report', () => {
+  describe('GET /packages/:packageId/scenarios/report.pdf', () => {
     let scenario: any
 
     beforeEach(async () => {
@@ -618,22 +734,79 @@ describe('ScenarioController', () => {
       })
     })
 
-    it('deve gerar relatório do cenário', async () => {
+    it('deve gerar relatório PDF do pacote com sucesso', async () => {
       const response = await request(app)
-        .get(`/scenarios/${scenario.id}/report`)
+        .get(`/packages/${testPackage.id}/scenarios/report.pdf`)
         .set('Authorization', `Bearer ${authToken}`)
-        .expect(500) // Service tem erro, então esperamos 500
+        .expect(200)
 
-      expect(response.body).toHaveProperty('message', 'Erro interno do servidor')
+      expect(response.headers['content-type']).toContain('application/pdf')
+      expect(response.headers['content-disposition']).toContain('attachment')
+      expect(response.body.toString()).toContain('Relatório de Cenários de Teste')
+      expect(response.body.toString()).toContain(`Pacote ${testPackage.id}`)
     })
 
-    it('deve retornar erro para cenário inexistente', async () => {
-      const response = await request(app)
-        .get('/scenarios/99999/report')
-        .set('Authorization', `Bearer ${authToken}`)
-        .expect(500) // Service tem erro, então esperamos 500
+    it('deve negar acesso sem token (linha 284)', async () => {
+      // Criar um middleware customizado que não seta req.user.id
+      const customAuth: express.RequestHandler = (req, res, next) => {
+        ;(req as any).user = {} // user existe mas não tem id
+        next()
+      }
 
-      expect(response.body).toHaveProperty('message', 'Erro interno do servidor')
+      const customApp = express()
+      customApp.use(express.json())
+      const scenarioController = new ScenarioController()
+      customApp.get('/packages/:packageId/scenarios/report.pdf', customAuth, scenarioController.generateScenarioReport.bind(scenarioController) as any)
+      customApp.use(errorHandler)
+
+      const response = await request(customApp)
+        .get(`/packages/${testPackage.id}/scenarios/report.pdf`)
+        .expect(401)
+
+      expect(response.body).toHaveProperty('message', 'Não autenticado')
+    })
+
+    it('deve retornar 403 quando acesso ao pacote é negado', async () => {
+      // Criar outro usuário sem acesso ao pacote
+      const otherUser = await prisma.user.create({
+        data: {
+          name: 'Other User',
+          email: unique('other@example.com'),
+          password: 'password123'
+        }
+      })
+
+      const otherToken = tokenFor(otherUser.id)
+
+      const response = await request(app)
+        .get(`/packages/${testPackage.id}/scenarios/report.pdf`)
+        .set('Authorization', `Bearer ${otherToken}`)
+        .expect(403)
+
+      expect(response.body).toHaveProperty('message', 'Acesso negado ao pacote')
+
+      // Limpar
+      await prisma.user.delete({ where: { id: otherUser.id } })
+    })
+
+    it('deve tratar erro AppError ao gerar relatório', async () => {
+      // Mock do scenarioService para simular AppError
+      const originalCheckPackageAccess = require('../../../services/scenario.service').ScenarioService.prototype.checkPackageAccess
+      require('../../../services/scenario.service').ScenarioService.prototype.checkPackageAccess = jest.fn().mockResolvedValue(true)
+      
+      const originalGetPackageScenarios = require('../../../services/scenario.service').ScenarioService.prototype.getPackageScenarios
+      require('../../../services/scenario.service').ScenarioService.prototype.getPackageScenarios = jest.fn().mockRejectedValue(new AppError('Pacote não encontrado', 404))
+
+      const response = await request(app)
+        .get(`/packages/${testPackage.id}/scenarios/report.pdf`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .expect(404)
+
+      expect(response.body.message).toBe('Pacote não encontrado')
+
+      // Restaurar mocks
+      require('../../../services/scenario.service').ScenarioService.prototype.checkPackageAccess = originalCheckPackageAccess
+      require('../../../services/scenario.service').ScenarioService.prototype.getPackageScenarios = originalGetPackageScenarios
     })
 
     it('deve tratar erro interno do servidor', async () => {
@@ -642,7 +815,7 @@ describe('ScenarioController', () => {
       require('../../../services/scenario.service').ScenarioService.prototype.checkPackageAccess = jest.fn().mockRejectedValue(new Error('Database connection error'))
 
       const response = await request(app)
-        .get(`/scenarios/${scenario.id}/report`)
+        .get(`/packages/${testPackage.id}/scenarios/report.pdf`)
         .set('Authorization', `Bearer ${authToken}`)
         .expect(500)
 

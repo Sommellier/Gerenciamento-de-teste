@@ -245,6 +245,27 @@ describe('getProjectScenarios.controller', () => {
       expect(getProjectScenariosUC.getProjectScenarios).not.toHaveBeenCalled()
     })
 
+    it('retorna 401 quando req.user.id está ausente (linha 19)', async () => {
+      // Criar um middleware customizado que não seta req.user.id
+      const customAuth: express.RequestHandler = (req, res, next) => {
+        ;(req as any).user = {} // user existe mas não tem id
+        next()
+      }
+
+      const customApp = express()
+      customApp.use(express.json())
+      customApp.get('/projects/:projectId/scenarios', customAuth, getProjectScenariosController)
+      customApp.use(errorHandler)
+
+      const response = await request(customApp)
+        .get(`/projects/${project.id}/scenarios`)
+        .expect(401)
+
+      expect(response.body).toEqual({
+        message: 'Não autenticado'
+      })
+    })
+
     it('retorna 401 quando token é inválido', async () => {
       const response = await request(app)
         .get(`/projects/${project.id}/scenarios`)

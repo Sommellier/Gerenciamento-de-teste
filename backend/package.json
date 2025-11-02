@@ -16,6 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:add-enum-values": "ts-node scripts/add-package-status-enum-values.ts",
+    "db:add-scenario-status-enum": "ts-node scripts/add-scenario-status-enum.ts",
     "db:apply-migration": "ts-node scripts/apply-migration-directly.ts",
     "db:apply-package-approval": "ts-node scripts/add-package-status-enum-values.ts && ts-node scripts/apply-migration-directly.ts && prisma generate",
     "db:test": "node test-postgres-connection.js",

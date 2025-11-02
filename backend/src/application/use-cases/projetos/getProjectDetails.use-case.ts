@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { getProjectScenarioMetrics } from '../scenarios/getProjectScenarioMetrics.use-case'
 
 interface GetProjectDetailsInput {
   projectId: number
@@ -78,20 +79,56 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
 
     const availableReleases = releases.map(r => r.release)
 
-    // Buscar métricas dos pacotes de teste
-    const testPackagesCount = await prisma.testPackage.count({
+    // Buscar métricas dos pacotes de teste por status
+    const packagesByStatus = await prisma.testPackage.groupBy({
+      by: ['status'],
       where: {
         projectId,
         ...(release && { release })
+      },
+      _count: {
+        status: true
       }
     })
 
+    // Inicializar contadores
     const metrics = {
-      created: testPackagesCount,
+      created: 0,
       executed: 0,
       passed: 0,
       failed: 0
     }
+
+    // Mapear resultados por status
+    packagesByStatus.forEach(stat => {
+      const count = stat._count.status
+      switch (stat.status) {
+        case 'CREATED':
+          metrics.created = count
+          break
+        case 'EXECUTED':
+          metrics.executed = count
+          break
+        case 'PASSED':
+          metrics.passed = count
+          break
+        case 'FAILED':
+          metrics.failed = count
+          break
+        case 'EM_TESTE':
+          metrics.executed += count
+          break
+        case 'CONCLUIDO':
+          metrics.passed += count
+          break
+        case 'APROVADO':
+          metrics.passed += count
+          break
+        case 'REPROVADO':
+          metrics.failed += count
+          break
+      }
+    })
 
     // Buscar pacotes de teste
     const testPackages = await prisma.testPackage.findMany({
@@ -114,6 +151,12 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
       tags: pkg.tags ? JSON.parse(pkg.tags) : []
     }))
 
+    // Buscar métricas reais dos cenários do projeto
+    const scenarioMetrics = await getProjectScenarioMetrics({
+      projectId,
+      release
+    })
+
     return {
       id: project.id,
       name: project.name,
@@ -126,7 +169,7 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
       availableReleases,
       testPackages: packagesWithParsedTags,
       scenarios: packagesWithParsedTags, // Usando os mesmos dados por enquanto
-      scenarioMetrics: metrics // Usando as mesmas métricas por enquanto
+      scenarioMetrics
     }
   } catch (error) {
     console.error('Erro no getProjectDetails:', error)

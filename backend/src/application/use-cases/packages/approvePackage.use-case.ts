@@ -10,7 +10,7 @@ interface ApprovePackageInput {
 
 export class ApprovePackageUseCase {
   async execute({ packageId, projectId, approverId }: ApprovePackageInput) {
-    // Buscar pacote
+    // Buscar pacote com projeto e membros
     const testPackage = await prisma.testPackage.findFirst({
       where: {
         id: packageId,
@@ -27,7 +27,15 @@ export class ApprovePackageUseCase {
             }
           }
         },
-        project: true
+        project: {
+          include: {
+            userProjects: {
+              where: {
+                userId: approverId
+              }
+            }
+          }
+        }
       }
     })
 
@@ -35,16 +43,40 @@ export class ApprovePackageUseCase {
       throw new AppError('Pacote não encontrado', 404)
     }
 
-    // Validar que pacote está em EM_TESTE
-    if (testPackage.status !== PackageStatus.EM_TESTE) {
-      throw new AppError('Pacote deve estar em EM_TESTE para ser aprovado', 400)
+    // Verificar se usuário é owner ou manager
+    const isOwner = testPackage.project.ownerId === approverId
+    const isManager = testPackage.project.userProjects.some(
+      up => up.userId === approverId && up.role === 'MANAGER'
+    )
+
+    if (!isOwner && !isManager) {
+      throw new AppError('Apenas o dono do projeto ou um manager podem aprovar o pacote', 403)
     }
 
-    // RB2.1: Aprovar o pacote (mudar status para CONCLUIDO)
+    // Verificar se existem cenários no pacote
+    if (testPackage.scenarios.length === 0) {
+      throw new AppError('Pacote não possui cenários para aprovar', 400)
+    }
+
+    // Verificar se todos os cenários estão aprovados
+    const allScenariosApproved = testPackage.scenarios.every(
+      scenario => scenario.status === 'APPROVED'
+    )
+
+    if (!allScenariosApproved) {
+      throw new AppError('Todos os cenários devem estar aprovados para aprovar o pacote', 400)
+    }
+
+    // Verificar se o pacote já está aprovado
+    if (testPackage.status === PackageStatus.APROVADO) {
+      throw new AppError('Pacote já está aprovado', 400)
+    }
+
+    // Aprovar o pacote (mudar status para APROVADO)
     const updatedPackage = await prisma.testPackage.update({
       where: { id: packageId },
       data: {
-        status: PackageStatus.CONCLUIDO,
+        status: PackageStatus.APROVADO,
         approvedById: approverId,
         approvedAt: new Date(),
         // Limpar campos de reprovação se existirem

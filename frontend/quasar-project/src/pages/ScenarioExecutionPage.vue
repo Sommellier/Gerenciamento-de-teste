@@ -623,8 +623,11 @@ async function loadScenario() {
     // O status do cenário no backend é a fonte de verdade
     
     // Primeiro: verificar status concluído
-    if (scenario.value.status === 'PASSED' || scenario.value.status === 'FAILED') {
-      executionStatus.value = scenario.value.status === 'FAILED' ? 'FAILED' : 'COMPLETED'
+    if (scenario.value.status === 'PASSED' || scenario.value.status === 'FAILED' || 
+        scenario.value.status === 'APPROVED' || scenario.value.status === 'REPROVED') {
+      executionStatus.value = scenario.value.status === 'FAILED' || scenario.value.status === 'REPROVED' 
+        ? 'FAILED' 
+        : 'COMPLETED'
     } 
     // Segundo: verificar se está em execução (prioridade ao status EXECUTED do cenário)
     else if (scenario.value.status === 'EXECUTED') {
@@ -647,10 +650,6 @@ async function loadScenario() {
         executionStatus.value = 'NOT_STARTED'
       }
     }
-    
-    console.log('🔍 Status do cenário carregado:', scenario.value.status)
-    console.log('🔍 Status da execução definido:', executionStatus.value)
-    console.log('🔍 Etapas:', steps.value.map(s => ({ id: s.id, status: s.status })))
   } catch (err: any) {
     console.error('Erro ao carregar cenário:', err)
     Notify.create({
@@ -697,11 +696,9 @@ async function startExecution() {
     
     // Atualizar status local PRIMEIRO para feedback imediato ao usuário
     executionStatus.value = 'IN_PROGRESS'
-    console.log('✅ Status atualizado para IN_PROGRESS:', executionStatus.value)
     
     // Forçar atualização do DOM imediatamente
     await nextTick()
-    console.log('✅ DOM atualizado, status atual:', executionStatus.value)
     
     // Atualizar status do cenário no backend para "Em Execução"
     await scenarioService.updateScenario(scenarioId, {
@@ -767,15 +764,10 @@ async function finishExecution() {
     const scenarioId = Number(route.params.scenarioId)
     const finalStatus = hasFailedSteps ? 'FAILED' : 'PASSED'
     
-    console.log('Atualizando cenário com status:', finalStatus)
-    console.log('Etapas:', steps.value.map(s => ({ id: s.id, status: s.status })))
-    
     // Atualizar status do cenário no backend
-    const updateResponse = await scenarioService.updateScenario(scenarioId, {
+    await scenarioService.updateScenario(scenarioId, {
       status: finalStatus
     })
-    
-    console.log('Resposta da atualização:', updateResponse)
     
     // Atualizar status local
     executionStatus.value = hasFailedSteps ? 'FAILED' : 'COMPLETED'
@@ -936,16 +928,12 @@ async function setStepStatus(status: string) {
     try {
       const scenarioId = Number(route.params.scenarioId)
       
-      console.log('Atualizando etapa:', currentStep.value.id, 'com status:', status)
-      
       // Salvar status da etapa no backend
-      const stepResponse = await executionService.updateStepStatus(
+      await executionService.updateStepStatus(
         currentStep.value.id,
         status,
         currentStep.value.actualResult
       )
-      
-      console.log('Resposta da atualização da etapa:', stepResponse)
       
       // Atualizar também no array de steps
       const stepIndex = steps.value.findIndex(s => s.id === currentStep.value.id)
@@ -1005,7 +993,7 @@ async function setStepStatus(status: string) {
     if (status === 'FAILED') {
       // Pré-preencher formulário de bug
       bugForm.value.title = `Falha na Etapa ${currentStepIndex.value + 1}: ${currentStep.value.action.substring(0, 50)}`
-      bugForm.value.description = `**Ação:** ${currentStep.value.action}\n\n**Resultado Esperado:** ${currentStep.value.expected}\n\n**Problema encontrado:** `
+      bugForm.value.description = `Ação: ${currentStep.value.action}\n\nResultado Esperado: ${currentStep.value.expected}\n\nProblema encontrado: `
       bugForm.value.relatedStep = currentStep.value.id
       bugForm.value.attachments = []
       showBugDialog.value = true

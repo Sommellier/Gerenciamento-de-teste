@@ -75,6 +75,15 @@ export class ScenarioService {
       throw new AppError('Acesso negado ao pacote', 403)
     }
 
+    // Verificar se o pacote está aprovado e bloquear criação
+    const testPackage = await prisma.testPackage.findUnique({
+      where: { id: packageId }
+    })
+
+    if (testPackage?.status === 'APROVADO') {
+      throw new AppError('Não é possível criar cenários em um pacote aprovado', 403)
+    }
+
     // Validar se o testadorId existe (se fornecido)
     if (data.testadorId) {
       const testador = await prisma.user.findUnique({
@@ -161,12 +170,25 @@ export class ScenarioService {
           select: { id: true, title: true }
         },
         project: {
-          select: { id: true, name: true }
+          select: { id: true, name: true, ownerId: true }
+        },
+        reports: {
+          include: {
+            approval: {
+              include: {
+                approver: {
+                  select: { id: true, name: true, email: true, avatar: true }
+                }
+              }
+            }
+          },
+          orderBy: { createdAt: 'desc' }
         }
       }
     })
 
     if (!scenario) {
+      console.error('🔴 [getScenarioById] Cenário não encontrado:', scenarioId)
       throw new AppError('Cenário não encontrado', 404)
     }
 
@@ -181,8 +203,6 @@ export class ScenarioService {
 
   // Atualizar cenário
   async updateScenario(scenarioId: number, data: UpdateScenarioData, userId: number) {
-    console.log('ScenarioService.updateScenario - ID:', scenarioId, 'Data:', data)
-    
     const scenario = await this.getScenarioById(scenarioId, userId)
 
     // Atualizar dados do cenário
@@ -198,8 +218,6 @@ export class ScenarioService {
       ...(data.testadorId !== undefined && { testadorId: data.testadorId }),
       ...(data.aprovadorId !== undefined && { aprovadorId: data.aprovadorId })
     }
-
-    console.log('ScenarioService.updateScenario - UpdateData:', updateData)
 
     // Se steps foram fornecidos, atualizar steps
     if (data.steps && Array.isArray(data.steps)) {

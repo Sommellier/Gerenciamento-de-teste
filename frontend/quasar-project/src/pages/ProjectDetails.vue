@@ -199,6 +199,26 @@
                         <span class="legend-value">{{ scenarioMetrics.failed }}</span>
                       </div>
                     </div>
+                    <div v-if="(scenarioMetrics.approved || 0) > 0" class="legend-item">
+                      <div class="legend-indicator">
+                        <div class="legend-color approved"></div>
+                        <div class="legend-pulse"></div>
+                      </div>
+                      <div class="legend-content">
+                        <span class="legend-label">Aprovados</span>
+                        <span class="legend-value">{{ scenarioMetrics.approved || 0 }}</span>
+                      </div>
+                    </div>
+                    <div v-if="(scenarioMetrics.reproved || 0) > 0" class="legend-item">
+                      <div class="legend-indicator">
+                        <div class="legend-color reproved"></div>
+                        <div class="legend-pulse"></div>
+                      </div>
+                      <div class="legend-content">
+                        <span class="legend-label">Reprovados</span>
+                        <span class="legend-value">{{ scenarioMetrics.reproved || 0 }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -580,11 +600,21 @@ const scenarioMetrics = computed(() => project.value?.scenarioMetrics || {
   created: 0,
   executed: 0,
   passed: 0,
-  failed: 0
+  failed: 0,
+  approved: 0,
+  reproved: 0
 })
 
 const totalScenarios = computed(() => {
-  return scenarioMetrics.value.created + scenarioMetrics.value.executed + scenarioMetrics.value.passed + scenarioMetrics.value.failed
+  // Incluir todos os status: created, executed, passed, failed, approved, reproved
+  // APPROVED e REPROVED são status separados, não estão incluídos em passed/failed
+  const total = scenarioMetrics.value.created + 
+                scenarioMetrics.value.executed + 
+                scenarioMetrics.value.passed + 
+                scenarioMetrics.value.failed +
+                (scenarioMetrics.value.approved || 0) +
+                (scenarioMetrics.value.reproved || 0)
+  return total
 })
 
 const chartSeries = computed(() => {
@@ -852,25 +882,21 @@ const monthlyChartOptions = computed(() => {
 })
 
 const successRateChartSeries = computed(() => {
-  if (!project.value?.testPackages) return []
+  // Usar as métricas do backend que já estão calculadas corretamente
+  if (!metrics.value) return []
   
-  const packages = project.value.testPackages
+  // Aprovados = PASSED + APROVADO + CONCLUIDO (já somados no backend)
+  const approvedPackages = metrics.value.passed
   
-  // Calcular estatísticas dos pacotes
-  const passedPackages = packages.filter(pkg => pkg.status === 'Passed').length
-  const failedPackages = packages.filter(pkg => pkg.status === 'Failed').length
-  const notExecutedPackages = packages.filter(pkg => pkg.status === 'Created' || !pkg.status).length
+  // Reprovados = FAILED + REPROVADO (já somados no backend)
+  const reprovedPackages = metrics.value.failed
   
-  console.log('Status dos pacotes:', {
-    total: packages.length,
-    passed: passedPackages,
-    failed: failedPackages,
-    notExecuted: notExecutedPackages,
-    packages: packages.map(p => ({ id: p.id, status: p.status }))
-  })
+  // Não Executados = CREATED + EXECUTED + EM_TESTE (que ainda não foram aprovados/reprovados)
+  const notExecutedPackages = metrics.value.created + metrics.value.executed
   
   // Retornar array simples para gráfico de pizza
-  return [passedPackages, failedPackages, notExecutedPackages]
+  // [Aprovados, Reprovados, Não Executados]
+  return [approvedPackages, reprovedPackages, notExecutedPackages]
 })
 
 const successRateChartOptions = computed(() => {
@@ -1591,6 +1617,14 @@ onMounted(() => {
   box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
 }
 .legend-color.failed { 
+  background: linear-gradient(135deg, #F44336, #EF5350);
+  box-shadow: 0 0 20px rgba(244, 67, 54, 0.3);
+}
+.legend-color.approved { 
+  background: linear-gradient(135deg, #4CAF50, #66BB6A);
+  box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+}
+.legend-color.reproved { 
   background: linear-gradient(135deg, #F44336, #EF5350);
   box-shadow: 0 0 20px rgba(244, 67, 54, 0.3);
 }

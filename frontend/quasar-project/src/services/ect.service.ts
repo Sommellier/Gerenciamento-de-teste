@@ -60,5 +60,31 @@ export const ectService = {
       console.error('Erro ao baixar relatório:', error)
       throw new Error(error.response?.data?.message || 'Erro ao baixar relatório')
     }
+  },
+
+  // Aprovar relatório ECT
+  async approveReport(reportId: number, comment?: string): Promise<any> {
+    try {
+      console.log('Aprovando relatório:', reportId)
+      const response = await api.post(`/reports/${reportId}/approve`, { comment })
+      console.log('Relatório aprovado com sucesso:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('Erro ao aprovar relatório:', error)
+      throw new Error(error.response?.data?.message || 'Erro ao aprovar relatório')
+    }
+  },
+
+  // Reprovar relatório ECT
+  async rejectReport(reportId: number, comment: string): Promise<any> {
+    try {
+      console.log('Reprovando relatório:', reportId)
+      const response = await api.post(`/reports/${reportId}/reject`, { comment })
+      console.log('Relatório reprovado com sucesso:', response.data)
+      return response.data
+    } catch (error: any) {
+      console.error('Erro ao reprovar relatório:', error)
+      throw new Error(error.response?.data?.message || 'Erro ao reprovar relatório')
+    }
   }
 }

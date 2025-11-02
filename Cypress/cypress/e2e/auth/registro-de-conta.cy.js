@@ -2,7 +2,7 @@ describe('Fluxo de criação de conta @regressao', () => {
   it('cria uma nova conta com sucesso e validar login', () => {
 
     //Constantes
-    const email = 'Luizteste2@gmail.com'
+    const email = 'Luizteste4@gmail.com'
     const senha = 'Segredo123'
 
     // Cenário

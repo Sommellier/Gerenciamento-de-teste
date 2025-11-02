@@ -52,9 +52,6 @@ export async function addStepComment({
     })
 
     // TODO: Enviar notificações para usuários mencionados
-    if (mentions && mentions.length > 0) {
-      console.log(`Notificar usuários mencionados: ${mentions.join(', ')}`)
-    }
 
     return comment
   } catch (error) {

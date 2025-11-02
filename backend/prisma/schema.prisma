@@ -47,6 +47,8 @@ enum ScenarioStatus {
   EXECUTED
   PASSED
   FAILED
+  APPROVED
+  REPROVED
 }
 
 enum PackageStatus {
@@ -57,6 +59,7 @@ enum PackageStatus {
   EM_TESTE
   CONCLUIDO
   REPROVADO
+  APROVADO
 }
 
 model User {

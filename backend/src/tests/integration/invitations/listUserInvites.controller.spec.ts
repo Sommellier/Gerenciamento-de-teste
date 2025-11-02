@@ -536,18 +536,78 @@ describe('listUserInvites.controller', () => {
   })
 
   describe('normalizeEmailQuery function', () => {
-    it('deve normalizar query de email corretamente', async () => {
+    it('deve normalizar query de email corretamente (linhas 51-53)', async () => {
       const normalizeEmailQuery = (q?: string) => {
-        if (!q || typeof q !== 'string') return undefined
-        const trimmed = q.trim()
-        return trimmed.length > 0 ? trimmed.toLowerCase() : undefined
+        if (!q || typeof q !== 'string') return undefined // linha 51
+        const trimmed = q.trim() // linha 52
+        return trimmed.length > 0 ? trimmed.toLowerCase() : undefined // linha 53
       }
       
+      // Testar linha 53 - quando trimmed.length > 0
       expect(normalizeEmailQuery('  TEST@EXAMPLE.COM  ')).toBe('test@example.com')
+      
+      // Testar linha 53 - quando trimmed.length === 0 (string vazia)
       expect(normalizeEmailQuery('')).toBeUndefined()
+      
+      // Testar linha 53 - quando trimmed.length === 0 (espaços)
       expect(normalizeEmailQuery('   ')).toBeUndefined()
+      
+      // Testar linha 51 - quando q é null
       expect(normalizeEmailQuery(null as any)).toBeUndefined()
+      
+      // Testar linha 51 - quando q é undefined
       expect(normalizeEmailQuery(undefined)).toBeUndefined()
+      
+      // Testar linha 51 - quando q não é string
+      expect(normalizeEmailQuery(123 as any)).toBeUndefined()
+    })
+
+    it('testa normalizeEmailQuery no contexto real (linhas 51-53)', async () => {
+      const user = await prisma.user.create({
+        data: {
+          name: 'Test User',
+          email: unique('user') + '@example.com',
+          password: 'secret'
+        }
+      })
+
+      const owner = await prisma.user.create({
+        data: {
+          name: 'Owner',
+          email: unique('owner') + '@example.com',
+          password: 'secret'
+        }
+      })
+
+      const project = await prisma.project.create({
+        data: {
+          name: 'Test Project',
+          description: 'Test Description',
+          ownerId: owner.id
+        }
+      })
+
+      await prisma.projectInvite.create({
+        data: {
+          projectId: project.id,
+          email: user.email,
+          role: 'TESTER',
+          token: 'token1',
+          status: 'PENDING',
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          invitedById: owner.id
+        }
+      })
+
+      const { listUserInvites } = require('../../../controllers/invitations/listUserInvites.controller')
+      
+      // Testar com query de email (linha 51-53 é chamada internamente)
+      const result = await listUserInvites({ 
+        userId: user.id,
+        q: '  ' + user.email.toUpperCase() + '  ' // deve normalizar
+      })
+
+      expect(result.items.length).toBeGreaterThanOrEqual(1)
     })
   })
 

@@ -17,9 +17,17 @@ export async function getProjectScenarioMetrics({ projectId, release }: GetProje
   }
 
   // Construir filtros
-  const where: any = { projectId }
+  // Cenários não têm campo release diretamente, então precisamos filtrar pelos pacotes
+  let where: any = { 
+    projectId
+  }
+  
+  // Se release foi especificada, filtrar pelos pacotes dessa release
   if (release) {
-    where.release = release
+    where.package = {
+      projectId,
+      release: release
+    }
   }
 
   // Buscar métricas agregadas de cenários
@@ -36,7 +44,9 @@ export async function getProjectScenarioMetrics({ projectId, release }: GetProje
     created: 0,
     executed: 0,
     passed: 0,
-    failed: 0
+    failed: 0,
+    approved: 0,
+    reproved: 0
   }
 
   // Mapear resultados
@@ -54,6 +64,16 @@ export async function getProjectScenarioMetrics({ projectId, release }: GetProje
         break
       case 'FAILED':
         result.failed = count
+        break
+      case 'APPROVED':
+        result.approved = count
+        // APPROVED é um status de conclusão, mas não deve ser contado como PASSED
+        // O PASSED já conta como concluído, APPROVED é aprovado após conclusão
+        break
+      case 'REPROVED':
+        result.reproved = count
+        // REPROVED é um status de falha, mas não deve ser contado como FAILED
+        // O FAILED já conta como falhou, REPROVED é reprovado após conclusão
         break
     }
   })

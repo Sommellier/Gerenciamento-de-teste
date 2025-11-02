@@ -11,4 +11,10 @@ router.post('/scenarios/:id/ect', auth, ectController.generateECT.bind(ectContro
 // GET /api/reports/:id/download - Download de relatório
 router.get('/reports/:id/download', auth, ectController.downloadReport.bind(ectController))
 
+// POST /api/reports/:id/approve - Aprovar relatório ECT
+router.post('/reports/:id/approve', auth, ectController.approveReport.bind(ectController))
+
+// POST /api/reports/:id/reject - Reprovar relatório ECT
+router.post('/reports/:id/reject', auth, ectController.rejectReport.bind(ectController))
+
 export default router
