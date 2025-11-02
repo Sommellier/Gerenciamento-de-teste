@@ -4,7 +4,8 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import path from 'path'
 import { generalLimiter, publicLimiter } from './infrastructure/rateLimiter'
-import userRoutes from './routes/user.routes' 
+
+import userRoutes from './routes/user.routes'
 import authRoutes from './routes/auth.routes'
 import projectRoutes from './routes/project.routes'
 import invitationRoutes from './routes/invitation.routes'
@@ -15,96 +16,93 @@ import scenarioRoutes from './routes/scenario.routes'
 import packageRoutes from './routes/package.routes'
 import executionRoutes from './routes/execution.routes'
 import ectRoutes from './routes/ect.routes'
+
 const app = express()
 
-// IMPORTANTE: CORS deve ser aplicado PRIMEIRO, antes de qualquer outro middleware
-// Configurar CORS de forma segura
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? (process.env.ALLOWED_ORIGINS?.split(',') || [process.env.ALLOWED_ORIGIN]).filter(Boolean)
-  : [
-      'http://localhost:9000',
-      'http://localhost:9001', // Quasar dev server
-      'http://localhost:8080',
-      'http://localhost:3000'
-    ]
+// Produção: defina ALLOWED_ORIGINS="https://seu-front1,https://seu-front2"
+const parseAllowed = (raw?: string | null): string[] =>
+  (raw ? raw.split(',') : [])
+    .map(s => s.trim())
+    .filter(Boolean)
 
-const corsOptions = {
-  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // Em produção, não permitir requisições sem origin por segurança
-    if (process.env.NODE_ENV === 'production') {
-      if (!origin) {
-        return callback(new Error('Origin não especificada. Requisições devem incluir o header Origin.'), false)
-      }
-      if (allowedOrigins.length === 0) {
-        return callback(new Error('ALLOWED_ORIGINS não configurado'), false)
-      }
-      if (allowedOrigins.indexOf(origin) === -1) {
-        return callback(new Error('Not allowed by CORS'), false)
-      }
-      callback(null, true)
-    } else {
-      // Em desenvolvimento, permitir mais flexibilidade
-      // Permitir localhost em qualquer porta para desenvolvimento
-      if (!origin) {
-        callback(null, true)
-        return
-      }
-      // Verificar se é localhost
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        callback(null, true)
-        return
-      }
-      if (allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true)
-      } else {
-        callback(new Error('Not allowed by CORS'), false)
-      }
+const allowedOrigins =
+  process.env.NODE_ENV === 'production'
+    ? parseAllowed(process.env.ALLOWED_ORIGINS ?? process.env.ALLOWED_ORIGIN ?? '')
+    : [
+        'http://localhost:9000',
+        'http://localhost:9001', // Quasar dev server
+        'http://localhost:8080',
+        'http://localhost:3000'
+      ]
+
+const isLocalhost = (origin: string) =>
+  origin.includes('localhost') || origin.includes('127.0.0.1')
+
+const corsOptions: cors.CorsOptions = {
+  origin(origin, callback) {
+    const isProd = process.env.NODE_ENV === 'production'
+
+    // Permitir requisições sem Origin (Postman/cURL, health checks)
+    if (!origin) return callback(null, true)
+
+    if (!isProd) {
+      if (isLocalhost(origin) || allowedOrigins.includes(origin)) return callback(null, true)
+      return callback(new Error('Not allowed by CORS (dev)'))
     }
+
+    // Produção
+    if (allowedOrigins.length === 0)
+      return callback(new Error('ALLOWED_ORIGINS não configurado'))
+
+    if (allowedOrigins.includes(origin)) return callback(null, true)
+    return callback(new Error('Not allowed by CORS (prod)'))
   },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'Cache-Control', 'Pragma']
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin',
+    'Cache-Control',
+    'Pragma'
+  ]
 }
 
-// Aplicar CORS PRIMEIRO (antes de outros middlewares)
+// CORS PRIMEIRO + preflight explícito
 app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
 
-// Configurar Helmet para não bloquear CORS
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginEmbedderPolicy: false
-}))
+// Segurança
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false
+  })
+)
 
-// Middlewares adicionais
+// Proxy (Render, etc.)
+app.set('trust proxy', 1)
+
+// Logs e parsers
 app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Aplicar rate limiter DEPOIS do CORS (para não interferir nas requisições OPTIONS)
+// Rate limiters
 app.use(generalLimiter)
+app.use('/api/public', publicLimiter) // se tiver rotas públicas, aplica aqui
 
-// Servir arquivos estáticos (uploads) com CORS configurado
-app.use('/uploads', (req, res, next) => {
-  const origin = req.headers.origin
-  if (process.env.NODE_ENV === 'production') {
-    if (origin && allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin)
-    }
-  } else {
-    // Desenvolvimento: permitir mais flexibilidade
-    if (origin && (allowedOrigins.includes(origin) || !process.env.ALLOWED_ORIGIN)) {
-      res.header('Access-Control-Allow-Origin', origin)
-    } else if (!origin) {
-      res.header('Access-Control-Allow-Origin', '*')
-    }
-  }
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
-  res.header('Access-Control-Allow-Credentials', 'true')
-  next()
-}, express.static(path.join(process.cwd(), 'uploads')))
+// Static uploads com CORS aplicado
+app.use(
+  '/uploads',
+  cors(corsOptions),
+  express.static(path.join(process.cwd(), 'uploads'))
+)
 
+// Rotas API (prefixo /api)
 app.use('/api', userRoutes)
 app.use('/api', authRoutes)
 app.use('/api', projectRoutes)
@@ -117,24 +115,24 @@ app.use('/api', packageRoutes)
 app.use('/api', executionRoutes)
 app.use('/api', ectRoutes)
 
-// Health check endpoint para Azure App Service
-app.get('/health', (req: Request, res: Response) => {
+// Health check
+app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-  // Log erro completo apenas em desenvolvimento
+// Error handler
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack)
+    console.error(err?.stack || err)
   }
-  
-  res.status(err.statusCode || 500).json({ 
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
-      : err.message || 'Internal Server Error',
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal Server Error' 
-      : err.message || 'Internal Server Error'
+
+  const status = err?.statusCode || 500
+  const message =
+    process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err?.message || 'Internal Server Error'
+
+  res.status(status).json({
+    error: message,
+    message
   })
 })
 
