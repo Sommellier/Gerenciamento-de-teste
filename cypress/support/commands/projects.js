@@ -1,5 +1,3 @@
-
-
 // Função para o fluxo "Criação de cenario
 Cypress.Commands.add('criarCenario', (nomeProjeto, descricaoProjeto) => {
     cy.get('.icon-wrapper.projects-icon svg').should('exist').click()
@@ -15,8 +13,8 @@ Cypress.Commands.add('criarCenario', (nomeProjeto, descricaoProjeto) => {
 })
 
 // Função para o fluxo "Validação da criação do projeto
-Cypress.Commands.add('validarCriacaoProjeto', (descricaoProjeto) => {
-    cy.findByRole('heading', { name: /meu projeto/i })
+Cypress.Commands.add('validarCriacaoProjeto', (nomeProjeto, descricaoProjeto) => {
+    cy.findByRole('heading', { name: nomeProjeto })
         .should('be.visible')
         .parents('.project-card')
         .within(() => {
@@ -60,5 +58,5 @@ Cypress.Commands.add('deletarCenario', (nomeProjetoEditado) => {
     cy.contains('button.menu-action.danger', /excluir/i).click()
     cy.contains('button', /excluir/i).click()
     cy.wait('@deleteProject').its('response.statusCode').should('be.oneOf', [200, 204])
-    cy.contains('.project-card .project-title', /meu projeto/i).should('not.exist')
+    cy.contains('.project-card .project-title', nomeProjetoEditado).should('not.exist')
 })
