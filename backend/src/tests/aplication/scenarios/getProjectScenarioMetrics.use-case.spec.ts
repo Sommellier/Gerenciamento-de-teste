@@ -58,7 +58,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 0,
         executed: 0,
         passed: 0,
-        failed: 0
+        failed: 0,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -123,7 +125,61 @@ describe('getProjectScenarioMetrics', () => {
         created: 2,
         executed: 1,
         passed: 2,
-        failed: 1
+        failed: 1,
+        approved: 0,
+        reproved: 0
+      })
+    })
+
+    it('retorna métricas com cenários APPROVED e REPROVED (linhas 69-77)', async () => {
+      // Criar cenários com status APPROVED e REPROVED
+      await prisma.testScenario.createMany({
+        data: [
+          {
+            title: 'Scenario APPROVED 1',
+            description: 'Description 1',
+            projectId,
+            status: 'APPROVED',
+            type: 'FUNCTIONAL',
+            priority: 'MEDIUM'
+          },
+          {
+            title: 'Scenario APPROVED 2',
+            description: 'Description 2',
+            projectId,
+            status: 'APPROVED',
+            type: 'FUNCTIONAL',
+            priority: 'MEDIUM'
+          },
+          {
+            title: 'Scenario REPROVED 1',
+            description: 'Description 3',
+            projectId,
+            status: 'REPROVED',
+            type: 'FUNCTIONAL',
+            priority: 'MEDIUM'
+          },
+          {
+            title: 'Scenario REPROVED 2',
+            description: 'Description 4',
+            projectId,
+            status: 'REPROVED',
+            type: 'FUNCTIONAL',
+            priority: 'MEDIUM'
+          }
+        ]
+      })
+
+      const result = await getProjectScenarioMetrics({ projectId })
+
+      // Linhas 69-77: APPROVED e REPROVED não devem ser contados como PASSED ou FAILED
+      expect(result).toEqual({
+        created: 0,
+        executed: 0,
+        passed: 0,
+        failed: 0,
+        approved: 2, // linha 69
+        reproved: 2  // linha 74
       })
     })
 
@@ -251,7 +307,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 3,
         executed: 0,
         passed: 0,
-        failed: 0
+        failed: 0,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -283,7 +341,7 @@ describe('getProjectScenarioMetrics', () => {
       expect(result.executed).toBeGreaterThanOrEqual(12)
       expect(result.passed).toBeGreaterThanOrEqual(12)
       expect(result.failed).toBeGreaterThanOrEqual(12)
-      expect(result.created + result.executed + result.passed + result.failed).toBe(50)
+      expect(result.created + result.executed + result.passed + result.failed + result.approved + result.reproved).toBe(50)
     })
   })
 
@@ -433,7 +491,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 1,
         executed: 1,
         passed: 1,
-        failed: 1
+        failed: 1,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -482,7 +542,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 1,
         executed: 1,
         passed: 1,
-        failed: 1
+        failed: 1,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -531,7 +593,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 1,
         executed: 1,
         passed: 1,
-        failed: 1
+        failed: 1,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -564,7 +628,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 1,
         executed: 0,
         passed: 1,
-        failed: 0
+        failed: 0,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -599,7 +665,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 1,
         executed: 0,
         passed: 1,
-        failed: 0
+        failed: 0,
+        approved: 0,
+        reproved: 0
       })
     })
 
@@ -640,7 +708,9 @@ describe('getProjectScenarioMetrics', () => {
         created: 1,
         executed: 0,
         passed: 0,
-        failed: 0
+        failed: 0,
+        approved: 0,
+        reproved: 0
       })
     })
   })
@@ -653,6 +723,8 @@ describe('getProjectScenarioMetrics', () => {
       expect(result).toHaveProperty('executed')
       expect(result).toHaveProperty('passed')
       expect(result).toHaveProperty('failed')
+      expect(result).toHaveProperty('approved')
+      expect(result).toHaveProperty('reproved')
     })
 
     it('retorna tipos corretos para propriedades', async () => {
@@ -662,6 +734,8 @@ describe('getProjectScenarioMetrics', () => {
       expect(typeof result.executed).toBe('number')
       expect(typeof result.passed).toBe('number')
       expect(typeof result.failed).toBe('number')
+      expect(typeof result.approved).toBe('number')
+      expect(typeof result.reproved).toBe('number')
     })
 
     it('retorna valores não negativos', async () => {
@@ -671,6 +745,8 @@ describe('getProjectScenarioMetrics', () => {
       expect(result.executed).toBeGreaterThanOrEqual(0)
       expect(result.passed).toBeGreaterThanOrEqual(0)
       expect(result.failed).toBeGreaterThanOrEqual(0)
+      expect(result.approved).toBeGreaterThanOrEqual(0)
+      expect(result.reproved).toBeGreaterThanOrEqual(0)
     })
 
     it('retorna valores inteiros', async () => {
@@ -680,6 +756,8 @@ describe('getProjectScenarioMetrics', () => {
       expect(Number.isInteger(result.executed)).toBe(true)
       expect(Number.isInteger(result.passed)).toBe(true)
       expect(Number.isInteger(result.failed)).toBe(true)
+      expect(Number.isInteger(result.approved)).toBe(true)
+      expect(Number.isInteger(result.reproved)).toBe(true)
     })
   })
 

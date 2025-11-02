@@ -238,6 +238,56 @@ describe('updatePackage - validação de pacote', () => {
     })
   })
 
+  it('bloqueia edição quando pacote está CONCLUIDO (linha 53)', async () => {
+    // Atualizar pacote para CONCLUIDO
+    await prisma.testPackage.update({
+      where: { id: packageId },
+      data: { status: 'CONCLUIDO' }
+    })
+
+    const updateData = {
+      packageId,
+      projectId,
+      title: 'Updated Title'
+    }
+
+    await expect(updatePackage(updateData)).rejects.toMatchObject({
+      status: 403,
+      message: 'Pacote não pode ser editado quando está concluído ou aprovado'
+    })
+
+    // Restaurar status
+    await prisma.testPackage.update({
+      where: { id: packageId },
+      data: { status: 'CREATED' }
+    })
+  })
+
+  it('bloqueia edição quando pacote está APROVADO (linha 53)', async () => {
+    // Atualizar pacote para APROVADO
+    await prisma.testPackage.update({
+      where: { id: packageId },
+      data: { status: 'APROVADO' }
+    })
+
+    const updateData = {
+      packageId,
+      projectId,
+      title: 'Updated Title'
+    }
+
+    await expect(updatePackage(updateData)).rejects.toMatchObject({
+      status: 403,
+      message: 'Pacote não pode ser editado quando está concluído ou aprovado'
+    })
+
+    // Restaurar status
+    await prisma.testPackage.update({
+      where: { id: packageId },
+      data: { status: 'CREATED' }
+    })
+  })
+
   it('rejeita quando pacote existe mas não pertence ao projeto', async () => {
     // Criar outro projeto e pacote
     const anotherProject = await createProject({

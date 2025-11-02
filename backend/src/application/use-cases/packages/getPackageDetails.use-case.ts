@@ -22,7 +22,8 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
           select: {
             id: true,
             name: true,
-            description: true
+            description: true,
+            ownerId: true
           }
         },
         approvedBy: {
@@ -149,10 +150,35 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
       return acc
     }, {} as Record<string, number>)
 
-    // Calcular taxa de execução e sucesso
+    // Buscar histórico de execuções do pacote (agrupadas por mês)
+    const scenarioIds = scenarios.map((s: any) => s.id)
+    const executionHistory = await prisma.scenarioExecutionHistory.findMany({
+      where: {
+        scenarioId: { in: scenarioIds }
+      },
+      select: {
+        createdAt: true,
+        action: true
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    })
+
+    // Agrupar execuções por mês
+    const executionsByMonth: Record<string, number> = {}
+    executionHistory.forEach(execution => {
+      const date = new Date(execution.createdAt)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      executionsByMonth[monthKey] = (executionsByMonth[monthKey] || 0) + 1
+    })
+
+    // Calcular taxa de execução
     const executedScenarios = scenarios.filter((s: any) => s.status !== 'CREATED').length
-    const passedScenarios = scenarios.filter((s: any) => s.status === 'PASSED').length
     const executionRate = totalScenarios > 0 ? (executedScenarios / totalScenarios) * 100 : 0
+    
+    // Taxa de sucesso: cenários PASSED / cenários executados (EXECUTED, PASSED, FAILED)
+    const passedScenarios = scenarios.filter((s: any) => s.status === 'PASSED').length
     const successRate = executedScenarios > 0 ? (passedScenarios / executedScenarios) * 100 : 0
 
     return {
@@ -165,6 +191,7 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
         scenariosByType,
         scenariosByPriority,
         scenariosByStatus,
+        executionsByMonth, // Adicionar execuções por mês
         executionRate: Math.round(executionRate * 100) / 100,
         successRate: Math.round(successRate * 100) / 100
       }

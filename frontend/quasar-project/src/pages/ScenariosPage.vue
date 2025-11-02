@@ -286,7 +286,6 @@ function createScenario() {
 
 function viewScenario(scenario: any) {
   // TODO: Implementar visualização de cenário
-  console.log('View scenario:', scenario)
 }
 
 // Scenario actions
@@ -299,7 +298,6 @@ function showScenarioMenu(scenario: any, event: Event) {
 function editScenario(scenario: any) {
   showMenu.value = false
   // TODO: Implementar edição de cenário
-  console.log('Edit scenario:', scenario)
 }
 
 function deleteScenario(scenario: any) {
@@ -343,20 +341,12 @@ async function loadScenarios() {
       params.append('q', searchQuery.value.trim())
     }
 
-    console.log('Loading scenarios with params:', params.toString())
-    console.log('Project ID:', route.params.projectId)
     const response = await api.get(`/projects/${route.params.projectId}/scenarios?${params}`)
-    console.log('Scenarios response:', response.data)
-    console.log('Response type:', typeof response.data)
-    console.log('Is array:', Array.isArray(response.data))
     
     // A API retorna os cenários diretamente, não em formato paginado
     scenarios.value = Array.isArray(response.data) ? response.data : []
     totalPages.value = 1
     totalScenarios.value = scenarios.value.length
-    
-    console.log('Scenarios loaded:', scenarios.value.length)
-    console.log('Scenarios data:', scenarios.value)
   } catch (err: any) {
     console.error('Error loading scenarios:', err)
     $q.notify({
@@ -414,7 +404,9 @@ function getScenarioStatus(status: string) {
     'CREATED': 'Criado',
     'EXECUTED': 'Executado',
     'PASSED': 'Concluído',
-    'FAILED': 'Falhou'
+    'FAILED': 'Falhou',
+    'APPROVED': 'Aprovado',
+    'REPROVED': 'Reprovado'
   }
   return statusMap[status] || status
 }
@@ -424,7 +416,9 @@ function getScenarioStatusColor(status: string) {
     'CREATED': 'grey',
     'EXECUTED': 'orange',
     'PASSED': 'green',
-    'FAILED': 'red'
+    'FAILED': 'red',
+    'APPROVED': 'positive',
+    'REPROVED': 'negative'
   }
   return colors[status] || 'grey'
 }

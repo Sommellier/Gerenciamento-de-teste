@@ -1,8 +1,14 @@
 import { Request, Response, NextFunction } from 'express'
 import { ECTService } from '../services/ect.service'
 import { AppError } from '../utils/AppError'
+import { approveReport } from '../application/use-cases/reports/approveReport.use-case'
+import { rejectReport } from '../application/use-cases/reports/rejectReport.use-case'
 
 const ectService = new ECTService()
+
+type AuthenticatedRequest = Request & {
+  user?: { id: number; email?: string }
+}
 
 export class ECTController {
   // POST /api/scenarios/:id/ect
@@ -18,8 +24,6 @@ export class ECTController {
       if (!userId) {
         throw new AppError('Usuário não autenticado', 401)
       }
-
-      console.log('Gerando ECT para cenário:', scenarioId, 'usuário:', userId)
 
       const result = await ectService.generateECT(scenarioId, userId)
 
@@ -52,15 +56,7 @@ export class ECTController {
         throw new AppError('Usuário não autenticado', 401)
       }
 
-      console.log('Download de relatório:', reportId, 'usuário:', userId)
-
       const result = await ectService.downloadReport(reportId, userId)
-
-      console.log('Relatório encontrado:', {
-        fileName: result.fileName,
-        mimeType: result.mimeType,
-        bufferSize: result.buffer.length
-      })
 
       // Configurar headers para download
       res.setHeader('Content-Type', result.mimeType)
@@ -70,6 +66,80 @@ export class ECTController {
       res.send(result.buffer)
     } catch (error) {
       console.error('Erro ao baixar relatório:', error)
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ message: error.message })
+        return
+      }
+      res.status(500).json({ message: 'Erro interno do servidor' })
+    }
+  }
+
+  // POST /api/reports/:id/approve
+  async approveReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reportId = parseInt(req.params.id)
+      const userId = req.user?.id
+      const { comment } = req.body
+
+      if (isNaN(reportId)) {
+        throw new AppError('ID do relatório inválido', 400)
+      }
+
+      if (!userId) {
+        throw new AppError('Usuário não autenticado', 401)
+      }
+
+      const result = await approveReport({
+        reportId,
+        approverId: userId,
+        comment
+      })
+
+      res.status(200).json({
+        message: 'Relatório aprovado com sucesso',
+        approval: result.approval
+      })
+    } catch (error) {
+      console.error('🔴 [ECTController.approveReport] Erro ao aprovar relatório:', error)
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ message: error.message })
+        return
+      }
+      res.status(500).json({ message: 'Erro interno do servidor' })
+    }
+  }
+
+  // POST /api/reports/:id/reject
+  async rejectReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const reportId = parseInt(req.params.id)
+      const userId = req.user?.id
+      const { comment } = req.body
+
+      if (isNaN(reportId)) {
+        throw new AppError('ID do relatório inválido', 400)
+      }
+
+      if (!userId) {
+        throw new AppError('Usuário não autenticado', 401)
+      }
+
+      if (!comment || comment.trim().length === 0) {
+        throw new AppError('Comentário é obrigatório para reprovação', 400)
+      }
+
+      const result = await rejectReport({
+        reportId,
+        rejectorId: userId,
+        comment: comment.trim()
+      })
+
+      res.status(200).json({
+        message: 'Relatório reprovado com sucesso',
+        approval: result.approval
+      })
+    } catch (error) {
+      console.error('🔴 [ECTController.rejectReport] Erro ao reprovar relatório:', error)
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ message: error.message })
         return

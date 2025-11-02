@@ -38,9 +38,25 @@
           label="Gerar ECT (PDF)"
           @click="generateECT"
           :loading="generatingECT"
-          :disable="scenario?.status !== 'PASSED'"
           class="action-btn"
         />
+        <!-- Botões de aprovar/reprovar ECT (apenas se permitido e houver relatório sem aprovação) -->
+        <template v-if="canApproveRejectECT && latestReportWithoutApproval">
+          <q-btn
+            color="positive"
+            icon="check_circle"
+            label="Aprovar ECT"
+            @click="openECTApprovalDialog"
+            class="action-btn"
+          />
+          <q-btn
+            color="negative"
+            icon="cancel"
+            label="Reprovar ECT"
+            @click="openECTRejectionDialog"
+            class="action-btn"
+          />
+        </template>
       </div>
     </div>
 
@@ -125,6 +141,47 @@
                 Data de Criação
               </div>
               <div class="info-value">{{ formatDate(scenario.createdAt) }}</div>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <!-- ECT Approval/Rejection Info -->
+      <q-card v-if="latestReportWithApproval && latestReportWithApproval.approval" class="ect-approval-card">
+        <q-card-section>
+          <div v-if="latestReportWithApproval.approval.status === 'APPROVED'" class="approval-item approved">
+            <q-icon name="check_circle" color="positive" size="32px" />
+            <div class="approval-details">
+              <div class="approval-status-badge approved-badge">
+                <q-chip color="positive" text-color="white" icon="check_circle" label="Aprovado" size="md" />
+              </div>
+              <div class="approval-label">ECT Aprovado por</div>
+              <div class="approval-value">{{ latestReportWithApproval.approval.approver?.name || 'N/A' }}</div>
+              <div class="approval-date">{{ formatDate(latestReportWithApproval.approval.approvedAt) }}</div>
+              <div v-if="latestReportWithApproval.approval.comment" class="approval-comment">
+                <strong>Comentário:</strong> {{ latestReportWithApproval.approval.comment }}
+              </div>
+            </div>
+          </div>
+          <div v-else-if="latestReportWithApproval.approval.status === 'REJECTED'" class="approval-item rejected">
+            <q-icon name="cancel" color="negative" size="32px" />
+            <div class="approval-details">
+              <div class="approval-status-badge rejected-badge">
+                <q-chip color="negative" text-color="white" icon="cancel" label="Reprovado" size="md" />
+              </div>
+              <div class="approval-label">ECT Reprovado por</div>
+              <div class="approval-value">{{ latestReportWithApproval.approval.approver?.name || 'N/A' }}</div>
+              <div class="approval-date">{{ formatDate(latestReportWithApproval.approval.approvedAt) }}</div>
+              <div v-if="latestReportWithApproval.approval.comment" class="rejection-reason">
+                <strong>Motivo da Reprovação:</strong> {{ latestReportWithApproval.approval.comment }}
+              </div>
+            </div>
+          </div>
+          <div v-else class="approval-item">
+            <q-icon name="help" color="warning" size="32px" />
+            <div class="approval-details">
+              <div class="approval-label">Status desconhecido</div>
+              <div class="approval-value">Status: {{ latestReportWithApproval.approval.status || 'N/A' }}</div>
             </div>
           </div>
         </q-card-section>
@@ -438,16 +495,95 @@
         </q-card-section>
       </q-card>
     </q-dialog>
+
+    <!-- ECT Approval Dialog -->
+    <q-dialog v-model="showECTApprovalDialog" persistent>
+      <q-card class="ect-approval-dialog" style="min-width: 500px">
+        <q-card-section class="dialog-header bg-positive text-white">
+          <div class="row items-center no-wrap">
+            <div class="col">
+              <div class="text-h6">Aprovar Relatório ECT</div>
+              <div class="text-subtitle2">Confirme a aprovação do relatório gerado</div>
+            </div>
+            <q-btn flat round dense icon="close" @click="showECTApprovalDialog = false" />
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-input
+            v-model="ectApprovalComment"
+            label="Comentário (opcional)"
+            type="textarea"
+            rows="3"
+            outlined
+            placeholder="Adicione um comentário sobre a aprovação..."
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" @click="showECTApprovalDialog = false" :disable="approvingECT" />
+          <q-btn 
+            color="positive" 
+            label="Aprovar" 
+            icon="check"
+            @click="approveECTReport"
+            :loading="approvingECT"
+            unelevated
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- ECT Rejection Dialog -->
+    <q-dialog v-model="showECTRejectDialog" persistent>
+      <q-card class="ect-rejection-dialog" style="min-width: 500px">
+        <q-card-section class="dialog-header bg-negative text-white">
+          <div class="row items-center no-wrap">
+            <div class="col">
+              <div class="text-h6">Reprovar Relatório ECT</div>
+              <div class="text-subtitle2">Informe o motivo da reprovação</div>
+            </div>
+            <q-btn flat round dense icon="close" @click="showECTRejectDialog = false" />
+          </div>
+        </q-card-section>
+
+        <q-card-section>
+          <q-input
+            v-model="ectRejectionComment"
+            label="Motivo da Reprovação *"
+            type="textarea"
+            rows="4"
+            outlined
+            placeholder="Descreva o motivo da reprovação do relatório..."
+            :rules="[val => !!val || 'Motivo da reprovação é obrigatório']"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancelar" @click="showECTRejectDialog = false" :disable="approvingECT" />
+          <q-btn 
+            color="negative" 
+            label="Reprovar" 
+            icon="close"
+            @click="rejectECTReport"
+            :loading="approvingECT"
+            :disable="!ectRejectionComment.trim()"
+            unelevated
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify, useQuasar } from 'quasar'
 import { scenarioService } from '../services/scenario.service'
 import { ectService } from '../services/ect.service'
 import { getProjectMembers, type ProjectMember } from '../services/project.service'
+import api from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -457,6 +593,7 @@ const $q = useQuasar()
 const loading = ref(true)
 const error = ref('')
 const scenario = ref<any>(null)
+const currentUser = ref<any>(null)
 const showAddStepDialog = ref(false)
 const editingStep = ref<any>(null)
 const savingStep = ref(false)
@@ -464,6 +601,82 @@ const generatingECT = ref(false)
 const showEditDialog = ref(false)
 const savingScenario = ref(false)
 const members = ref<ProjectMember[]>([])
+const showECTApprovalDialog = ref(false)
+const ectReportId = ref<number | null>(null)
+const ectApprovalComment = ref('')
+const ectRejectionComment = ref('')
+const approvingECT = ref(false)
+const showECTRejectDialog = ref(false)
+
+// Computed properties
+const canApproveRejectECT = computed(() => {
+  if (!scenario.value || !currentUser.value) return false
+  
+  const isOwner = scenario.value.project?.ownerId === currentUser.value.id
+  const isApprover = scenario.value.aprovadorId === currentUser.value.id
+  
+  return isOwner || isApprover
+})
+
+// Verificar se existe QUALQUER relatório aprovado/reprovado
+// Uma vez que algum ECT foi aprovado/reprovado, não pode mais aprovar/reprovar outros
+const hasAnyApprovedReport = computed(() => {
+  if (!scenario.value?.reports || scenario.value.reports.length === 0) return false
+  return scenario.value.reports.some((report: any) => report.approval !== null && report.approval !== undefined)
+})
+
+// Encontrar o relatório mais recente (ordenado por createdAt desc)
+const latestReport = computed(() => {
+  if (!scenario.value?.reports || scenario.value.reports.length === 0) return null
+  
+  // Retornar o relatório mais recente (já vem ordenado por createdAt desc do backend)
+  return scenario.value.reports[0] || null
+})
+
+// Verifica se o relatório mais recente já possui uma aprovação/reprovação
+const latestReportHasApproval = computed(() => {
+  return latestReport.value?.approval !== null && latestReport.value?.approval !== undefined
+})
+
+// Encontrar QUALQUER relatório que tem aprovação/reprovação para exibir status
+// Mostra sempre o relatório aprovado/reprovado (mesmo que não seja o mais recente)
+const latestReportWithApproval = computed(() => {
+  if (!scenario.value?.reports || scenario.value.reports.length === 0) {
+    return null
+  }
+  
+  // Encontrar o primeiro relatório que tem aprovação/reprovação
+  // Os relatórios vêm ordenados por createdAt desc, então pega o primeiro que encontrar
+  const approvedReport = scenario.value.reports.find((report: any) => {
+    const hasApproval = report.approval !== null && report.approval !== undefined
+    
+    if (!hasApproval) return false
+    
+    const status = report.approval?.status
+    const isValidStatus = status === 'APPROVED' || status === 'REJECTED'
+    
+    return isValidStatus
+  })
+  
+  return approvedReport || null
+})
+
+// Só mostrar botões de aprovar/reprovar se:
+// 1. NÃO existe nenhum relatório aprovado/reprovado (uma vez aprovado, não pode mais aprovar outros)
+// 2. Há um relatório mais recente sem aprovação/reprovação
+const latestReportWithoutApproval = computed(() => {
+  // Se já existe QUALQUER relatório aprovado/reprovado, não permitir mais aprovações/reprovações
+  if (hasAnyApprovedReport.value) return null
+  
+  const latest = latestReport.value
+  if (!latest) return null
+  
+  // Se o relatório mais recente já tem aprovação/reprovação, não mostrar botões
+  if (latest.approval) return null
+  
+  // Se não tem aprovação e não há nenhum relatório aprovado, pode aprovar/reprovar
+  return latest
+})
 
 const stepForm = ref({
   action: '',
@@ -486,6 +699,15 @@ function goBack() {
   router.push(`/projects/${projectId}/packages/${packageId}`)
 }
 
+async function loadCurrentUser() {
+  try {
+    const response = await api.get('/profile')
+    currentUser.value = response.data
+  } catch (err: any) {
+    console.error('Erro ao carregar usuário atual:', err)
+  }
+}
+
 async function loadScenario() {
   try {
     loading.value = true
@@ -493,7 +715,14 @@ async function loadScenario() {
     
     const scenarioId = Number(route.params.scenarioId)
     const response = await scenarioService.getScenarioById(scenarioId)
-    scenario.value = response.scenario
+    
+    // Atualizar o valor do cenário de forma reativa
+    // Usar JSON.parse/stringify para forçar criação de novo objeto e garantir reatividade
+    const scenarioData = JSON.parse(JSON.stringify(response.scenario))
+    scenario.value = scenarioData
+    
+    // Aguardar o próximo tick para garantir que os computed sejam recalculados
+    await nextTick()
   } catch (err: any) {
     console.error('Erro ao carregar cenário:', err)
     error.value = err.response?.data?.message || err.message || 'Erro ao carregar cenário'
@@ -529,17 +758,6 @@ function executeScenario() {
 async function generateECT() {
   // Evitar múltiplos cliques
   if (generatingECT.value) {
-    console.log('ECT já está sendo gerado, ignorando clique')
-    return
-  }
-
-  // Validar se o cenário está concluído com sucesso
-  if (scenario.value?.status !== 'PASSED') {
-    Notify.create({
-      type: 'warning',
-      message: 'ECT só pode ser gerado para cenários concluídos com sucesso',
-      timeout: 3000
-    })
     return
   }
 
@@ -547,7 +765,6 @@ async function generateECT() {
     generatingECT.value = true
     
     const scenarioId = Number(route.params.scenarioId)
-    console.log('Iniciando geração de ECT para cenário:', scenarioId)
     
     // Mostrar notificação de início
     Notify.create({
@@ -560,10 +777,11 @@ async function generateECT() {
     // Gerar ECT
     const result = await ectService.generateECT(scenarioId)
     
-    console.log('ECT gerado com sucesso:', result)
-    
     // Baixar o arquivo
     await ectService.downloadReport(result.reportId)
+    
+    // Salvar ID do relatório para aprovação/reprovação
+    ectReportId.value = result.reportId
     
     // Notificação de sucesso
     Notify.create({
@@ -571,6 +789,9 @@ async function generateECT() {
       message: 'ECT gerado e baixado com sucesso!',
       timeout: 3000
     })
+    
+    // Recarregar o cenário para obter o novo relatório
+    await loadScenario()
     
   } catch (error: any) {
     console.error('Erro ao gerar ECT:', error)
@@ -582,6 +803,102 @@ async function generateECT() {
     })
   } finally {
     generatingECT.value = false
+  }
+}
+
+function openECTApprovalDialog() {
+  if (latestReportWithoutApproval.value) {
+    ectReportId.value = latestReportWithoutApproval.value.id
+    showECTApprovalDialog.value = true
+  }
+}
+
+function openECTRejectionDialog() {
+  if (latestReportWithoutApproval.value) {
+    ectReportId.value = latestReportWithoutApproval.value.id
+    showECTRejectDialog.value = true
+  }
+}
+
+async function approveECTReport() {
+  if (!ectReportId.value) return
+
+  approvingECT.value = true
+  try {
+    await ectService.approveReport(ectReportId.value, ectApprovalComment.value || undefined)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Relatório ECT aprovado com sucesso!',
+      timeout: 3000
+    })
+    
+    showECTApprovalDialog.value = false
+    ectApprovalComment.value = ''
+    ectReportId.value = null
+    
+    // Recarregar o cenário
+    await loadScenario()
+    
+    // Aguardar o próximo tick do Vue para garantir que a reatividade seja processada
+    await nextTick()
+    
+    // Forçar atualização do cenário novamente após o Vue processar
+    await new Promise(resolve => setTimeout(resolve, 200))
+    await loadScenario()
+    
+    // Aguardar mais um tick após o segundo carregamento
+    await nextTick()
+  } catch (error: any) {
+    console.error('Erro ao aprovar ECT:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || error.message || 'Erro ao aprovar relatório',
+      timeout: 5000
+    })
+  } finally {
+    approvingECT.value = false
+  }
+}
+
+async function rejectECTReport() {
+  if (!ectReportId.value || !ectRejectionComment.value.trim()) return
+
+  approvingECT.value = true
+  try {
+    await ectService.rejectReport(ectReportId.value, ectRejectionComment.value.trim())
+    
+    Notify.create({
+      type: 'info',
+      message: 'Relatório ECT reprovado.',
+      timeout: 3000
+    })
+    
+    showECTRejectDialog.value = false
+    ectRejectionComment.value = ''
+    ectReportId.value = null
+    
+    // Recarregar o cenário
+    await loadScenario()
+    
+    // Aguardar o próximo tick do Vue para garantir que a reatividade seja processada
+    await nextTick()
+    
+    // Forçar atualização do cenário novamente após o Vue processar
+    await new Promise(resolve => setTimeout(resolve, 200))
+    await loadScenario()
+    
+    // Aguardar mais um tick após o segundo carregamento
+    await nextTick()
+  } catch (error: any) {
+    console.error('Erro ao reprovar ECT:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || error.message || 'Erro ao reprovar relatório',
+      timeout: 5000
+    })
+  } finally {
+    approvingECT.value = false
   }
 }
 
@@ -888,7 +1205,9 @@ function getStatusColor(status: string) {
     CREATED: 'grey',
     EXECUTED: 'blue',
     PASSED: 'green',
-    FAILED: 'red'
+    FAILED: 'red',
+    APPROVED: 'positive',
+    REPROVED: 'negative'
   }
   return colors[status] || 'grey'
 }
@@ -898,7 +1217,9 @@ function getStatusLabel(status: string) {
     CREATED: 'Criado',
     EXECUTED: 'Executado',
     PASSED: 'Concluído',
-    FAILED: 'Falhou'
+    FAILED: 'Falhou',
+    APPROVED: 'Aprovado',
+    REPROVED: 'Reprovado'
   }
   return labels[status] || status
 }
@@ -929,8 +1250,9 @@ function formatDate(date: string) {
 }
 
 // Lifecycle
-onMounted(() => {
-  loadScenario()
+onMounted(async () => {
+  await loadCurrentUser()
+  await loadScenario()
   loadMembers()
 })
 </script>
@@ -1352,6 +1674,94 @@ onMounted(() => {
     max-width: unset;
     width: 100%;
   }
+}
+
+/* ECT Approval Card Styles */
+.ect-approval-card {
+  background: #0f172a;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  margin-top: 20px;
+}
+
+.ect-approval-card .approval-item {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  border-left: 4px solid;
+}
+
+.ect-approval-card .approval-item.approved {
+  border-left-color: #4caf50;
+}
+
+.ect-approval-card .approval-item.rejected {
+  border-left-color: #f44336;
+}
+
+.ect-approval-card .approval-details {
+  flex: 1;
+  color: white;
+}
+
+.ect-approval-card .approval-status-badge {
+  margin-bottom: 12px;
+}
+
+.ect-approval-card .approval-status-badge .q-chip {
+  font-weight: 600;
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
+.ect-approval-card .approval-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 4px;
+  margin-top: 8px;
+}
+
+.ect-approval-card .approval-value {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ect-approval-card .approval-date {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ect-approval-card .approval-comment {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ect-approval-card .approval-comment strong {
+  color: white;
+}
+
+.ect-approval-card .rejection-reason {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(244, 67, 54, 0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ect-approval-card .rejection-reason strong {
+  color: white;
 }
 </style>
 

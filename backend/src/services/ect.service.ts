@@ -51,11 +51,6 @@ export class ECTService {
         throw new AppError('Cenário não encontrado', 404)
       }
 
-      // Validar se o cenário está concluído com sucesso
-      if (scenario.status !== 'PASSED') {
-        throw new AppError('ECT só pode ser gerado para cenários concluídos com sucesso', 400)
-      }
-
       // Verificar permissão de acesso
       const hasAccess = await this.checkScenarioAccess(scenarioId, userId)
       if (!hasAccess) {
@@ -712,7 +707,6 @@ export class ECTService {
     try {
       // Temporariamente permitir acesso para todos os usuários autenticados
       // TODO: Implementar verificação real de acesso ao projeto
-      console.log('Verificando acesso - cenário:', scenarioId, 'usuário:', userId)
       return true
     } catch (error) {
       console.error("Erro ao verificar acesso ao cenário:", error)

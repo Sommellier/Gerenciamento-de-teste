@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { PackageStatus } from '@prisma/client'
 
 interface CreateScenarioInPackageInput {
   packageId: number
@@ -46,6 +47,11 @@ export async function createScenarioInPackage({
 
     if (!testPackage) {
       throw new AppError('Pacote não encontrado', 404)
+    }
+
+    // Bloquear criação de cenários quando o pacote está aprovado
+    if (testPackage.status === PackageStatus.APROVADO) {
+      throw new AppError('Não é possível criar cenários em um pacote aprovado', 403)
     }
 
     // Herdar o tipo do pacote se não foi fornecido

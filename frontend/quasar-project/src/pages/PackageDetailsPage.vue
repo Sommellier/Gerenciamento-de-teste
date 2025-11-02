@@ -44,6 +44,17 @@
           </div>
           
           <div class="header-actions">
+            <!-- Botão de aprovar pacote quando todos cenários estão aprovados (apenas para owner/manager) -->
+            <q-btn
+              v-if="canShowApprovePackageButton"
+              color="positive"
+              icon="check_circle"
+              label="Aprovar Pacote"
+              @click="handleApprovePackageWhenAllScenariosApproved"
+              class="action-btn"
+              :loading="approving"
+            />
+            
             <!-- Ações de aprovação/reprovação (apenas para EM_TESTE) -->
             <template v-if="packageData?.status === 'EM_TESTE'">
               <q-btn
@@ -74,7 +85,7 @@
               :loading="sendingToTest"
             />
             
-            <!-- Ações normais (desabilitadas quando CONCLUIDO) -->
+            <!-- Ações normais (desabilitadas quando CONCLUIDO ou APROVADO) -->
             <q-btn
               color="white"
               text-color="primary"
@@ -82,7 +93,7 @@
               label="Editar"
               @click="editPackage"
               class="action-btn"
-              :disable="packageData?.status === 'CONCLUIDO'"
+              :disable="packageData?.status === 'CONCLUIDO' || packageData?.status === 'APROVADO'"
             />
             <q-btn
               color="white"
@@ -91,7 +102,7 @@
               label="Excluir"
               @click="confirmDelete"
               class="action-btn"
-              :disable="packageData?.status === 'CONCLUIDO'"
+              :disable="packageData?.status === 'CONCLUIDO' || packageData?.status === 'APROVADO'"
             />
           </div>
         </div>
@@ -184,7 +195,7 @@
             </div>
             <div class="metric-content">
               <div class="metric-value">{{ Math.round(packageData.metrics.successRate) }}%</div>
-              <div class="metric-label">Status dos Cenários</div>
+              <div class="metric-label">Status de Conclusão</div>
             </div>
           </div>
           
@@ -233,6 +244,7 @@
             <div class="section-header">
               <h3 class="section-title">Cenários de Teste</h3>
               <q-btn
+                v-if="canCreateScenario"
                 color="primary"
                 icon="add"
                 label="Criar Cenário"
@@ -318,6 +330,29 @@
                     >
                       <q-tooltip>Duplicar cenário</q-tooltip>
                     </q-btn>
+                    <!-- Botões de aprovar/reprovar cenário (apenas para owner/manager) -->
+                    <template v-if="canApprovePackage">
+                      <q-btn
+                        v-if="scenario.status !== 'APPROVED'"
+                        flat
+                        icon="check_circle"
+                        color="positive"
+                        size="sm"
+                        @click.stop="approveScenario(scenario)"
+                      >
+                        <q-tooltip>Aprovar cenário</q-tooltip>
+                      </q-btn>
+                      <q-btn
+                        v-if="scenario.status !== 'REPROVED'"
+                        flat
+                        icon="cancel"
+                        color="negative"
+                        size="sm"
+                        @click.stop="reproveScenario(scenario)"
+                      >
+                        <q-tooltip>Reprovar cenário</q-tooltip>
+                      </q-btn>
+                    </template>
                     <q-btn
                       flat
                       icon="delete"
@@ -385,7 +420,7 @@
               <!-- Status dos Cenários Chart -->
               <div class="chart-card">
                 <div class="chart-header">
-                  <h4 class="chart-title">Status dos Cenários</h4>
+                  <h4 class="chart-title">Status de Conclusão</h4>
                   <q-icon name="pie_chart" class="chart-icon" />
                 </div>
                 <div class="chart-content">
@@ -450,55 +485,37 @@
                 <p class="empty-description">Nenhum bug corresponde aos filtros selecionados.</p>
               </div>
               
-              <div v-else class="bugs-list">
+              <div v-else class="bugs-grid">
                 <div
                   v-for="bug in filteredBugs"
                   :key="bug.id"
-                  class="bug-card"
+                  class="bug-card clickable"
                   @click="viewBug(bug)"
-                  style="cursor: pointer"
                 >
                   <div class="bug-header">
-                    <div class="bug-title-section">
-                      <h4 class="bug-title">{{ bug.title }}</h4>
-                      <div class="bug-chips">
-                        <q-chip
-                          :color="getBugSeverityColor(bug.severity)"
-                          text-color="white"
-                          :label="getSeverityLabel(bug.severity)"
-                          size="sm"
-                        />
-                        <q-chip
-                          :color="getBugStatusColor(bug.status)"
-                          text-color="white"
-                          :label="getStatusLabel(bug.status)"
-                          size="sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <p class="bug-description" v-if="bug.description">{{ bug.description }}</p>
-                  
-                  <div class="bug-scenario-info">
+                    <h4 class="bug-title">{{ bug.title }}</h4>
                     <q-chip
-                      outline
-                      color="primary"
-                      icon="bug_report"
+                      :color="getBugStatusColor(bug.status)"
+                      text-color="white"
+                      :label="getStatusLabel(bug.status)"
                       size="sm"
-                    >
-                      <strong>Cenário:</strong>&nbsp;{{ bug.scenario?.title || 'Sem cenário' }}
-                    </q-chip>
+                    />
                   </div>
+                  
+                  <p class="bug-description">{{ formatBugDescription(bug.description) || 'Sem descrição' }}</p>
                   
                   <div class="bug-meta">
                     <div class="meta-item">
-                      <q-icon name="person" size="16px" />
-                      <span>{{ bug.creator?.name || bug.creator?.email || 'Desconhecido' }}</span>
+                      <q-icon name="bug_report" size="16px" />
+                      <span>{{ bug.scenario?.title || 'Sem cenário' }}</span>
                     </div>
                     <div class="meta-item">
-                      <q-icon name="schedule" size="16px" />
-                      <span>{{ formatDate(bug.createdAt) }}</span>
+                      <q-icon name="flag" size="16px" />
+                      <span>{{ getSeverityLabel(bug.severity) }}</span>
+                    </div>
+                    <div class="meta-item">
+                      <q-icon name="person" size="16px" />
+                      <span>{{ bug.creator?.name || bug.creator?.email || 'Desconhecido' }}</span>
                     </div>
                   </div>
                   
@@ -536,7 +553,7 @@
                       icon="delete"
                       color="negative"
                       size="sm"
-                      @click="confirmDeleteBug(bug)"
+                      @click.stop="confirmDeleteBug(bug)"
                     >
                       <q-tooltip>Excluir</q-tooltip>
                     </q-btn>
@@ -568,28 +585,32 @@
             <div class="form-row">
               <q-input
                 v-model="editForm.title"
-                label="Título do Pacote"
+                label="Título do Pacote *"
                 outlined
                 :rules="[val => !!val || 'Título é obrigatório']"
                 class="form-input"
+                hint="Nome ou identificação do pacote de teste"
+                dense
               />
             </div>
 
             <div class="form-row">
               <q-input
                 v-model="editForm.description"
-                label="Descrição"
+                label="Descrição do Pacote"
                 outlined
                 type="textarea"
                 rows="3"
                 class="form-input"
+                hint="Descreva o propósito e o escopo deste pacote de teste"
+                dense
               />
             </div>
 
             <div class="form-row">
               <q-select
                 v-model="editForm.type"
-                label="Tipo"
+                label="Tipo de Teste *"
                 outlined
                 :options="[
                   { label: 'Funcional', value: 'FUNCIONAL' },
@@ -600,13 +621,15 @@
                 emit-value
                 map-options
                 class="form-input"
+                hint="Selecione o tipo de teste que será executado neste pacote"
+                dense
               />
             </div>
 
             <div class="form-row">
               <q-select
                 v-model="editForm.priority"
-                label="Prioridade"
+                label="Prioridade do Pacote *"
                 outlined
                 :options="[
                   { label: 'Alta', value: 'ALTA' },
@@ -616,49 +639,58 @@
                 emit-value
                 map-options
                 class="form-input"
+                hint="Nível de prioridade para execução dos testes"
+                dense
               />
             </div>
 
             <div class="form-row">
               <q-select
                 v-model="editForm.status"
-                label="Status"
+                label="Status Atual do Pacote *"
                 outlined
                 :options="[
-                  { label: 'Criado', value: 'CRIADO' },
-                  { label: 'Em Execução', value: 'EM_EXECUCAO' },
-                  { label: 'Concluído', value: 'APROVADO' },
-                  { label: 'Rejeitado', value: 'REJEITADO' }
+                  { label: 'Criado', value: 'CREATED' },
+                  { label: 'Em Execução', value: 'EXECUTED' },
+                  { label: 'Aprovado', value: 'PASSED' },
+                  { label: 'Falhou', value: 'FAILED' }
                 ]"
                 emit-value
                 map-options
                 class="form-input"
+                hint="Status atual do pacote no processo de teste"
+                dense
               />
             </div>
 
             <div class="form-row">
               <q-input
                 v-model="editForm.assigneeEmail"
-                label="Email do Responsável"
+                label="Email do Responsável pelo Pacote"
                 outlined
                 type="email"
                 class="form-input"
+                hint="Email da pessoa responsável pela execução dos testes"
+                dense
               />
             </div>
 
             <div class="form-row">
               <q-select
                 v-model="editForm.environment"
-                label="Ambiente"
+                label="Ambiente de Teste"
                 outlined
                 :options="[
-                  { label: 'Desenvolvimento', value: 'DESENVOLVIMENTO' },
-                  { label: 'Homologação', value: 'HOMOLOGACAO' },
-                  { label: 'Produção', value: 'PRODUCAO' }
+                  { label: 'Desenvolvimento', value: 'DEV' },
+                  { label: 'QA / Teste', value: 'QA' },
+                  { label: 'Homologação', value: 'STAGING' },
+                  { label: 'Produção', value: 'PROD' }
                 ]"
                 emit-value
                 map-options
                 class="form-input"
+                hint="Ambiente onde os testes serão executados"
+                dense
               />
             </div>
           </q-form>
@@ -917,7 +949,7 @@
             </div>
             <div class="section-content-modal">
               <div class="bug-description-text-modal">
-                {{ selectedBug.description || 'Sem descrição' }}
+                {{ formatBugDescription(selectedBug.description) || 'Sem descrição' }}
               </div>
             </div>
           </div>
@@ -1185,19 +1217,72 @@
 
     <!-- Delete Bug Confirmation Dialog -->
     <q-dialog v-model="showDeleteBugDialog" persistent>
-      <q-card style="min-width: 400px">
-        <q-card-section class="dialog-header bg-negative text-white">
-          <div class="text-h6">Confirmar Exclusão</div>
+      <q-card class="delete-bug-dialog-card" style="min-width: 480px; max-width: 600px">
+        <q-card-section class="delete-bug-dialog-header bg-negative text-white">
+          <div class="delete-bug-header-content">
+            <div class="delete-bug-icon-wrapper">
+              <q-icon name="warning" size="40px" color="white" />
+            </div>
+            <div class="delete-bug-title-section">
+              <div class="text-h5 q-mb-xs">Confirmar Exclusão</div>
+              <div class="text-subtitle2" style="opacity: 0.9">Esta ação é permanente</div>
+            </div>
+          </div>
         </q-card-section>
 
-        <q-card-section>
-          <p>Tem certeza que deseja excluir o bug <strong>{{ selectedBug?.title }}</strong>?</p>
-          <p class="text-negative">Esta ação não pode ser desfeita.</p>
+        <q-card-section class="delete-bug-dialog-body">
+          <div class="delete-bug-warning-box">
+            <q-icon name="info" size="24px" color="negative" class="q-mr-sm" />
+            <div class="delete-bug-warning-text">
+              <strong>Esta ação não pode ser desfeita.</strong> Todos os dados relacionados ao bug serão permanentemente removidos.
+            </div>
+          </div>
+
+          <div class="delete-bug-info-section">
+            <div class="delete-bug-info-item">
+              <q-icon name="bug_report" size="20px" color="grey-7" />
+              <div class="delete-bug-info-content">
+                <div class="delete-bug-info-label">Bug</div>
+                <div class="delete-bug-info-value">{{ selectedBug?.title }}</div>
+              </div>
+            </div>
+            
+            <div v-if="selectedBug?.scenario" class="delete-bug-info-item">
+              <q-icon name="assignment" size="20px" color="grey-7" />
+              <div class="delete-bug-info-content">
+                <div class="delete-bug-info-label">Cenário Relacionado</div>
+                <div class="delete-bug-info-value">{{ selectedBug.scenario.title }}</div>
+              </div>
+            </div>
+
+            <div class="delete-bug-info-item">
+              <q-icon name="schedule" size="20px" color="grey-7" />
+              <div class="delete-bug-info-content">
+                <div class="delete-bug-info-label">Criado em</div>
+                <div class="delete-bug-info-value">{{ formatDate(selectedBug?.createdAt) }}</div>
+              </div>
+            </div>
+          </div>
         </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn flat label="Cancelar" @click="showDeleteBugDialog = false" />
-          <q-btn color="negative" label="Excluir" @click="deleteBugConfirmed" :loading="deletingBug" />
+        <q-card-actions class="delete-bug-dialog-actions">
+          <q-btn 
+            flat 
+            label="Cancelar" 
+            color="grey-7"
+            @click="showDeleteBugDialog = false"
+            class="delete-bug-cancel-btn"
+            :disable="deletingBug"
+          />
+          <q-btn 
+            unelevated
+            label="Excluir Bug" 
+            color="negative"
+            icon="delete"
+            @click="deleteBugConfirmed" 
+            :loading="deletingBug"
+            class="delete-bug-confirm-btn"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -1213,6 +1298,7 @@ import { packageService } from '../services/package.service'
 import { scenarioService } from '../services/scenario.service'
 import { getProjectMembers } from '../services/project-details.service'
 import { executionService } from '../services/execution.service'
+import api from '../services/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -1224,6 +1310,7 @@ const packageData = ref<any>(null)
 const activeTab = ref('scenarios')
 const bugs = ref<any[]>([])
 const members = ref<any[]>([])
+const currentUser = ref<any>(null)
 
 // Bug management state
 const selectedBug = ref<any>(null)
@@ -1274,6 +1361,46 @@ const rejectionReason = ref('')
 // Computed
 const projectId = computed(() => parseInt(route.params.projectId as string))
 const packageId = computed(() => parseInt(route.params.packageId as string))
+
+// Verificar se usuário é owner ou manager
+const canApprovePackage = computed(() => {
+  if (!packageData.value?.project || !currentUser.value) return false
+  
+  // Verificar se é owner do projeto
+  const isOwner = packageData.value.project.ownerId === currentUser.value.id
+  if (isOwner) return true
+  
+  // Se não é owner, verificar se é manager (mesmo sem membros carregados, pode verificar no backend)
+  // Mas vamos verificar nos membros se existirem
+  if (members.value.length > 0) {
+    const userMember = members.value.find(m => m.id === currentUser.value.id)
+    const isManager = userMember?.role === 'MANAGER'
+    return isManager
+  }
+  
+  // Se não temos membros carregados ainda, retornar false (aguardar carregamento)
+  return false
+})
+
+// Verificar se todos os cenários estão aprovados
+const allScenariosApproved = computed(() => {
+  if (!packageData.value?.scenarios || packageData.value.scenarios.length === 0) return false
+  return packageData.value.scenarios.every((scenario: any) => scenario.status === 'APPROVED')
+})
+
+// Verificar se pode aprovar pacote (todos cenários aprovados e usuário é owner/manager)
+const canShowApprovePackageButton = computed(() => {
+  return canApprovePackage.value && 
+         allScenariosApproved.value && 
+         packageData.value?.status !== 'APROVADO' &&
+         packageData.value?.status !== 'CONCLUIDO'
+})
+
+// Verificar se pode criar cenário (pacote não pode estar aprovado ou concluído)
+const canCreateScenario = computed(() => {
+  if (!packageData.value) return false
+  return packageData.value.status !== 'APROVADO' && packageData.value.status !== 'CONCLUIDO'
+})
 
 // Tester options - OWNER, ADMIN, MANAGER, TESTER
 const testerOptions = computed(() => {
@@ -1435,29 +1562,14 @@ const priorityChartOptions = computed(() => ({
 }))
 
 const monthlyChartSeries = computed(() => {
-  if (!packageData.value?.scenarios) return []
+  if (!packageData.value?.metrics?.executionsByMonth) return []
   
-  const scenarios = packageData.value.scenarios
-  // Usar data de criação do pacote ou data atual como fallback
-  const packageCreatedAt = packageData.value?.createdAt ? new Date(packageData.value.createdAt) : new Date()
-  const currentDate = new Date()
+  // Usar dados reais de execuções por mês do backend
+  const executionsByMonth = packageData.value.metrics.executionsByMonth
   
-  // Calcular meses desde a criação até agora
-  const monthsSinceCreation = getMonthsBetween(packageCreatedAt, currentDate)
-  
-  if (monthsSinceCreation <= 0) return []
-  
-  // Gerar dados baseados no número de cenários e meses desde criação
-  const monthlyData = []
-  
-  for (let i = 0; i < monthsSinceCreation; i++) {
-    // Distribuir execuções baseado no número de cenários
-    const totalScenarios = scenarios.length
-    const baseExecutions = Math.max(1, Math.floor(totalScenarios * 0.3))
-    const randomVariation = Math.floor(Math.random() * totalScenarios * 0.2)
-    
-    monthlyData.push(baseExecutions + randomVariation)
-  }
+  // Ordenar meses (chaves no formato YYYY-MM)
+  const sortedMonths = Object.keys(executionsByMonth).sort()
+  const monthlyData = sortedMonths.map(month => executionsByMonth[month])
   
   return [{
     name: 'Execuções',
@@ -1466,16 +1578,21 @@ const monthlyChartSeries = computed(() => {
 })
 
 const monthlyChartOptions = computed(() => {
-  // Usar data de criação do pacote ou data atual como fallback
-  const packageCreatedAt = packageData.value?.createdAt ? new Date(packageData.value.createdAt) : new Date()
-  const currentDate = new Date()
-  const monthsSinceCreation = getMonthsBetween(packageCreatedAt, currentDate)
+  if (!packageData.value?.metrics?.executionsByMonth) return {}
   
-  const monthLabels = []
-  for (let i = 0; i < monthsSinceCreation; i++) {
-    const date = new Date(packageCreatedAt.getFullYear(), packageCreatedAt.getMonth() + i, 1)
-    monthLabels.push(getMonthName(date.getMonth()))
-  }
+  // Usar dados reais de execuções por mês do backend
+  const executionsByMonth = packageData.value.metrics.executionsByMonth
+  
+  // Ordenar meses e gerar labels
+  const sortedMonths = Object.keys(executionsByMonth).sort()
+  const monthLabels = sortedMonths.map(monthKey => {
+    const [year, month] = monthKey.split('-')
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    const monthName = monthNames[parseInt(month) - 1]
+    const currentYear = new Date().getFullYear()
+    // Mostrar ano apenas se não for o ano atual
+    return parseInt(year) !== currentYear ? `${monthName} ${year}` : monthName
+  })
   
   return {
     chart: {
@@ -1539,12 +1656,17 @@ const successRateChartSeries = computed(() => {
   
   const scenarios = packageData.value.scenarios
   
-  // Calcular estatísticas dos cenários
+  // Calcular estatísticas dos cenários - mostrar os 5 principais status
+  // CREATED, EXECUTED, PASSED, FAILED, APPROVED, REPROVED (mas agrupar APPROVED e REPROVED se necessário)
+  const createdScenarios = scenarios.filter((s: any) => s.status === 'CREATED' || !s.status).length
+  const executedScenarios = scenarios.filter((s: any) => s.status === 'EXECUTED').length
   const passedScenarios = scenarios.filter((s: any) => s.status === 'PASSED').length
   const failedScenarios = scenarios.filter((s: any) => s.status === 'FAILED').length
-  const notExecutedScenarios = scenarios.filter((s: any) => s.status === 'CREATED' || !s.status).length
+  const approvedScenarios = scenarios.filter((s: any) => s.status === 'APPROVED').length
+  const reprovedScenarios = scenarios.filter((s: any) => s.status === 'REPROVED').length
   
-  return [passedScenarios, failedScenarios, notExecutedScenarios]
+  // Retornar todos os status separadamente (incluindo Aprovado e Reprovado separados)
+  return [createdScenarios, executedScenarios, passedScenarios, failedScenarios, approvedScenarios, reprovedScenarios]
 })
 
 const successRateChartOptions = computed(() => {
@@ -1555,8 +1677,8 @@ const successRateChartOptions = computed(() => {
       background: 'transparent',
       toolbar: { show: false }
     },
-    labels: ['Sucesso', 'Com Bug', 'Não Executado'],
-    colors: ['#4CAF50', '#F44336', '#9E9E9E'],
+    labels: ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado'],
+    colors: ['#9E9E9E', '#2196F3', '#4CAF50', '#F44336', '#10B981', '#EF4444'],
     dataLabels: {
       enabled: true,
       formatter: function (val: number, opts: any) {
@@ -1565,7 +1687,7 @@ const successRateChartOptions = computed(() => {
       style: {
         fontSize: '12px',
         fontWeight: 'bold',
-        colors: ['#fff', '#fff', '#fff']
+        colors: ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff']
       }
     },
     legend: {
@@ -1584,7 +1706,7 @@ const successRateChartOptions = computed(() => {
     tooltip: {
       y: {
         formatter: function (val: number, opts: any) {
-          const labels = ['Sucesso', 'Com Bug', 'Não Executado']
+          const labels = ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado']
           return labels[opts.seriesIndex] + ': ' + val + ' cenários'
         }
       }
@@ -1638,11 +1760,7 @@ const loadPackageDetails = async () => {
     loading.value = true
     error.value = ''
     
-    console.log('Carregando detalhes do pacote:', { projectId: projectId.value, packageId: packageId.value })
-    
     const data = await packageService.getPackageDetails(projectId.value, packageId.value)
-    
-    console.log('Dados do pacote recebidos:', data)
     
     if (!data) {
       throw new Error('Nenhum dado retornado do servidor')
@@ -1753,6 +1871,52 @@ const handleApprove = async () => {
     })
   } finally {
     approving.value = false
+  }
+}
+
+// Aprovar pacote quando todos os cenários estão aprovados
+const handleApprovePackageWhenAllScenariosApproved = async () => {
+  if (!allScenariosApproved.value) {
+    Notify.create({
+      type: 'warning',
+      message: 'Todos os cenários devem estar aprovados para aprovar o pacote',
+      position: 'top'
+    })
+    return
+  }
+
+  try {
+    approving.value = true
+    
+    await packageService.approvePackage(projectId.value, packageId.value)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Pacote aprovado com sucesso!',
+      position: 'top'
+    })
+    
+    // Recarregar dados
+    await loadPackageDetails()
+  } catch (error: any) {
+    console.error('Erro ao aprovar pacote:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || 'Erro ao aprovar pacote',
+      position: 'top'
+    })
+  } finally {
+    approving.value = false
+  }
+}
+
+// Carregar usuário atual
+const loadCurrentUser = async () => {
+  try {
+    const response = await api.get('/profile')
+    currentUser.value = response.data
+  } catch (err: any) {
+    console.error('Erro ao carregar usuário atual:', err)
   }
 }
 
@@ -1938,13 +2102,63 @@ const duplicateScenario = async (scenario: any) => {
       message: 'Cenário duplicado com sucesso!',
       position: 'top'
     })
-
+    
     // Recarregar os dados
     await loadPackageDetails()
   } catch (error: any) {
     Notify.create({
       type: 'negative',
       message: 'Erro ao duplicar cenário: ' + error.message,
+      position: 'top'
+    })
+  }
+}
+
+// Aprovar cenário (apenas owner/manager)
+const approveScenario = async (scenario: any) => {
+  try {
+    await scenarioService.updateScenario(scenario.id, {
+      status: 'APPROVED'
+    } as any)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Cenário aprovado com sucesso!',
+      position: 'top'
+    })
+    
+    // Recarregar dados
+    await loadPackageDetails()
+  } catch (error: any) {
+    console.error('Erro ao aprovar cenário:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || 'Erro ao aprovar cenário',
+      position: 'top'
+    })
+  }
+}
+
+// Reprovar cenário (apenas owner/manager)
+const reproveScenario = async (scenario: any) => {
+  try {
+    await scenarioService.updateScenario(scenario.id, {
+      status: 'REPROVED'
+    } as any)
+    
+    Notify.create({
+      type: 'positive',
+      message: 'Cenário reprovado com sucesso!',
+      position: 'top'
+    })
+    
+    // Recarregar dados
+    await loadPackageDetails()
+  } catch (error: any) {
+    console.error('Erro ao reprovar cenário:', error)
+    Notify.create({
+      type: 'negative',
+      message: error.response?.data?.message || 'Erro ao reprovar cenário',
       position: 'top'
     })
   }
@@ -1990,7 +2204,7 @@ const editBug = (bug: any) => {
   bugEditForm.value = {
     id: bug.id,
     title: bug.title,
-    description: bug.description || '',
+    description: formatBugDescription(bug.description || ''),
     severity: bug.severity,
     status: bug.status
   }
@@ -2115,6 +2329,31 @@ const deleteBugConfirmed = async () => {
 
 const getBugCount = () => {
   return bugs.value.length
+}
+
+const formatBugDescription = (description: string) => {
+  if (!description) return ''
+  
+  // Garantir que cada campo fique em uma linha separada e remover markdown **
+  let formatted = description
+  
+  // Remover ** dos campos e adicionar quebra de linha dupla antes de cada campo (exceto no início)
+  formatted = formatted.replace(/(\S)\s*\*\*([^*:]+):\*\*/g, '$1\n\n$2:')
+  
+  // Adicionar quebra de linha após o valor de cada campo, antes do próximo campo
+  // Padrão: Campo: valor texto Campo: -> Campo:\nvalor texto\n\nCampo:
+  formatted = formatted.replace(/([^*:]+):\s*([^*\n]+?)(\s+\*\*([^*:]+):\*\*)/g, '$1:\n$2\n\n$4:')
+  
+  // Remover todos os ** restantes que possam estar no texto
+  formatted = formatted.replace(/\*\*/g, '')
+  
+  // Limpar múltiplas linhas em branco consecutivas (máximo 2)
+  formatted = formatted.replace(/\n{3,}/g, '\n\n')
+  
+  // Limpar espaços no início e fim
+  formatted = formatted.trim()
+  
+  return formatted
 }
 
 const truncateText = (text: string, maxLength: number) => {
@@ -2247,7 +2486,8 @@ const getSeverityLabel = (severity: string) => {
   return labels[severity] || severity
 }
 
-const getStatusLabel = (status: string) => {
+const getStatusLabel = (status: string | undefined) => {
+  if (!status) return 'Desconhecido'
   const labels: Record<string, string> = {
     // Bug status
     'OPEN': 'Aberto',
@@ -2263,10 +2503,13 @@ const getStatusLabel = (status: string) => {
     'EXECUTED': 'Executado',
     'PASSED': 'Concluído',
     'FAILED': 'Falhou',
+    'APPROVED': 'Aprovado',
+    'REPROVED': 'Reprovado',
     // New package approval status
     'EM_TESTE': 'Em Teste',
     'CONCLUIDO': 'Concluído',
-    'REPROVADO': 'Reprovado'
+    'REPROVADO': 'Reprovado',
+    'APROVADO': 'Aprovado'
   }
   return labels[status] || status
 }
@@ -2317,7 +2560,8 @@ const getPriorityLabel = (priority: string) => {
   return labels[priority] || priority
 }
 
-const getStatusColor = (status: string) => {
+const getStatusColor = (status: string | undefined) => {
+  if (!status) return 'grey'
   const colors: Record<string, string> = {
     'CRIADO': 'grey',
     'EM_EXECUCAO': 'warning',
@@ -2327,9 +2571,12 @@ const getStatusColor = (status: string) => {
     'EXECUTED': 'blue',
     'PASSED': 'positive',
     'FAILED': 'negative',
+    'APPROVED': 'positive',
+    'REPROVED': 'negative',
     'EM_TESTE': 'blue',
     'CONCLUIDO': 'positive',
-    'REPROVADO': 'negative'
+    'REPROVADO': 'negative',
+    'APROVADO': 'positive'
   }
   return colors[status] || 'grey'
 }
@@ -2385,6 +2632,7 @@ onMounted(() => {
   loadMembers().then(() => {
     hasInitiallyLoaded.value = true
   })
+  loadCurrentUser()
   
   // Adicionar listener para quando a página volta a ficar visível
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -2921,10 +3169,10 @@ onBeforeUnmount(() => {
   max-width: 250px;
 }
 
-.bugs-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.bugs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
 }
 
 .bug-card {
@@ -2935,11 +3183,18 @@ onBeforeUnmount(() => {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.bug-card.clickable {
+  cursor: pointer;
 }
 
 .bug-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+  border-color: #667eea;
 }
 
 .bug-header {
@@ -2949,42 +3204,41 @@ onBeforeUnmount(() => {
   margin-bottom: 12px;
 }
 
-.bug-title-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  flex: 1;
-}
-
-.bug-chips {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
 .bug-title {
   font-size: 18px;
   font-weight: 600;
   color: white;
   margin: 0;
+  flex: 1;
+  margin-right: 12px;
+  line-height: 1.3;
 }
 
 .bug-description {
   color: rgba(255, 255, 255, 0.7);
   font-size: 14px;
-  line-height: 1.5;
-  margin: 0 0 12px 0;
+  line-height: 1.8;
+  margin: 0 0 16px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-.bug-scenario-info {
-  margin-bottom: 12px;
+/* Processar markdown nos cards de bug para quebrar linhas */
+.bug-description {
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .bug-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .bug-meta .meta-item {
@@ -2999,6 +3253,7 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  margin-top: auto;
 }
 
 /* Bug Details Dialog - Modal Moderno */
@@ -3437,24 +3692,45 @@ onBeforeUnmount(() => {
 }
 
 .form-input :deep(.q-field__control) {
-  background: rgba(255, 255, 255, 0.1) !important;
+  background: #ffffff !important;
   border-radius: 8px;
+  border: 1px solid #e5e7eb !important;
+}
+
+.form-input :deep(.q-field--outlined .q-field__control) {
+  border: 1px solid #d1d5db !important;
+}
+
+.form-input :deep(.q-field--outlined .q-field__control:hover) {
+  border-color: #9ca3af !important;
+}
+
+.form-input :deep(.q-field--focused .q-field__control) {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
 }
 
 .form-input :deep(.q-field__native) {
-  color: white !important;
+  color: #1f2937 !important;
 }
 
 .form-input :deep(.q-field__label) {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: #000000 !important;
+  font-weight: 600 !important;
 }
 
 .form-input :deep(.q-field__messages) {
-  color: rgba(255, 255, 255, 0.7) !important;
+  color: #374151 !important;
+  font-size: 13px !important;
+}
+
+.form-input :deep(.q-field__hint) {
+  color: #6b7280 !important;
+  font-size: 12px !important;
 }
 
 .form-input :deep(.q-field__input) {
-  color: white !important;
+  color: #1f2937 !important;
 }
 
 .dialog-actions-form {
@@ -3483,7 +3759,7 @@ onBeforeUnmount(() => {
 .dialog-header .text-h6 {
   font-size: 20px;
   font-weight: 600;
-  color: #1e293b;
+  color: #000000;
   margin: 0;
 }
 
@@ -3587,5 +3863,174 @@ onBeforeUnmount(() => {
     margin: 16px;
     min-width: auto !important;
   }
+  
+  .delete-bug-dialog-card {
+    min-width: auto !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Delete Bug Dialog Styles */
+.delete-bug-dialog-card {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.delete-bug-dialog-header {
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.delete-bug-dialog-header::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.delete-bug-header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  z-index: 1;
+}
+
+.delete-bug-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+}
+
+.delete-bug-title-section {
+  flex: 1;
+}
+
+.delete-bug-dialog-body {
+  padding: 32px;
+}
+
+.delete-bug-warning-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: #fef2f2;
+  border-radius: 12px;
+  border-left: 4px solid #f44336;
+  margin-bottom: 24px;
+}
+
+.delete-bug-warning-text {
+  flex: 1;
+  color: #7f1d1d;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.delete-bug-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.delete-bug-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.delete-bug-info-item:hover {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.delete-bug-info-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.delete-bug-info-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.delete-bug-info-value {
+  font-size: 15px;
+  color: #1f2937;
+  font-weight: 600;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.delete-bug-dialog-actions {
+  padding: 20px 32px;
+  border-top: 1px solid #e5e7eb;
+  background: #fafafa;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.delete-bug-cancel-btn {
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.delete-bug-cancel-btn:hover {
+  background: #f3f4f6 !important;
+  transform: translateY(-1px);
+}
+
+.delete-bug-confirm-btn {
+  padding: 10px 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
+}
+
+.delete-bug-confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(244, 67, 54, 0.4);
+}
+
+.delete-bug-confirm-btn:active {
+  transform: translateY(0);
 }
 </style>

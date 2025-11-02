@@ -9,3 +9,4 @@ backend/coverage/
 *.log
 .DS_Store
 node_modules/
+cypress/videos/

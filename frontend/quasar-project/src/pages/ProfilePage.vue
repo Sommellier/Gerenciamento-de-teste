@@ -69,6 +69,15 @@
                   @click="submitForm"
                   class="save-btn-header"
                 />
+                <q-btn
+                  flat
+                  icon="delete"
+                  label="Deletar Conta"
+                  color="negative"
+                  @click="showDeleteConfirmDialog = true"
+                  :loading="deleting"
+                  class="delete-account-btn-header"
+                />
               </div>
             </div>
           </q-card-section>
@@ -351,6 +360,86 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
+
+    <!-- Delete Account Confirmation Dialog -->
+    <q-dialog v-model="showDeleteConfirmDialog" persistent>
+      <q-card class="delete-dialog-card">
+        <q-card-section class="delete-dialog-header">
+          <div class="delete-header-content">
+            <div class="delete-icon-wrapper">
+              <q-icon name="warning" size="56px" color="negative" />
+            </div>
+            <div class="delete-title-section">
+              <h3 class="delete-title">Excluir Conta Permanentemente</h3>
+              <p class="delete-subtitle">Esta ação não pode ser desfeita</p>
+            </div>
+          </div>
+        </q-card-section>
+        
+        <q-card-section class="delete-dialog-body">
+          <div class="delete-warning-box">
+            <q-icon name="info" size="24px" color="warning" class="warning-icon" />
+            <div class="warning-content">
+              <p class="warning-text">
+                Você está prestes a <strong>permanentemente deletar</strong> sua conta. Todos os seus dados serão removidos e não poderão ser recuperados.
+              </p>
+            </div>
+          </div>
+
+          <div class="delete-data-list">
+            <h4 class="data-list-title">Os seguintes dados serão removidos:</h4>
+            <div class="data-list-items">
+              <div class="data-item">
+                <q-icon name="folder" size="20px" color="grey-6" />
+                <span>Seus projetos e todas as informações associadas</span>
+              </div>
+              <div class="data-item">
+                <q-icon name="description" size="20px" color="grey-6" />
+                <span>Seus cenários de teste</span>
+              </div>
+              <div class="data-item">
+                <q-icon name="play_circle" size="20px" color="grey-6" />
+                <span>Suas execuções e históricos</span>
+              </div>
+              <div class="data-item">
+                <q-icon name="person" size="20px" color="grey-6" />
+                <span>Todos os dados do seu perfil</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="delete-confirmation-checkbox">
+            <q-checkbox 
+              v-model="deleteConfirmed" 
+              color="negative"
+              label="Entendo que esta ação é irreversível e desejo deletar minha conta"
+              class="confirm-checkbox"
+            />
+          </div>
+        </q-card-section>
+        
+        <q-card-actions align="right" class="delete-dialog-actions">
+          <q-btn
+            flat
+            label="Cancelar"
+            color="grey-8"
+            @click="cancelDelete"
+            :disable="deleting"
+            class="cancel-btn"
+          />
+          <q-btn
+            color="negative"
+            label="Sim, Deletar Minha Conta"
+            icon="delete"
+            @click="deleteAccount"
+            :loading="deleting"
+            :disable="!deleteConfirmed"
+            unelevated
+            class="delete-btn"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-page>
 </template>
 
@@ -396,6 +485,9 @@ const successDialog = ref(false)
 const successText = ref('')
 const errorDialog = ref(false)
 const errorText = ref('')
+const showDeleteConfirmDialog = ref(false)
+const deleteConfirmed = ref(false)
+const deleting = ref(false)
 
 // Computed
 const hasChanges = computed(() => {
@@ -628,6 +720,46 @@ async function submitForm() {
   }
 }
 
+function cancelDelete() {
+  showDeleteConfirmDialog.value = false
+  deleteConfirmed.value = false
+}
+
+async function deleteAccount() {
+  if (!profile.value || !deleteConfirmed.value) {
+    return
+  }
+
+  deleting.value = true
+  try {
+    await api.delete(`/users/${profile.value.id}`)
+    
+    // Limpar dados locais
+    localStorage.clear()
+    
+    // Mostrar notificação de sucesso
+    $q.notify({
+      type: 'info',
+      message: 'Conta deletada com sucesso',
+      position: 'top',
+      timeout: 3000
+    })
+    
+    // Redirecionar para login
+    setTimeout(() => {
+      router.push('/login')
+    }, 2000)
+  } catch (err: any) {
+    console.error('Error deleting account:', err)
+    errorText.value = getCustomErrorMessage(err)
+    errorDialog.value = true
+    showDeleteConfirmDialog.value = false
+    deleteConfirmed.value = false
+  } finally {
+    deleting.value = false
+  }
+}
+
 function getCustomErrorMessage(err: any): string {
   if (err.response?.data?.message) {
     const message = err.response.data.message
@@ -785,6 +917,9 @@ onMounted(() => {
 
 .header-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .edit-btn {
@@ -806,6 +941,16 @@ onMounted(() => {
 
 .save-btn-header:hover {
   background: #6b8cff;
+}
+
+.delete-account-btn-header {
+  color: #ef4444 !important;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.delete-account-btn-header:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
 }
 
 /* Avatar Card */
@@ -1000,6 +1145,177 @@ onMounted(() => {
 .empty-stats-card p {
   margin: 0;
   color: #cbd5e1;
+}
+
+/* Delete Dialog Styles */
+.delete-dialog-card {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  min-width: 520px;
+  max-width: 600px;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.delete-dialog-header {
+  padding: 32px 32px 24px;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+.delete-header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.delete-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.delete-title-section {
+  flex: 1;
+}
+
+.delete-title {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.delete-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.delete-dialog-body {
+  padding: 32px;
+}
+
+.delete-warning-box {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #fef3c7;
+  border: 2px solid #fbbf24;
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.warning-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-content {
+  flex: 1;
+}
+
+.warning-text {
+  margin: 0;
+  color: #78350f;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.warning-text strong {
+  color: #92400e;
+  font-weight: 700;
+}
+
+.delete-data-list {
+  margin-bottom: 24px;
+}
+
+.data-list-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.data-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.data-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.data-item:hover {
+  background: #f3f4f6;
+  border-left-color: #d1d5db;
+}
+
+.data-item span {
+  color: #4b5563;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.delete-confirmation-checkbox {
+  padding: 20px;
+  background: #fee2e2;
+  border-radius: 12px;
+  border: 2px solid #fecaca;
+}
+
+.confirm-checkbox {
+  width: 100%;
+}
+
+.confirm-checkbox :deep(.q-checkbox__label) {
+  color: #991b1b;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.delete-dialog-actions {
+  padding: 20px 32px;
+  background: #fafafa;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0 0 16px 16px;
+  gap: 12px;
+}
+
+.cancel-btn {
+  padding: 10px 24px;
+  font-weight: 600;
+}
+
+.delete-btn {
+  padding: 10px 24px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.delete-btn:hover {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  box-shadow: none;
 }
 
 /* Dialog */

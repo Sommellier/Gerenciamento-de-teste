@@ -193,8 +193,8 @@
 
                 <div class="package-stats">
                   <div class="stat">
-                    <q-icon name="list" size="18px" class="stat-icon" />
-                    <span>{{ packageItem.steps.length }} passos</span>
+                    <q-icon name="playlist_play" size="18px" class="stat-icon" />
+                    <span>{{ packageItem.scenarios?.length || 0 }} cenário{{ (packageItem.scenarios?.length || 0) !== 1 ? 's' : '' }}</span>
                   </div>
                   <div class="stat" v-if="packageItem.assigneeEmail">
                     <q-icon name="person" size="18px" class="stat-icon" />
@@ -370,7 +370,11 @@ const getStatusLabel = (status: string) => {
     CREATED: 'Criado',
     EXECUTED: 'Executado',
     PASSED: 'Concluído',
-    FAILED: 'Falhou'
+    FAILED: 'Falhou',
+    EM_TESTE: 'Em Teste',
+    CONCLUIDO: 'Concluído',
+    REPROVADO: 'Reprovado',
+    APROVADO: 'Aprovado'
   }
   return statusMap[status] || status
 }
@@ -380,7 +384,11 @@ const getStatusColor = (status: string) => {
     CREATED: 'grey',
     EXECUTED: 'orange',
     PASSED: 'green',
-    FAILED: 'red'
+    FAILED: 'red',
+    EM_TESTE: 'blue',
+    CONCLUIDO: 'purple',
+    REPROVADO: 'negative',
+    APROVADO: 'positive'
   }
   return colorMap[status] || 'grey'
 }

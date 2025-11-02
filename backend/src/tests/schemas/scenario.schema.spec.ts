@@ -482,7 +482,7 @@ describe('scenario.schema', () => {
     })
 
     it('deve ter todos os valores corretos para ScenarioStatusEnum', () => {
-      expect(ScenarioStatusEnum).toEqual(['CREATED', 'EXECUTED', 'PASSED', 'FAILED', 'BLOCKED'])
+      expect(ScenarioStatusEnum).toEqual(['CREATED', 'EXECUTED', 'PASSED', 'FAILED', 'APPROVED', 'REPROVED'])
     })
 
     it('deve ter todos os valores corretos para ExecutionResultEnum', () => {
@@ -490,6 +490,7 @@ describe('scenario.schema', () => {
     })
   })
 })
+
 
 
 

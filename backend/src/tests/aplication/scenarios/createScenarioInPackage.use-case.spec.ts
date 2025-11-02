@@ -330,6 +330,35 @@ describe('createScenarioInPackage', () => {
     })
   })
 
+  it('bloqueia criação quando pacote está APROVADO (linha 54)', async () => {
+    // Atualizar pacote para APROVADO
+    await prisma.testPackage.update({
+      where: { id: packageId },
+      data: { status: 'APROVADO' }
+    })
+
+    const scenarioData = {
+      packageId,
+      projectId,
+      title: 'Test Scenario',
+      description: 'Test Description',
+      priority: 'HIGH' as const,
+      tags: ['test'],
+      steps: [{ action: 'Test action', expected: 'Expected result' }]
+    }
+
+    await expect(createScenarioInPackage(scenarioData)).rejects.toMatchObject({
+      status: 403,
+      message: 'Não é possível criar cenários em um pacote aprovado'
+    })
+
+    // Restaurar status
+    await prisma.testPackage.update({
+      where: { id: packageId },
+      data: { status: 'CREATED' }
+    })
+  })
+
   describe('createScenarioInPackage - casos de erro', () => {
     it('lança erro quando pacote não existe', async () => {
       const scenarioData = {

@@ -28,6 +28,11 @@ export async function getProjectPackages({ projectId, release }: GetProjectPacka
     include: {
       steps: {
         orderBy: { stepOrder: 'asc' }
+      },
+      scenarios: {
+        select: {
+          id: true
+        }
       }
     },
     orderBy: { createdAt: 'desc' }

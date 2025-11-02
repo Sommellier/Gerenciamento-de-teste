@@ -118,6 +118,107 @@ describe('listMembers.use-case', () => {
     expect(res.items[0].user.name).toContain('Eve')
   })
 
+  it('filtra por roles corretamente (linha 177)', async () => {
+    const { project, owner } = await seedProjectWithMembers()
+
+    // Testar filtro de roles - linha 177
+    const res = await listMembers({
+      projectId: project.id,
+      requesterId: owner.id,
+      roles: ['TESTER']
+    })
+
+    // Deve retornar apenas testers
+    expect(res.items.every(i => i.role === 'TESTER')).toBe(true)
+    expect(res.items.length).toBe(2) // 2 testers criados
+  })
+
+  it('inclui owner quando não há filtro de roles e atende busca (linha 188)', async () => {
+    // Criar projeto onde owner não está como membro no banco
+    const owner = await prisma.user.create({
+      data: { name: 'Owner User', email: unique('owner') + '@example.com', password: 'secret' }
+    })
+    const project = await prisma.project.create({
+      data: { ownerId: owner.id, name: unique('Projeto'), description: null }
+    })
+    
+    // Adicionar um membro TESTER que não bate a busca
+    const tester = await prisma.user.create({
+      data: { name: 'Other Tester', email: unique('other') + '@mail.com', password: 'secret' }
+    })
+    await prisma.userOnProject.create({
+      data: { projectId: project.id, userId: tester.id, role: 'TESTER' }
+    })
+
+    // Buscar por nome do owner (linha 188)
+    const res = await listMembers({
+      projectId: project.id,
+      requesterId: owner.id,
+      q: 'Owner'
+    })
+
+    // Owner deve estar na lista no início (linha 188 - unshift)
+    expect(res.items[0].userId).toBe(owner.id)
+    expect(res.items[0].role).toBe('OWNER')
+    expect(res.items.some(i => i.userId === owner.id)).toBe(true)
+  })
+
+  it('inclui owner quando não há filtro de roles e owner atende busca por email (linha 188)', async () => {
+    // Criar projeto onde owner não está como membro no banco
+    const owner = await prisma.user.create({
+      data: { name: 'Owner User', email: unique('owner') + '@example.com', password: 'secret' }
+    })
+    const project = await prisma.project.create({
+      data: { ownerId: owner.id, name: unique('Projeto'), description: null }
+    })
+
+    // Buscar por email do owner (linha 188)
+    const res = await listMembers({
+      projectId: project.id,
+      requesterId: owner.id,
+      q: owner.email.split('@')[0] // parte do email antes do @
+    })
+
+    // Owner deve estar na lista no início (linha 188 - unshift)
+    expect(res.items[0].userId).toBe(owner.id)
+    expect(res.items[0].role).toBe('OWNER')
+  })
+
+  it('inclui owner quando não há filtro de roles e não há query (linha 188)', async () => {
+    // Criar projeto onde owner não está como membro no banco
+    const owner = await prisma.user.create({
+      data: { name: 'Owner User', email: unique('owner') + '@example.com', password: 'secret' }
+    })
+    const project = await prisma.project.create({
+      data: { ownerId: owner.id, name: unique('Projeto'), description: null }
+    })
+
+    // Sem query, owner deve ser incluído (linha 188 - !query)
+    const res = await listMembers({
+      projectId: project.id,
+      requesterId: owner.id
+    })
+
+    // Owner deve estar na lista no início (linha 188 - unshift)
+    expect(res.items[0].userId).toBe(owner.id)
+    expect(res.items[0].role).toBe('OWNER')
+  })
+
+  it('não inclui owner quando há filtro de roles (linha 177)', async () => {
+    const { project, owner } = await seedProjectWithMembers()
+
+    // Com filtro de roles, owner não deve ser incluído (linha 183)
+    const res = await listMembers({
+      projectId: project.id,
+      requesterId: owner.id,
+      roles: ['TESTER', 'APPROVER']
+    })
+
+    // Owner não deve estar na lista quando há filtro de roles
+    expect(res.items.every(i => i.role !== 'OWNER' || i.userId !== owner.id)).toBe(true)
+    expect(res.items.every(i => i.role === 'TESTER' || i.role === 'APPROVER')).toBe(true)
+  })
+
   it('ignora q com espaços apenas (normalizeQuery → undefined) e devolve todos', async () => {
     const { project, owner } = await seedProjectWithMembers()
     const res = await listMembers({

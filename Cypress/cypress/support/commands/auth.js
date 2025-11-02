@@ -29,5 +29,9 @@ Cypress.Commands.add('deleçãoDeConta', () => {
     cy.get('.q-menu').should('be.visible').click()
     cy.contains('.q-menu .q-item__label', /ver perfil/i).click()
     cy.findByRole('button', { name: /deletar conta/i }).click()
+    cy.get('.delete-confirmation-checkbox .confirm-checkbox')
+        .click()
+        .should('have.attr', 'aria-checked', 'true')
     cy.findByRole('button', { name: /SIM, DELETAR MINHA CONTA/i }).click()
+    cy.get('[role="checkbox"]').click();
 })

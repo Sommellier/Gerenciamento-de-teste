@@ -112,8 +112,6 @@ export class ScenarioController {
         return res.status(401).json({ message: 'Não autenticado' })
       }
 
-      console.log('Atualizando cenário:', scenarioId, 'com dados:', req.body)
-
       // Para updates, não validamos campos obrigatórios - aceitar updates parciais
       const updateData: any = {
         id: scenarioId
@@ -130,11 +128,7 @@ export class ScenarioController {
       if (req.body.testadorId !== undefined) updateData.testadorId = req.body.testadorId
       if (req.body.aprovadorId !== undefined) updateData.aprovadorId = req.body.aprovadorId
 
-      console.log('Dados de atualização processados:', updateData)
-
       const scenario = await scenarioService.updateScenario(scenarioId, updateData, userId)
-
-      console.log('Cenário atualizado com sucesso:', scenario)
 
       res.json({
         message: 'Cenário atualizado com sucesso',

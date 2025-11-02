@@ -15,8 +15,6 @@ export async function updateStepStatus({
   userId
 }: UpdateStepStatusInput) {
   try {
-    console.log('updateStepStatus - stepId:', stepId, 'status:', status, 'actualResult:', actualResult)
-    
     // Verificar se a etapa existe
     const step = await prisma.testScenarioStep.findUnique({
       where: { id: stepId }
@@ -26,8 +24,6 @@ export async function updateStepStatus({
       throw new AppError('Etapa não encontrada', 404)
     }
 
-    console.log('updateStepStatus - Etapa encontrada:', step)
-
     // Atualizar status da etapa
     const updatedStep = await prisma.testScenarioStep.update({
       where: { id: stepId },
@@ -36,8 +32,6 @@ export async function updateStepStatus({
         actualResult: actualResult || step.actualResult
       }
     })
-
-    console.log('updateStepStatus - Etapa atualizada:', updatedStep)
 
     return updatedStep
   } catch (error) {
