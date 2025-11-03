@@ -258,8 +258,10 @@ async function loadProject() {
       project.value = response.data
       
       // Populate form
-      name.value = project.value.name || ''
-      description.value = project.value.description || ''
+      if (project.value) {
+        name.value = project.value.name || ''
+        description.value = project.value.description || ''
+      }
     }
   } catch (err: unknown) {
     console.error('Error loading project:', err)
