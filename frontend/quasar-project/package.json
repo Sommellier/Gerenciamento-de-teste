@@ -14,8 +14,7 @@
     "test:coverage": "vitest --coverage",
     "test:run": "vitest run",
     "dev": "quasar dev",
-    "build": "quasar build",
-    "postinstall": "npx quasar prepare"
+    "build": "quasar build"
   },
   "dependencies": {
     "@quasar/extras": "^1.17.0",
