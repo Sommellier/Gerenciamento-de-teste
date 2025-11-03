@@ -15,7 +15,7 @@
     "test:run": "vitest run",
     "dev": "quasar dev",
     "build": "quasar build",
-    "postinstall": "quasar prepare"
+    "postinstall": "npx quasar prepare"
   },
   "dependencies": {
     "@quasar/extras": "^1.17.0",
