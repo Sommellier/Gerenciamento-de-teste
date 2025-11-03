@@ -1,7 +1,15 @@
 import axios from 'axios'
 
+// Obter URL da API da variável de ambiente ou usar localhost como fallback para desenvolvimento
+export const getApiUrl = () => {
+  // No Quasar/Vite, variáveis de ambiente são acessadas via import.meta.env
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+  // Garantir que a URL não termine com / para evitar problemas
+  return apiUrl.replace(/\/$/, '')
+}
+
 const api = axios.create({
-  baseURL: 'http://localhost:3000/api',
+  baseURL: `${getApiUrl()}/api`,
   timeout: 10000 // 10 segundos de timeout
 })
 
@@ -40,7 +48,7 @@ api.interceptors.response.use(
       } else if (error.code === 'ERR_NETWORK') {
         error.message = 'Erro de conexão. Verifique se o servidor está rodando e sua internet.'
       } else {
-        error.message = 'Erro de conexão. Verifique se o servidor está rodando em http://localhost:3000'
+        error.message = 'Erro de conexão. Verifique se o servidor está rodando e sua internet.'
       }
     }
     
@@ -51,7 +59,7 @@ api.interceptors.response.use(
       if (refreshToken) {
         try {
           // Tentar obter novo access token
-          const response = await axios.post<RefreshTokenResponse>('http://localhost:3000/api/refresh-token', {
+          const response = await axios.post<RefreshTokenResponse>(`${getApiUrl()}/api/refresh-token`, {
             refreshToken
           })
           
