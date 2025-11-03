@@ -1108,7 +1108,9 @@ async function handleFileUpload(event: Event) {
       }
       
       // Adicionar o URL completo do backend
-      const fullUrl = `http://localhost:3000${attachment.url}`
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      const baseUrl = apiUrl.replace(/\/$/, '')
+      const fullUrl = `${baseUrl}${attachment.url}`
       currentStep.value.attachments.push({
         ...attachment,
         url: fullUrl

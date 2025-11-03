@@ -587,7 +587,10 @@ function getAvatarUrl(avatar: string) {
   if (avatar.startsWith('http')) {
     return avatar
   }
-  return `http://localhost:3000${avatar}`
+  // Usar getApiUrl para obter a URL base da API
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+  const baseUrl = apiUrl.replace(/\/$/, '')
+  return `${baseUrl}${avatar}`
 }
 
 function triggerFileInput() {

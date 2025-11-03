@@ -2188,7 +2188,8 @@ const formatBugDescription = (description: string) => {
 const downloadBugAttachment = async (attachment: StepAttachment) => {
   try {
     const api = (await import('../services/api')).default
-    const baseURL = api.defaults.baseURL || 'http://localhost:3000/api'
+    const { getApiUrl } = await import('../services/api')
+    const baseURL = api.defaults.baseURL || `${getApiUrl()}/api`
     
     // Construir URL completa do anexo
     let fileUrl = attachment.url

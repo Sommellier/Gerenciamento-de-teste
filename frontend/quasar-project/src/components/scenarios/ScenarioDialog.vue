@@ -467,7 +467,9 @@ const onSubmit = async () => {
     } else {
       // Usar a rota nova que aceita projectId e packageId
       const token = localStorage.getItem('token')
-      const response = await fetch(`http://localhost:3000/api/projects/${projectId}/packages/${props.packageId}/scenarios`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+      const baseUrl = apiUrl.replace(/\/$/, '')
+      const response = await fetch(`${baseUrl}/api/projects/${projectId}/packages/${props.packageId}/scenarios`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
