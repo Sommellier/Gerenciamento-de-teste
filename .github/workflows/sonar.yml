@@ -62,21 +62,31 @@ jobs:
         run: npm run test:coverage -- --runInBand
         working-directory: ./backend
 
-      - name: Run SonarCloud Analysis
+      - name: Verify Coverage File Exists
         working-directory: ./backend
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          npm install -g sonarqube-scanner
-          npx sonar-scanner \
-            -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste \
-            -Dsonar.organization=sommellier \
-            -Dsonar.sources=src \
-            -Dsonar.exclusions=**/*.d.ts,**/dist/**,**/migrations/**,**/prisma/**,src/tests/** \
-            -Dsonar.tests=src/tests \
-            -Dsonar.test.inclusions=src/**/*.test.ts,src/**/*.spec.ts \
-            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
-            -Dsonar.coverage.exclusions=src/main.ts,src/server.ts,src/tests/** \
-            -Dsonar.newCode.referenceBranch=main \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+          if [ ! -f "coverage/lcov.info" ]; then
+            echo "Error: coverage/lcov.info file not found!"
+            exit 1
+          fi
+          echo "Coverage file found at coverage/lcov.info"
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: ./backend
+          args: >
+            -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste
+            -Dsonar.organization=sommellier
+            -Dsonar.sources=src
+            -Dsonar.exclusions=**/*.d.ts,**/dist/**,**/migrations/**,**/prisma/**,src/tests/**
+            -Dsonar.tests=src/tests
+            -Dsonar.test.inclusions=src/**/*.test.ts,src/**/*.spec.ts
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.coverage.exclusions=src/main.ts,src/server.ts,src/tests/**
+            -Dsonar.newCode.referenceBranch=main
+            -Dsonar.language=ts
+            -Dsonar.sourceEncoding=UTF-8

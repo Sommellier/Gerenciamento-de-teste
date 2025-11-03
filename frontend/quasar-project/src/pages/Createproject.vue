@@ -488,12 +488,12 @@ type ProjectDTO = {
 }
 
 /** ======= API helpers (ajuste os caminhos se necessário) ======= */
-async function apiCreateProject(payload: { name: string; description: string | null }) {
+function apiCreateProject(payload: { name: string; description: string | null }) {
   // POST /projects (ownerId vem do token JWT automaticamente)
   return api.post<ProjectDTO>('/projects', payload)
 }
 
-async function apiCreateOrResendInvite(pid: number, payload: { email: string; role: Role }) {
+function apiCreateOrResendInvite(pid: number, payload: { email: string; role: Role }) {
   // POST /projects/:projectId/invites (cria ou reenvia convite)
   return api.post(`/projects/${pid}/invites`, payload)
 }
@@ -520,7 +520,7 @@ async function apiListInvites(pid: number) : Promise<Invite[]> {
   }>>(`/projects/${pid}/invites`)
   const items = Array.isArray(data) ? data : (data?.items ?? [])
   // normaliza status do backend -> display
-  return items.map(it => {
+  return items.map((it: { id: number; email: string; role: string; status: string; createdAt?: string; expiresAt?: string }) => {
     const invite: Invite = {
       id: it.id,
       email: it.email,
