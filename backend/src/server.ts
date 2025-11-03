@@ -39,7 +39,7 @@ const isLocalhost = (origin: string) =>
   origin.includes('localhost') || origin.includes('127.0.0.1')
 
 const corsOptions: cors.CorsOptions = {
-  origin(origin, callback) {
+  origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     const isProd = process.env.NODE_ENV === 'production'
 
     // Permitir requisições sem Origin (Postman/cURL, health checks)
