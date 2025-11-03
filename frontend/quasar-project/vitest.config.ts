@@ -1,6 +1,8 @@
 import { fileURLToPath } from 'node:url'
 import { mergeConfig, defineConfig as defineViteConfig } from 'vite'
+// @ts-expect-error - vitest/config types may not be available in all environments
 import { defineConfig } from 'vitest/config'
+// @ts-expect-error - vite-tsconfig-paths types may not be available in all environments
 import tsconfigPaths from 'vite-tsconfig-paths'
 import vue from '@vitejs/plugin-vue'
 

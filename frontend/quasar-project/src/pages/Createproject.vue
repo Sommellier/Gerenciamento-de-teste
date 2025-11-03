@@ -260,14 +260,22 @@
           </button>
         </div>
         <div class="menu-content">
-          <button class="menu-action" @click="resendInvite(selectedCollaborator)">
+          <button 
+            v-if="selectedCollaborator"
+            class="menu-action" 
+            @click="selectedCollaborator && resendInvite(selectedCollaborator)"
+          >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Reenviar Convite
           </button>
-          <button class="menu-action danger" @click="removeCollaborator(selectedCollaborator.email)">
+          <button 
+            v-if="selectedCollaborator"
+            class="menu-action danger" 
+            @click="selectedCollaborator && removeCollaborator(selectedCollaborator.email)"
+          >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M19,6V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V6M8,6V4A2,2 0 0,1 10,2H14A2,2 0 0,1 16,4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -330,8 +338,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { useQuasar, QTableProps } from 'quasar'
+import { useQuasar } from 'quasar'
 import api from 'src/services/api'
+
+// Definir nome do componente multi-word para evitar erro do ESLint
+defineOptions({
+  name: 'CreateProjectPage'
+})
 
 const props = withDefaults(defineProps<{ redirectOnSuccess?: boolean }>(), { redirectOnSuccess: true })
 const $q = useQuasar()
@@ -339,11 +352,11 @@ const router = useRouter()
 
 /** ---------- navegação ---------- */
 function goBack() {
-  router.push('/dashboard')
+  void router.push('/dashboard')
 }
 
 function goToProfile() {
-  router.push('/profile')
+  void router.push('/profile')
 }
 
 /** ---------- projeto ---------- */
@@ -357,11 +370,6 @@ const errorDialog = ref(false)
 const errorText = ref('')
 
 const nameRegex = /^[\p{L}\p{N}\s._-]+$/u
-const nameRules: Array<(v: string) => true | string> = [
-  (v: string) => ((v ?? '').trim().length >= 2) || 'Mínimo 2 caracteres',
-  (v: string) => ((v ?? '').trim().length <= 100) || 'Máximo 100 caracteres',
-  (v: string) => nameRegex.test((v ?? '').trim()) || 'Permitidos: letras, números, espaço, -, _, .',
-]
 
 /** ---------- colaboradores / convites ---------- */
 type Role = 'MANAGER' | 'TESTER' | 'APPROVER'
@@ -390,11 +398,6 @@ const isFormValid = computed(() => {
   return name.value.trim().length >= 2 && nameRegex.test(name.value.trim())
 })
 
-const roleOptions = [
-  { label: 'Manager', value: 'MANAGER' },
-  { label: 'Tester', value: 'TESTER' },
-  { label: 'Approver', value: 'APPROVER' },
-]
 
 function addEmail() {
   const email = emailInput.value.trim().toLowerCase()
@@ -445,9 +448,14 @@ async function resendInvite(row: Row) {
     await api.post(`/projects/${projectId.value}/invites`, { email: row.email, role: row.role })
     row.status = 'Invited'
     $q.notify({ type: 'positive', message: `Convite reenviado para ${row.email}` })
-  } catch (err: any) {
-    const status = err?.response?.status
-    const rawMsg = err?.response?.data?.message || err?.response?.data?.error
+  } catch (err: unknown) {
+    const status = err && typeof err === 'object' && 'response' in err
+      ? (err as { response?: { status?: number } }).response?.status
+      : undefined
+    const rawMsg = err && typeof err === 'object' && 'response' in err
+      ? (err as { response?: { data?: { message?: string; error?: string } } }).response?.data?.message 
+        || (err as { response?: { data?: { error?: string } } }).response?.data?.error
+      : undefined
     const msg = getCustomInviteErrorMessage(status, rawMsg, 'reenviar')
     
     $q.notify({ 
@@ -459,12 +467,6 @@ async function resendInvite(row: Row) {
   }
 }
 
-const columns: QTableProps['columns'] = [
-  { name: 'email', label: 'E-mail', field: 'email', align: 'left' },
-  { name: 'role', label: 'Função', field: 'role', align: 'left' },
-  { name: 'status', label: 'Status', field: 'status', align: 'left' },
-  { name: 'actions', label: 'Ações', field: 'actions', align: 'right' },
-]
 
 function initialsFrom(email: string) {
   const [namePart = ''] = email.split('@')
@@ -474,17 +476,7 @@ function initialsFrom(email: string) {
   return a.toUpperCase().slice(0, 2)
 }
 
-function avatarColor(seed: string) {
-  const list = ['primary', 'teal', 'cyan', 'indigo', 'deep-purple', 'purple', 'orange', 'deep-orange', 'blue']
-  let h = 0; for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
-  return list[h % list.length]
-}
-function statusColor(s: InviteStatusDisplay) {
-  if (s === 'Accepted') return 'positive'
-  if (s === 'Invited') return 'info'
-  if (s === 'Declined' || s === 'Revoked') return 'negative'
-  return 'warning' // Pending
-}
+// statusColor function removed - not used
 
 type ProjectDTO = {
   id: number
@@ -508,17 +500,41 @@ async function apiCreateOrResendInvite(pid: number, payload: { email: string; ro
 
 async function apiListInvites(pid: number) : Promise<Invite[]> {
   // GET /projects/:projectId/invites
-  const { data } = await api.get<any>(`/projects/${pid}/invites`)
-  const items: any[] = Array.isArray(data) ? data : (data?.items ?? [])
+  interface ApiResponse {
+    items?: Array<{
+      id: number
+      email: string
+      role: string
+      status: string
+      createdAt?: string
+      expiresAt?: string
+    }>
+  }
+  const { data } = await api.get<ApiResponse | Array<{
+    id: number
+    email: string
+    role: string
+    status: string
+    createdAt?: string
+    expiresAt?: string
+  }>>(`/projects/${pid}/invites`)
+  const items = Array.isArray(data) ? data : (data?.items ?? [])
   // normaliza status do backend -> display
-  return items.map((it: any) => ({
-    id: it.id,
-    email: it.email,
-    role: it.role as Role,
-    status: backendToDisplayStatus(it.status),
-    createdAt: it.createdAt,
-    expiresAt: it.expiresAt,
-  }))
+  return items.map(it => {
+    const invite: Invite = {
+      id: it.id,
+      email: it.email,
+      role: it.role as Role,
+      status: backendToDisplayStatus(it.status)
+    }
+    if (it.createdAt) {
+      invite.createdAt = it.createdAt
+    }
+    if (it.expiresAt) {
+      invite.expiresAt = it.expiresAt
+    }
+    return invite
+  })
 }
 
 /** Envia todos os convites da tabela (após criar projeto) */
@@ -531,9 +547,14 @@ async function sendAllInvitesOrUpdateStatuses(pid: number) {
       await apiCreateOrResendInvite(pid, { email: row.email, role: row.role })
       row.status = 'Invited'
       sent++
-    } catch (err: any) {
-      const status = err?.response?.status
-      const rawMsg = err?.response?.data?.message || err?.response?.data?.error
+    } catch (err: unknown) {
+      const status = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
+        : undefined
+      const rawMsg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string; error?: string } } }).response?.data?.message 
+          || (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        : undefined
       const msg = getCustomInviteErrorMessage(status, rawMsg, 'enviar')
       
       $q.notify({ 
@@ -556,12 +577,12 @@ async function sendAllInvitesOrUpdateStatuses(pid: number) {
 async function refreshInviteStatuses(pid: number) {
   try {
     const invites = await apiListInvites(pid)
-    const byEmail = new Map(invites.map(i => [i.email.toLowerCase(), i.status as InviteStatusDisplay]))
+    const byEmail = new Map(invites.map(i => [i.email.toLowerCase(), i.status]))
     collaborators.value = collaborators.value.map(r => {
       const s = byEmail.get(r.email.toLowerCase())
       return s ? { ...r, status: s } : r
     })
-  } catch (err) {
+  } catch {
     // silencioso: página continua funcional mesmo sem listagem
   }
 }
@@ -705,9 +726,14 @@ async function onSubmit() {
     })
     successText.value = 'Projeto criado com sucesso!'
     successDialog.value = true
-  } catch (err: any) {
-    const status = err?.response?.status
-    const rawMsg = err?.response?.data?.message || err?.response?.data?.error
+  } catch (err: unknown) {
+    const status = err && typeof err === 'object' && 'response' in err
+      ? (err as { response?: { status?: number } }).response?.status
+      : undefined
+    const rawMsg = err && typeof err === 'object' && 'response' in err
+      ? (err as { response?: { data?: { message?: string; error?: string } } }).response?.data?.message 
+        || (err as { response?: { data?: { error?: string } } }).response?.data?.error
+      : undefined
     const msg = getCustomErrorMessage(status, rawMsg)
     
     $q.notify({ 
@@ -732,14 +758,14 @@ function resetPage() {
   collaborators.value = []
 }
 
-function submitForm() { onSubmit() }
+function submitForm() { void onSubmit() }
 
 function onSuccessOk() {
   successDialog.value = false
   // limpar página e redirecionar se configurado
   resetPage()
   if (props.redirectOnSuccess) {
-    router.push({ name: 'projects' }).catch(() => {})
+    void router.push({ name: 'projects' })
   }
 }
 </script>

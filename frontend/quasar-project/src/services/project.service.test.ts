@@ -1,3 +1,4 @@
+// @ts-expect-error - vitest types are available but TypeScript can't find them in this context
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { projectService } from './project.service'
 import api from './api'
@@ -9,6 +10,30 @@ vi.mock('./api', () => ({
     get: vi.fn(),
   },
 }))
+
+// Tipos para mocks
+interface MockApiResponse<T> {
+  data: T
+}
+
+type MockedApiPost = {
+  mockResolvedValue: (value: MockApiResponse<unknown>) => void
+}
+
+type MockedApiGet = {
+  mockResolvedValue: (value: MockApiResponse<unknown>) => void
+}
+
+// Helper functions to avoid unbound method errors
+const getPostMock = (): MockedApiPost & { mock: { calls: unknown[][] } } => {
+  // eslint-disable-next-line @typescript-eslint/unbound-method
+  return (api.post as unknown as MockedApiPost & { mock: { calls: unknown[][] } })
+}
+
+const getGetMock = (): MockedApiGet & { mock: { calls: unknown[][] } } => {
+  // eslint-disable-next-line @typescript-eslint/unbound-method
+  return (api.get as unknown as MockedApiGet & { mock: { calls: unknown[][] } })
+}
 
 describe('projectService', () => {
   beforeEach(() => {
@@ -31,7 +56,7 @@ describe('projectService', () => {
         updatedAt: '2024-01-01',
       }
 
-      ;(api.post as any).mockResolvedValue({ data: mockProject })
+      ;(api.post as unknown as MockedApiPost).mockResolvedValue({ data: mockProject })
 
       const result = await projectService.createProject({
         name: 'Test Project',
@@ -39,7 +64,9 @@ describe('projectService', () => {
       })
 
       expect(result).toEqual(mockProject)
-      expect(api.post).toHaveBeenCalledWith('/projects', {
+      const postMock = getPostMock()
+      expect(postMock.mock.calls[0]?.[0]).toBe('/projects')
+      expect(postMock.mock.calls[0]?.[1]).toEqual({
         name: 'Test Project',
         description: 'Test Description',
       })
@@ -55,7 +82,7 @@ describe('projectService', () => {
         updatedAt: '2024-01-02',
       }
 
-      ;(api.post as any).mockResolvedValue({ data: mockProject })
+      ;(api.post as unknown as MockedApiPost).mockResolvedValue({ data: mockProject })
 
       const result = await projectService.createProject({
         name: 'Minimal Project',
@@ -70,16 +97,17 @@ describe('projectService', () => {
     it('deve buscar releases do projeto', async () => {
       const mockReleases = ['v1.0', 'v1.1', 'v2.0']
 
-      ;(api.get as any).mockResolvedValue({ data: mockReleases })
+      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: mockReleases })
 
       const result = await projectService.getProjectReleases(1)
 
       expect(result).toEqual(mockReleases)
-      expect(api.get).toHaveBeenCalledWith('/projects/1/releases')
+      const getMock = getGetMock()
+      expect(getMock.mock.calls[0]?.[0]).toBe('/projects/1/releases')
     })
 
     it('deve retornar array vazio quando não há releases', async () => {
-      ;(api.get as any).mockResolvedValue({ data: [] })
+      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: [] })
 
       const result = await projectService.getProjectReleases(1)
 
@@ -96,12 +124,12 @@ describe('projectService', () => {
         ],
       }
 
-      ;(api.get as any).mockResolvedValue({ data: mockMembers })
+      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: mockMembers })
 
       const result = await projectService.getProjectMembers(1)
 
       expect(result).toHaveLength(2)
-      expect(result[0].name).toBe('Alice')
+      expect(result[0]?.name).toBe('Alice')
     })
 
     it('deve retornar membros do projeto como array direto', async () => {
@@ -109,16 +137,16 @@ describe('projectService', () => {
         { id: 1, name: 'Alice', email: 'alice@test.com', role: 'MANAGER' },
       ]
 
-      ;(api.get as any).mockResolvedValue({ data: mockMembers })
+      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: mockMembers })
 
       const result = await projectService.getProjectMembers(1)
 
       expect(result).toHaveLength(1)
-      expect(result[0].name).toBe('Alice')
+      expect(result[0]?.name).toBe('Alice')
     })
 
     it('deve retornar array vazio quando não há membros', async () => {
-      ;(api.get as any).mockResolvedValue({ data: { items: [] } })
+      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: { items: [] } })
 
       const result = await projectService.getProjectMembers(1)
 

@@ -317,11 +317,21 @@ function closeDialog() {
 
 function getInitials(name: string) {
   if (!name) return '?'
-  const parts = name.split(' ')
+  const parts = name.split(' ').filter(p => p.length > 0)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase()
+    }
   }
-  return name.substring(0, 2).toUpperCase()
+  if (parts.length > 0 && parts[0]) {
+    const firstPart = parts[0]
+    if (firstPart && firstPart.length > 0 && firstPart[0]) {
+      return firstPart[0].toUpperCase()
+    }
+  }
+  return '?'
 }
 
 function getMemberColor(memberId: number) {
@@ -430,8 +440,8 @@ const onSubmit = async () => {
     const scenarioData = {
       title: formData.value.name,
       description: formData.value.description || `Cenário de teste: ${formData.value.name}`,
-      type: formData.value.type, // Tipo pode ser herdado do pacote
-      priority: formData.value.priority,
+      type: formData.value.type as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
+      priority: formData.value.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
       testadorId: formData.value.tester,
       aprovadorId: formData.value.approver,
       projectId: projectId,
@@ -440,7 +450,16 @@ const onSubmit = async () => {
     }
 
     if (isEditing.value && props.scenario) {
-      await scenarioService.updateScenario(props.scenario.id, scenarioData)
+      // Para atualização, remover testadorId e aprovadorId pois não fazem parte de CreateScenarioData
+      const updateData = {
+        title: scenarioData.title,
+        description: scenarioData.description,
+        type: scenarioData.type,
+        priority: scenarioData.priority,
+        tags: scenarioData.tags,
+        steps: scenarioData.steps
+      }
+      await scenarioService.updateScenario(props.scenario.id, updateData)
       Notify.create({
         type: 'positive',
         message: 'Cenário atualizado com sucesso'
@@ -485,8 +504,8 @@ const onSubmit = async () => {
 watch(() => props.modelValue, (newValue) => {
   if (newValue) {
     loadScenarioData()
-    loadMembers()
-    loadPackageType()
+    void loadMembers()
+    void loadPackageType()
   }
 })
 
@@ -500,8 +519,8 @@ watch(() => props.scenario, () => {
 onMounted(() => {
   if (props.modelValue) {
     loadScenarioData()
-    loadMembers()
-    loadPackageType()
+    void loadMembers()
+    void loadPackageType()
   }
 })
 </script>

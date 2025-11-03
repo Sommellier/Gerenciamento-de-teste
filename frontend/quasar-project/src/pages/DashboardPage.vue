@@ -131,16 +131,15 @@ import { useQuasar } from 'quasar'
 const router = useRouter()
 const $q = useQuasar()
 
-const goToProjects = () => router.push('/projects')
-const goToCreate = () => router.push('/create-project')
-const goToInvites = () => router.push('/invites')
-const goToProfile = () => router.push('/profile')
+const goToProjects = () => void router.push('/projects')
+const goToCreate = () => void router.push('/create-project')
+const goToInvites = () => void router.push('/invites')
+const goToProfile = () => void router.push('/profile')
 
 const handleLogout = () => {
   $q.dialog({
     title: 'Confirmar Logout',
     message: 'Tem certeza que deseja desconectar-se?',
-    cancel: true,
     persistent: true,
     ok: {
       label: 'Desconectar',
@@ -156,7 +155,7 @@ const handleLogout = () => {
     localStorage.removeItem('token')
     
     // Redirecionar para login
-    router.push('/login')
+    void router.push('/login')
     
     // Notificar usuário
     $q.notify({

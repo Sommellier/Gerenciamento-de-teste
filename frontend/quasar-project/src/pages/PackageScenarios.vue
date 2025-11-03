@@ -279,7 +279,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'
-import { scenarioService, type TestScenario } from '../services/scenario.service'
+import { scenarioService, type CreateScenarioData } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 
 // Composables
@@ -382,16 +382,27 @@ const priorityRules = [
 
 // Methods
 function goBack() {
-  router.push(`/projects/${route.params.projectId}/packages/${packageId.value}`)
+  const projectId = String(route.params.projectId ?? '')
+  void router.push(`/projects/${projectId}/packages/${packageId.value}`)
 }
 
 function getInitials(name: string) {
   if (!name) return '?'
-  const parts = name.split(' ')
+  const parts = name.split(' ').filter(p => p.length > 0)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase()
+    }
   }
-  return name.substring(0, 2).toUpperCase()
+  if (parts.length > 0 && parts[0]) {
+    const firstPart = parts[0]
+    if (firstPart && firstPart.length > 0 && firstPart[0]) {
+      return firstPart[0].toUpperCase()
+    }
+  }
+  return '?'
 }
 
 function getMemberColor(memberId: number) {
@@ -421,7 +432,7 @@ async function loadMembers() {
         members.value = []
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Erro ao carregar membros:', error)
     members.value = [] // Garantir que sempre seja um array
     Notify.create({
@@ -458,15 +469,27 @@ async function createScenario() {
 
     const projectId = Number(route.params.projectId)
     
+    if (!projectId || isNaN(projectId)) {
+      errorMessage.value = 'ID do projeto inválido'
+      showErrorDialog.value = true
+      return
+    }
+    
     // Preparar dados para a API
-    const scenarioData: any = {
+    const scenarioData: CreateScenarioData & {
+      projectId: number
+      testadorId?: number
+      aprovadorId?: number
+      tags?: string[]
+      steps?: Array<{ action: string; expected: string }>
+    } = {
       title: scenarioForm.value.name,
       description: scenarioForm.value.description || `Cenário de teste: ${scenarioForm.value.name}`,
-      type: scenarioForm.value.type,
-      priority: scenarioForm.value.priority,
+      type: scenarioForm.value.type as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
+      priority: scenarioForm.value.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+      projectId: projectId,
       testadorId: scenarioForm.value.tester,
       aprovadorId: scenarioForm.value.approver,
-      projectId: projectId,
       tags: [],
       steps: []
     }
@@ -482,12 +505,15 @@ async function createScenario() {
     
     // Redirecionar de volta para a página de detalhes do pacote após 1.5s
     setTimeout(() => {
-      router.push(`/projects/${projectId}/packages/${packageId.value}`)
+      void router.push(`/projects/${projectId}/packages/${packageId.value}`)
     }, 1500)
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating scenario:', error)
-    errorMessage.value = error.message || 'Erro inesperado ao criar cenário'
+    const errorMsg = error && typeof error === 'object' && 'message' in error
+      ? (error as { message?: string }).message || 'Erro inesperado ao criar cenário'
+      : 'Erro inesperado ao criar cenário'
+    errorMessage.value = errorMsg
     showErrorDialog.value = true
   } finally {
     creatingScenario.value = false
@@ -496,7 +522,7 @@ async function createScenario() {
 
 // Lifecycle
 onMounted(() => {
-  loadMembers()
+  void loadMembers()
 })
 </script>
 

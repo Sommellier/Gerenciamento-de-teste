@@ -264,7 +264,6 @@ import {
   getProjectMembers,
   type ProjectMember
 } from '../services/project.service'
-import { createScenario } from '../services/scenario.service'
 
 // Composables
 const route = useRoute()
@@ -337,20 +336,27 @@ const priorityRules = [
 
 // Methods
 function goBack() {
-  router.push(`/projects/${projectId.value}`)
+  void router.push(`/projects/${projectId.value}`)
 }
 
 function goToProfile() {
-  router.push('/profile')
+  void router.push('/profile')
 }
 
 function getInitials(name: string) {
   if (!name) return '?'
-  const parts = name.split(' ')
+  const parts = name.split(' ').filter(p => p.length > 0)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase()
+    }
   }
-  return name.substring(0, 2).toUpperCase()
+  if (parts.length > 0 && parts[0] && parts[0].length > 0) {
+    return parts[0].substring(0, 2).toUpperCase()
+  }
+  return '?'
 }
 
 function getMemberColor(memberId: number) {
@@ -382,22 +388,21 @@ async function createScenario() {
     }
 
     // Preparar dados para a API
-    const scenarioData = {
-      title: scenarioForm.value.name,
-      description: `Cenário de teste: ${scenarioForm.value.name}`,
-      type: scenarioForm.value.type,
-      priority: scenarioForm.value.priority,
-      testadorId: scenarioForm.value.tester,
-      aprovadorId: scenarioForm.value.approver,
-      steps: [
-        {
-          action: 'Executar o cenário de teste',
-          expected: 'Cenário executado com sucesso'
-        }
-      ]
-    }
-
-    // Aqui você implementaria a chamada para a API
+    // TODO: Implementar chamada para a API quando o endpoint estiver disponível
+    // const scenarioData = {
+    //   title: scenarioForm.value.name,
+    //   description: `Cenário de teste: ${scenarioForm.value.name}`,
+    //   type: scenarioForm.value.type,
+    //   priority: scenarioForm.value.priority,
+    //   testadorId: scenarioForm.value.tester,
+    //   aprovadorId: scenarioForm.value.approver,
+    //   steps: [
+    //     {
+    //       action: 'Executar o cenário de teste',
+    //       expected: 'Cenário executado com sucesso'
+    //     }
+    //   ]
+    // }
     // await createScenario(projectId.value, scenarioData)
     
     // Mock: simular criação bem-sucedida
@@ -405,9 +410,12 @@ async function createScenario() {
     
     showSuccessDialog.value = true
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error creating scenario:', error)
-    errorMessage.value = error.message || 'Erro inesperado ao criar cenário'
+    const errorMsg = error instanceof Error 
+      ? error.message 
+      : 'Erro inesperado ao criar cenário'
+    errorMessage.value = errorMsg
     showErrorDialog.value = true
   } finally {
     creatingScenario.value = false
@@ -438,7 +446,7 @@ async function loadData() {
 
 // Lifecycle
 onMounted(() => {
-  loadData()
+  void loadData()
 })
 </script>
 

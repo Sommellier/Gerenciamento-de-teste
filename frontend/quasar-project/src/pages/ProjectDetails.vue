@@ -506,7 +506,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import VueApexCharts from 'vue3-apexcharts'
@@ -514,8 +514,7 @@ import {
   getProjectDetails, 
   getAvailableReleases,
   type ProjectDetails,
-  type ProjectMember,
-  type TestScenario
+  type ProjectMember
 } from '../services/project-details.service'
 
 // Composables
@@ -547,11 +546,6 @@ const roleOptions = [
   { label: 'Aprovador', value: 'APPROVER' }
 ]
 
-// Options
-const scenarioTypes = ['Functional', 'Regression', 'Smoke', 'E2E']
-const priorityOptions = ['Low', 'Medium', 'High', 'Critical']
-const environmentOptions = ['Dev', 'QA', 'Staging', 'Prod']
-
 // Computed
 const projectId = computed(() => Number(route.params.projectId))
 
@@ -566,30 +560,13 @@ const metrics = computed(() => {
   return result
 })
 
-const memberOptions = computed(() => {
-  return members.value.map(member => ({
-    label: member.name,
-    value: member.id,
-    email: member.email,
-    avatar: member.avatar
-  }))
-})
-
 // Navigation
-function goToCreateScenario() {
-  router.push(`/projects/${projectId.value}/create-scenario`)
-}
-
-function goToScenarios() {
-  router.push(`/projects/${projectId.value}/scenarios`)
-}
-
 function goToCreatePackage() {
-  router.push(`/projects/${projectId.value}/create-package`)
+  void router.push(`/projects/${projectId.value}/create-package`)
 }
 
 function goToPackages() {
-  router.push(`/projects/${projectId.value}/packages`)
+  void router.push(`/projects/${projectId.value}/packages`)
 }
 
 const totalPackages = computed(() => {
@@ -708,7 +685,7 @@ const priorityChartSeries = computed(() => {
   
   packages.forEach(pkg => {
     const priority = pkg.priority?.toUpperCase() as keyof typeof priorityCounts
-    if (priority && priorityCounts.hasOwnProperty(priority)) {
+    if (priority && priority in priorityCounts) {
       priorityCounts[priority]++
     }
   })
@@ -820,8 +797,13 @@ const monthlyChartOptions = computed(() => {
   const sortedMonths = Object.keys(monthlyData).sort()
   const monthLabels = sortedMonths.map(monthKey => {
     const [year, month] = monthKey.split('-')
+    if (!year || !month) return monthKey
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-    return `${monthNames[parseInt(month) - 1]} ${year}`
+    const monthIndex = parseInt(month) - 1
+    if (monthIndex >= 0 && monthIndex < monthNames.length) {
+      return `${monthNames[monthIndex]} ${year}`
+    }
+    return monthKey
   })
   
   return {
@@ -882,20 +864,29 @@ const monthlyChartOptions = computed(() => {
 })
 
 const successRateChartSeries = computed(() => {
-  // Usar as métricas do backend que já estão calculadas corretamente
-  if (!metrics.value) return []
+  if (!project.value?.testPackages) return []
   
-  // Aprovados = PASSED + APROVADO + CONCLUIDO (já somados no backend)
-  const approvedPackages = metrics.value.passed
+  const packages = project.value.testPackages
   
-  // Reprovados = FAILED + REPROVADO (já somados no backend)
-  const reprovedPackages = metrics.value.failed
+  // Calcular estatísticas dos pacotes baseado nos status reais
+  // Status possíveis: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED' | 'EM_TESTE' | 'CONCLUIDO' | 'REPROVADO' | 'APROVADO'
+  const approvedPackages = packages.filter(pkg => (pkg.status as string) === 'APROVADO').length
+  const reprovedPackages = packages.filter(pkg => (pkg.status as string) === 'REPROVADO').length
+  // Não executados são aqueles que não foram aprovados nem reprovados
+  const notExecutedPackages = packages.filter(pkg => {
+    const status = (pkg.status as string) || ''
+    return status !== 'APROVADO' && status !== 'REPROVADO'
+  }).length
   
-  // Não Executados = CREATED + EXECUTED + EM_TESTE (que ainda não foram aprovados/reprovados)
-  const notExecutedPackages = metrics.value.created + metrics.value.executed
+  console.log('Status dos pacotes:', {
+    total: packages.length,
+    approved: approvedPackages,
+    reproved: reprovedPackages,
+    notExecuted: notExecutedPackages,
+    packages: packages.map(p => ({ id: p.id, status: p.status }))
+  })
   
   // Retornar array simples para gráfico de pizza
-  // [Aprovados, Reprovados, Não Executados]
   return [approvedPackages, reprovedPackages, notExecutedPackages]
 })
 
@@ -911,7 +902,7 @@ const successRateChartOptions = computed(() => {
     colors: ['#10B981', '#EF4444', '#6B7280'],
     dataLabels: {
       enabled: true,
-      formatter: function (val: number, opts: any) {
+      formatter: function (val: number, opts: { seriesIndex: number }) {
         const labels = ['Aprovados', 'Reprovados', 'Não Executados']
         return labels[opts.seriesIndex] + ' (' + val.toFixed(1) + '%)'
       },
@@ -936,7 +927,7 @@ const successRateChartOptions = computed(() => {
     },
     tooltip: {
       y: {
-        formatter: function (val: number, opts: any) {
+        formatter: function (val: number, opts: { seriesIndex: number }) {
           const labels = ['Aprovados', 'Reprovados', 'Não Executados']
           return labels[opts.seriesIndex] + ': ' + val + ' pacotes'
         }
@@ -974,39 +965,36 @@ const filteredMembers = computed(() => {
 })
 
 const memberColumns = [
-  { name: 'avatar', label: '', field: 'avatar', align: 'left' },
-  { name: 'name', label: 'Nome', field: 'name', align: 'left' },
-  { name: 'email', label: 'Email', field: 'email', align: 'left' },
-  { name: 'role', label: 'Função', field: 'role', align: 'left' }
+  { name: 'avatar', label: '', field: 'avatar', align: 'left' as const },
+  { name: 'name', label: 'Nome', field: 'name', align: 'left' as const },
+  { name: 'email', label: 'Email', field: 'email', align: 'left' as const },
+  { name: 'role', label: 'Função', field: 'role', align: 'left' as const }
 ]
 
-// Validation rules
-const titleRules = [
-  (val: string) => !!val || 'Título é obrigatório',
-  (val: string) => val.length >= 3 || 'Título deve ter pelo menos 3 caracteres',
-  (val: string) => val.length <= 120 || 'Título deve ter no máximo 120 caracteres'
-]
-
-const typeRules = [
-  (val: string) => !!val || 'Tipo é obrigatório'
-]
-
-const priorityRules = [
-  (val: string) => !!val || 'Prioridade é obrigatória'
-]
+// Validation rules removed - not used
 
 // Methods
 function goBack() {
-  router.push('/projects')
+  void router.push('/projects')
 }
 
 function getInitials(nameOrEmail: string) {
   if (!nameOrEmail) return '?'
-  const parts = nameOrEmail.split(' ')
+  const parts = nameOrEmail.split(' ').filter(p => p.length > 0)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase()
+    }
   }
-  return nameOrEmail[0].toUpperCase()
+  if (parts.length > 0 && parts[0]) {
+    const firstPart = parts[0]
+    if (firstPart && firstPart.length > 0 && firstPart[0]) {
+      return firstPart[0].toUpperCase()
+    }
+  }
+  return '?'
 }
 
 function getAvatarUrl(avatar: string) {
@@ -1028,7 +1016,7 @@ function getRoleColor(role: string) {
 }
 
 // Member management functions
-async function addMember() {
+function addMember() {
   try {
     addingMember.value = true
     
@@ -1060,13 +1048,14 @@ async function addMember() {
     // await memberService.addMember(projectId.value, addMemberForm.value)
     
     // Mock: adicionar membro localmente
+    const emailParts = addMemberForm.value.email.split('@')
+    const mockName = emailParts[0] || addMemberForm.value.email
+    const roleValue = addMemberForm.value.role as 'OWNER' | 'ADMIN' | 'MANAGER' | 'TESTER' | 'APPROVER'
     const newMember: ProjectMember = {
       id: Date.now(),
-      name: addMemberForm.value.email.split('@')[0], // Mock name
+      name: mockName,
       email: addMemberForm.value.email,
-      role: addMemberForm.value.role,
-      avatar: null,
-      joinedAt: new Date().toISOString()
+      role: roleValue
     }
     
     members.value.push(newMember)
@@ -1080,10 +1069,17 @@ async function addMember() {
       message: 'Membro adicionado com sucesso!',
       position: 'top'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    console.error('Erro ao adicionar membro:', error)
+    interface ErrorWithMessage {
+      message?: string
+    }
+    const errorMessage = error && typeof error === 'object' && 'message' in error
+      ? (error as ErrorWithMessage).message || 'Erro ao adicionar membro'
+      : 'Erro ao adicionar membro'
     $q.notify({
       type: 'negative',
-      message: 'Erro ao adicionar membro: ' + error.message,
+      message: errorMessage,
       position: 'top'
     })
   } finally {
@@ -1177,30 +1173,6 @@ async function onReleaseChange() {
   await loadProjectDetails()
 }
 
-function getMemberInitials(member: any) {
-  const name = member.label || member.name || 'U'
-  const parts = name.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return name.substring(0, 2).toUpperCase()
-}
-
-function getMemberAvatarColor(member: any) {
-  const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
-  const name = member.label || member.name || 'user'
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return colors[Math.abs(hash) % colors.length]
-}
-
-// Função para recarregar dados
-const reloadData = () => {
-  loadProjectDetails()
-}
-
 // Watch para monitorar mudanças no project
 watch(project, (newProject) => {
   console.log('Project changed:', newProject)
@@ -1212,7 +1184,7 @@ watch(project, (newProject) => {
 
 // Lifecycle
 onMounted(() => {
-  loadProjectDetails()
+  void loadProjectDetails()
 })
 </script>
 

@@ -1,186 +1,185 @@
+<!-- Página de Edição de Projeto Moderna -->
 <template>
-  <q-page class="q-pa-none">
-    <!-- BG blur -->
-    <div class="hero" />
+  <div class="edit-project-page">
+    <!-- Background com gradiente animado -->
+    <div class="animated-bg">
+      <div class="gradient-orb orb-1"></div>
+      <div class="gradient-orb orb-2"></div>
+      <div class="gradient-orb orb-3"></div>
+    </div>
 
-    <!-- Glass container -->
-    <section class="glass-shell">
-      <div class="header-row">
-        <div class="header-left">
-          <q-btn 
-            flat 
-            round 
-            color="primary" 
-            icon="arrow_back" 
-            size="md"
-            @click="goBack"
-            class="back-btn"
-          >
-            <q-tooltip>Voltar aos projetos</q-tooltip>
-          </q-btn>
-          
-          <div class="title-wrap">
-            <q-avatar color="primary" text-color="white" size="40px" icon="edit" />
-            <div>
-              <div class="title">Editar Projeto</div>
-              <div class="subtitle">Atualize as informações do projeto</div>
+    <!-- Container principal -->
+    <main class="main-container">
+      <!-- Header moderno -->
+      <header class="page-header">
+        <div class="header-content">
+          <div class="header-left">
+            <button class="back-button" @click="goBack" aria-label="Voltar aos projetos">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            
+            <div class="title-section">
+              <div class="icon-wrapper">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 4H4A2 2 0 0 0 2 6V20A2 2 0 0 0 4 22H18A2 2 0 0 0 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M18.5 2.5C18.8978 2.10217 19.4374 1.87868 20 1.87868C20.5626 1.87868 21.1022 2.10217 21.5 2.5C21.8978 2.89782 22.1213 3.43739 22.1213 4C22.1213 4.56261 21.8978 5.10217 21.5 5.5L12 15L8 16L9 12L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="title-content">
+                <h1 class="page-title">Editar Projeto</h1>
+                <p class="page-subtitle">Atualize as informações do projeto</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div class="header-actions">
-          <q-btn 
-            color="primary" 
-            unelevated 
-            size="md" 
-            :loading="submitting" 
-            label="Salvar Alterações" 
-            @click="submitForm"
-            class="save-btn"
-          />
+          <div class="header-actions">
+            <button 
+              class="save-button"
+              @click="submitForm"
+              :disabled="submitting"
+              aria-label="Salvar alterações"
+            >
+              <svg v-if="!submitting" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H16L21 8V19A2 2 0 0 1 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div v-else class="loading-spinner"></div>
+              {{ submitting ? 'Salvando...' : 'Salvar Alterações' }}
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
       <!-- Loading state -->
       <div v-if="loading" class="loading-state">
-        <q-spinner-dots size="40px" color="primary" />
+        <div class="spinner"></div>
         <p>Carregando projeto...</p>
       </div>
 
-      <!-- Edit form -->
-      <div v-else class="edit-form">
-        <q-card flat bordered class="form-panel">
-          <q-card-section class="panel-head">
-            <q-icon name="description" size="22px" class="q-mr-sm" />
-            <div class="panel-title">Informações do Projeto</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <q-form ref="formRef" @submit.prevent="submitForm" class="q-gutter-md">
-              <q-input 
-                v-model="name" 
-                label="Nome do projeto" 
-                filled 
-                :maxlength="100" 
-                counter 
-                :rules="nameRules" 
-                lazy-rules
-                :disable="submitting"
-              >
-                <template #prepend><q-icon name="folder" /></template>
-              </q-input>
-
-              <q-input 
-                v-model="description" 
-                label="Descrição (opcional)" 
-                type="textarea" 
-                autogrow 
-                filled
-                :maxlength="500" 
-                counter
-                :disable="submitting"
-              >
-                <template #prepend><q-icon name="notes" /></template>
-              </q-input>
-
-              <q-banner v-if="name.trim().length < 2" class="hint" rounded dense inline-actions>
-                <template #avatar>
-                  <q-icon name="info" />
-                </template>
-                Mínimo de 2 caracteres. Permitidos: letras, números, espaço, "-", "_" e ".".
-              </q-banner>
-            </q-form>
-          </q-card-section>
-        </q-card>
-
-        <!-- Project info -->
-        <q-card flat bordered class="info-panel">
-          <q-card-section class="panel-head">
-            <q-icon name="info" size="22px" class="q-mr-sm" />
-            <div class="panel-title">Informações do Projeto</div>
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <div class="info-grid">
-              <div class="info-item">
-                <q-icon name="schedule" size="16px" class="q-mr-sm" />
-                <span class="info-label">Criado em:</span>
-                <span class="info-value">{{ formatDate(project?.createdAt) }}</span>
+      <!-- Conteúdo principal -->
+      <section v-else class="content-section">
+        <div class="content-grid">
+          <!-- Formulário de dados do projeto -->
+          <div class="form-card">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14 2H6A2 2 0 0 0 4 4V20A2 2 0 0 0 6 22H18A2 2 0 0 0 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
-              <div class="info-item">
-                <q-icon name="person" size="16px" class="q-mr-sm" />
-                <span class="info-label">Proprietário:</span>
-                <span class="info-value">Você</span>
-              </div>
-              <div class="info-item">
-                <q-icon name="update" size="16px" class="q-mr-sm" />
-                <span class="info-label">Última atualização:</span>
-                <span class="info-value">{{ formatDate(project?.updatedAt) }}</span>
-              </div>
+              <div class="card-title">Informações do Projeto</div>
             </div>
-          </q-card-section>
-        </q-card>
-
-        <!-- Members section -->
-        <q-card flat bordered class="members-panel">
-          <q-card-section class="panel-head">
-            <q-icon name="group" size="22px" class="q-mr-sm" />
-            <div class="panel-title">Membros do Projeto</div>
-            <q-spinner-dots v-if="loadingMembers" size="20px" color="primary" class="q-ml-auto" />
-          </q-card-section>
-          <q-separator />
-          <q-card-section>
-            <!-- Loading members -->
-            <div v-if="loadingMembers" class="loading-members">
-              <q-spinner-dots size="24px" color="primary" />
-              <p>Carregando membros...</p>
-            </div>
-
-            <!-- Empty state -->
-            <div v-else-if="members.length === 0" class="empty-members">
-              <q-icon name="group_off" size="48px" color="grey-5" />
-              <h4>Nenhum membro encontrado</h4>
-              <p>Este projeto ainda não possui membros além do proprietário.</p>
-            </div>
-
-            <!-- Members list -->
-            <div v-else class="members-list">
-              <div 
-                v-for="member in members" 
-                :key="member.id" 
-                class="member-item"
-              >
-                <div class="member-avatar">
-                  <q-avatar 
-                    :color="getMemberColor(member.role)" 
-                    text-color="white" 
-                    size="32px"
-                  >
-                    {{ getMemberInitials(member.name || member.email) }}
-                  </q-avatar>
-                </div>
-                <div class="member-info">
-                  <div class="member-name">{{ member.name || member.email }}</div>
-                  <div class="member-email" v-if="member.name">{{ member.email }}</div>
-                </div>
-                <div class="member-role">
-                  <q-chip 
-                    :color="getRoleColor(member.role)" 
-                    text-color="white" 
-                    size="sm"
-                    :label="getRoleLabel(member.role)"
+            
+            <div class="card-content">
+              <form @submit.prevent="submitForm" class="project-form">
+                <div class="form-group">
+                  <label class="form-label">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22 19A2 2 0 0 1 20 21H4A2 2 0 0 1 2 19V5A2 2 0 0 1 4 3H8L12 7H20A2 2 0 0 1 22 9V19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Nome do Projeto
+                  </label>
+                  <input
+                    v-model="name"
+                    type="text"
+                    class="form-input"
+                    placeholder="Digite o nome do projeto"
+                    maxlength="100"
+                    required
+                    :disabled="submitting"
                   />
+                  <div class="input-counter">{{ name.length }}/100</div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M14 2H6A2 2 0 0 0 4 4V20A2 2 0 0 0 6 22H18A2 2 0 0 0 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Descrição (Opcional)
+                  </label>
+                  <textarea
+                    v-model="description"
+                    class="form-textarea"
+                    placeholder="Descreva o objetivo do projeto..."
+                    maxlength="500"
+                    rows="4"
+                    :disabled="submitting"
+                  ></textarea>
+                  <div class="input-counter">{{ description.length }}/500</div>
+                </div>
+
+                <!-- Hint para validação -->
+                <div v-if="name.trim().length < 2" class="form-hint">
+                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Mínimo de 2 caracteres. Permitidos: letras, números, espaço, "-", "_" e ".".
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Informações do Projeto (Read-only) -->
+          <div class="info-card">
+            <div class="card-header">
+              <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                  <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="card-title">Informações do Projeto</div>
+            </div>
+
+            <div class="card-content">
+              <div class="info-grid">
+                <div class="info-item">
+                  <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="info-label">Criado em:</span>
+                  <span class="info-value">{{ formatDate(project?.createdAt) }}</span>
+                </div>
+                <div class="info-item">
+                  <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 21V19A4 4 0 0 0 16 15H8A4 4 0 0 0 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="info-label">Proprietário:</span>
+                  <span class="info-value">Você</span>
+                </div>
+                <div class="info-item">
+                  <svg class="info-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <polyline points="23,6 13.5,15.5 8.5,10.5 1,18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="17,6 23,6 23,12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="info-label">Última atualização:</span>
+                  <span class="info-value">{{ formatDate(project?.updatedAt) }}</span>
                 </div>
               </div>
             </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </section>
+          </div>
+        </div>
+      </section>
+    </main>
 
     <!-- Success dialog -->
     <q-dialog v-model="successDialog">
-      <q-card>
+      <q-card class="dialog-card">
         <q-card-section class="row items-center q-gutter-sm">
           <q-icon name="check_circle" color="positive" size="32px" />
           <div class="text-h6">Projeto atualizado!</div>
@@ -194,7 +193,7 @@
 
     <!-- Error dialog -->
     <q-dialog v-model="errorDialog">
-      <q-card>
+      <q-card class="dialog-card">
         <q-card-section class="row items-center q-gutter-sm">
           <q-icon name="error" color="negative" size="32px" />
           <div class="text-h6">Falha ao atualizar projeto</div>
@@ -205,7 +204,7 @@
         </q-card-actions>
       </q-card>
     </q-dialog>
-  </q-page>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -218,17 +217,22 @@ const router = useRouter()
 const route = useRoute()
 const $q = useQuasar()
 
+// Interfaces
+interface Project {
+  id: number
+  name: string
+  description?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
 // State
-const project = ref<any>(null)
+const project = ref<Project | null>(null)
 const loading = ref(false)
 const submitting = ref(false)
 const name = ref('')
 const description = ref('')
-const formRef = ref<any>(null)
-
-// Members state
-const members = ref<any[]>([])
-const loadingMembers = ref(false)
+const formRef = ref<{ validate?: () => Promise<boolean> } | null>(null)
 
 // Dialogs
 const successDialog = ref(false)
@@ -236,35 +240,28 @@ const successText = ref('')
 const errorDialog = ref(false)
 const errorText = ref('')
 
-// Validation rules
-const nameRegex = /^[\p{L}\p{N}\s._-]+$/u
-const nameRules: Array<(v: string) => true | string> = [
-  (v: string) => !!v || 'Nome é obrigatório',
-  (v: string) => v.length >= 2 || 'Mínimo de 2 caracteres',
-  (v: string) => v.length <= 100 || 'Máximo de 100 caracteres',
-  (v: string) => nameRegex.test(v) || 'Caracteres inválidos'
-]
-
 // Navigation
 function goBack() {
-  router.push('/projects')
+  void router.push('/projects')
 }
 
 // Load project data
 async function loadProject() {
   loading.value = true
   try {
-    const projectId = route.params.id
-    const response = await api.get(`/projects/${projectId}`)
-    project.value = response.data
-    
-    // Populate form
-    name.value = project.value.name || ''
-    description.value = project.value.description || ''
-    
-    // Load members
-    await loadMembers()
-  } catch (err: any) {
+    const projectId = String(route.params.id ?? '')
+    if (!projectId) {
+      throw new Error('ID do projeto não fornecido')
+    }
+    const response = await api.get<Project>(`/projects/${projectId}`)
+    if (response.data) {
+      project.value = response.data
+      
+      // Populate form
+      name.value = project.value.name || ''
+      description.value = project.value.description || ''
+    }
+  } catch (err: unknown) {
     console.error('Error loading project:', err)
     $q.notify({
       type: 'negative',
@@ -277,37 +274,30 @@ async function loadProject() {
   }
 }
 
-// Load project members
-async function loadMembers() {
-  if (!project.value) return
-  
-  loadingMembers.value = true
-  try {
-    const projectId = route.params.id
-    const response = await api.get(`/projects/${projectId}/members`)
-    members.value = response.data.items || []
-  } catch (err: any) {
-    console.error('Error loading members:', err)
-    // Não mostra erro para membros, apenas log
-  } finally {
-    loadingMembers.value = false
-  }
-}
-
 // Submit form
 async function submitForm() {
   if (!project.value) return
   
-  const ok = await formRef.value?.validate?.()
-  if (!ok) return
+  if (formRef.value?.validate) {
+    const ok = await formRef.value.validate()
+    if (!ok) return
+  }
 
   submitting.value = true
   try {
-    const projectId = route.params.id
-    const response = await api.put(`/projects/${projectId}`, {
+    const projectId = String(route.params.id ?? '')
+    if (!projectId) {
+      throw new Error('ID do projeto não fornecido')
+    }
+    interface UpdateProjectData {
+      name: string
+      description: string | null
+    }
+    const updateData: UpdateProjectData = {
       name: name.value.trim(),
       description: description.value.trim() || null
-    })
+    }
+    await api.put<Project>(`/projects/${projectId}`, updateData)
 
     $q.notify({
       type: 'positive',
@@ -319,9 +309,21 @@ async function submitForm() {
     
     successText.value = 'Projeto atualizado com sucesso!'
     successDialog.value = true
-  } catch (err: any) {
-    const status = err?.response?.status
-    const rawMsg = err?.response?.data?.message || err?.response?.data?.error
+  } catch (err: unknown) {
+    interface AxiosError {
+      response?: {
+        status?: number
+        data?: {
+          message?: string
+          error?: string
+        }
+      }
+    }
+    const axiosError = err && typeof err === 'object' && 'response' in err
+      ? err as AxiosError
+      : undefined
+    const status = axiosError?.response?.status
+    const rawMsg = axiosError?.response?.data?.message || axiosError?.response?.data?.error
     const msg = getCustomErrorMessage(status, rawMsg)
     
     $q.notify({
@@ -390,7 +392,7 @@ function getCustomErrorMessage(status: number | undefined, rawMsg: string | unde
 }
 
 // Utility functions
-function formatDate(dateString: string) {
+function formatDate(dateString: string | undefined) {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
   return date.toLocaleDateString('pt-BR', {
@@ -402,250 +404,474 @@ function formatDate(dateString: string) {
   })
 }
 
-// Member utility functions
-function getMemberInitials(nameOrEmail: string) {
-  if (!nameOrEmail) return '?'
-  const parts = nameOrEmail.split(' ')
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return nameOrEmail[0].toUpperCase()
-}
-
-function getMemberColor(role: string) {
-  switch (role) {
-    case 'OWNER': return 'purple'
-    case 'MANAGER': return 'blue'
-    case 'TESTER': return 'green'
-    case 'APPROVER': return 'orange'
-    default: return 'grey'
-  }
-}
-
-function getRoleColor(role: string) {
-  switch (role) {
-    case 'OWNER': return 'purple'
-    case 'MANAGER': return 'blue'
-    case 'TESTER': return 'green'
-    case 'APPROVER': return 'orange'
-    default: return 'grey'
-  }
-}
-
-function getRoleLabel(role: string) {
-  switch (role) {
-    case 'OWNER': return 'Proprietário'
-    case 'MANAGER': return 'Gerente'
-    case 'TESTER': return 'Testador'
-    case 'APPROVER': return 'Aprovador'
-    default: return role
-  }
-}
-
 // Lifecycle
 onMounted(() => {
-  loadProject()
+  void loadProject()
 })
 </script>
 
 <style scoped>
-.hero {
-  position: fixed;
-  inset: 0;
-  background-image: url('https://images.unsplash.com/photo-1519389950473-47ba0277781c?q=80&w=1920&auto=format&fit=crop');
-  background-size: cover;
-  background-position: center;
-  filter: blur(6px) saturate(110%);
-  transform: scale(1.05);
-  z-index: 0;
+/* ===== Reset e Base ===== */
+* {
+  box-sizing: border-box;
 }
 
-.glass-shell {
+.edit-project-page {
+  min-height: 100vh;
   position: relative;
-  z-index: 1;
-  width: min(800px, 94vw);
-  margin: 56px auto;
-  padding: 18px 18px 22px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, .58);
-  border: 1px solid rgba(255, 255, 255, .7);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, .18),
-    inset 0 1px 0 rgba(255, 255, 255, .7);
-  backdrop-filter: blur(16px) saturate(130%);
-  -webkit-backdrop-filter: blur(16px) saturate(130%);
+  background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
 }
 
-.header-row {
+/* ===== Background Animado ===== */
+.animated-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.7;
+  animation: float 20s ease-in-out infinite;
+}
+
+.orb-1 {
+  width: 300px;
+  height: 300px;
+  background: linear-gradient(45deg, #ff6b6b, #feca57);
+  top: 10%;
+  left: 10%;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 200px;
+  height: 200px;
+  background: linear-gradient(45deg, #48dbfb, #0abde3);
+  top: 60%;
+  right: 20%;
+  animation-delay: -7s;
+}
+
+.orb-3 {
+  width: 250px;
+  height: 250px;
+  background: linear-gradient(45deg, #ff9ff3, #f368e0);
+  bottom: 20%;
+  left: 50%;
+  animation-delay: -14s;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-30px) rotate(120deg);
+  }
+  66% {
+    transform: translateY(30px) rotate(240deg);
+  }
+}
+
+/* ===== Container Principal ===== */
+.main-container {
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* ===== Header ===== */
+.page-header {
+  margin-bottom: 2rem;
+}
+
+.header-content {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 14px 14px 6px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  padding: 1.5rem 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
-.back-btn {
-  transition: all 0.2s ease;
-}
-
-.back-btn:hover {
-  transform: translateX(-2px);
-  background-color: rgba(25, 118, 210, 0.08);
-}
-
-.title-wrap {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 12px;
+.back-button {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: white;
 }
 
-.title {
-  font-size: 24px;
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.back-button svg {
+  width: 20px;
+  height: 20px;
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.icon-wrapper {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.icon-wrapper svg {
+  width: 24px;
+  height: 24px;
+}
+
+.title-content h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.title-content p {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+}
+
+/* ===== Header Actions ===== */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.save-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
   font-weight: 600;
-  color: #1a1a1a;
-  margin: 0;
 }
 
-.subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
+.save-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
 }
 
-.save-btn {
-  font-weight: 500;
+.save-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
+.save-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.loading-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== Loading State ===== */
 .loading-state {
   text-align: center;
   padding: 60px 20px;
-  color: #666;
+  color: white;
 }
 
-.edit-form {
+.loading-state .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.loading-state p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+}
+
+/* ===== Content Section ===== */
+.content-section {
+  margin-bottom: 2rem;
+}
+
+.content-grid {
   display: grid;
-  gap: 20px;
-  padding: 0 14px 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
 }
 
-.form-panel, .info-panel {
-  border-radius: 12px;
+/* ===== Cards ===== */
+.form-card,
+.info-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
 }
 
-.panel-head {
+.card-header {
   display: flex;
   align-items: center;
-  padding: 16px 20px;
-  background: rgba(0, 0, 0, 0.02);
+  gap: 0.75rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.panel-title {
-  font-size: 16px;
+.card-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.card-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.card-title {
+  font-size: 1.1rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: white;
 }
 
+.card-content {
+  padding: 1.5rem;
+}
+
+/* ===== Form ===== */
+.project-form {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.form-group {
+  position: relative;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.form-label svg {
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: white;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: rgba(79, 172, 254, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+}
+
+.form-input:disabled,
+.form-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.input-counter {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.form-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(79, 172, 254, 0.15);
+  border: 1px solid rgba(79, 172, 254, 0.3);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.85rem;
+}
+
+.form-hint svg {
+  width: 20px;
+  height: 20px;
+  color: #4facfe;
+  flex-shrink: 0;
+}
+
+/* ===== Info Grid ===== */
 .info-grid {
   display: grid;
-  gap: 12px;
+  gap: 1rem;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  padding: 8px 0;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+}
+
+.info-icon {
+  width: 20px;
+  height: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
 }
 
 .info-label {
   font-weight: 500;
-  color: #666;
-  margin-right: 8px;
-  min-width: 120px;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 140px;
+  font-size: 0.9rem;
 }
 
 .info-value {
-  color: #1a1a1a;
+  color: white;
+  font-size: 0.9rem;
 }
 
-.hint {
-  background: rgba(25, 118, 210, 0.08);
-  border-left: 4px solid #1976d2;
+/* ===== Dialog ===== */
+.dialog-card {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
 }
 
-.members-panel {
-  border-radius: 12px;
-  overflow: hidden;
+/* ===== Responsividade ===== */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 1rem 0.5rem;
+  }
+  
+  .header-content {
+    padding: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .header-left {
+    width: 100%;
+  }
+  
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .card-content {
+    padding: 1rem;
+  }
 }
 
-.loading-members {
-  text-align: center;
-  padding: 20px;
-  color: #666;
-}
-
-.empty-members {
-  text-align: center;
-  padding: 40px 20px;
-  color: #666;
-}
-
-.empty-members h4 {
-  margin: 16px 0 8px 0;
-  color: #333;
-}
-
-.empty-members p {
-  margin: 0;
-  font-size: 14px;
-}
-
-.members-list {
-  display: grid;
-  gap: 12px;
-}
-
-.member-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.02);
-  transition: background-color 0.2s ease;
-}
-
-.member-item:hover {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.member-avatar {
-  flex-shrink: 0;
-}
-
-.member-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.member-name {
-  font-weight: 500;
-  color: #1a1a1a;
-  margin-bottom: 2px;
-}
-
-.member-email {
-  font-size: 12px;
-  color: #666;
-}
-
-.member-role {
-  flex-shrink: 0;
+@media (max-width: 480px) {
+  .title-content h1 {
+    font-size: 1.5rem;
+  }
+  
+  .save-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+  }
 }
 </style>

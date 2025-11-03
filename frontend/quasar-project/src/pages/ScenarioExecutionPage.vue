@@ -20,7 +20,7 @@
             </q-chip>
             <div class="responsible" v-if="scenario?.testador">
               <q-avatar size="24px" color="primary">
-                {{ getInitials(scenario.testador.name) }}
+                {{ getInitials(scenario.testador.name || '') }}
               </q-avatar>
               <span>{{ scenario.testador.name }}</span>
             </div>
@@ -133,7 +133,7 @@
           >
             <q-item-section avatar>
               <q-avatar
-                :color="getStepStatusColor(step.status)"
+                :color="getStepStatusColor(step.status || 'PENDING')"
                 text-color="white"
                 size="32px"
               >
@@ -183,7 +183,7 @@
                 flat
                 icon="chevron_right"
                 label="Próxima"
-                icon-right
+                icon-right="chevron_right"
                 @click="nextStep"
                 :disable="currentStepIndex === totalSteps - 1"
               />
@@ -208,7 +208,7 @@
                 <q-icon name="check_circle" size="24px" color="positive" />
                 <h3>Resultado Esperado</h3>
               </div>
-              <div class="section-content" v-html="currentStep.expected"></div>
+              <div class="section-content" v-html="currentStep.expected || ''"></div>
             </q-card-section>
           </q-card>
 
@@ -220,7 +220,8 @@
                 <h3>Resultado Obtido</h3>
               </div>
               <q-editor
-                v-model="currentStep.actualResult"
+                :model-value="currentStep?.actualResult || ''"
+                @update:model-value="(val: string) => { if (currentStep) currentStep.actualResult = val }"
                 :dense="false"
                 :readonly="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                 :toolbar="[
@@ -319,7 +320,7 @@
                   color="primary"
                   icon="add"
                   label="Adicionar Evidência"
-                  @click="$refs.fileInput.click()"
+                  @click="fileInput?.click()"
                   :disable="executionStatus === 'COMPLETED' || executionStatus === 'FAILED'"
                   class="add-attachment-btn"
                 />
@@ -346,14 +347,14 @@
                 <div v-if="currentStep.comments && currentStep.comments.length > 0" class="comments-list">
                   <div v-for="comment in currentStep.comments" :key="comment.id" class="comment-item">
                     <q-avatar size="32px" color="primary">
-                      {{ getInitials(comment.user.name) }}
+                      {{ getInitials(comment.user.name || '') }}
                     </q-avatar>
                     <div class="comment-content">
                       <div class="comment-header">
-                        <strong>{{ comment.user.name }}</strong>
-                        <span class="comment-date">{{ formatDate(comment.createdAt) }}</span>
+                        <strong>{{ comment.user.name || 'Desconhecido' }}</strong>
+                        <span class="comment-date">{{ formatDate(comment.createdAt || '') }}</span>
                       </div>
-                      <p>{{ comment.text }}</p>
+                      <p>{{ comment.text || '' }}</p>
                     </div>
                   </div>
                 </div>
@@ -379,7 +380,7 @@
                   <!-- Mention Suggestions -->
                   <q-menu
                     v-model="showMentionMenu"
-                    :target="mentionMenuTarget"
+                    :target="mentionMenuTarget || false"
                     anchor="bottom left"
                     self="top left"
                   >
@@ -392,7 +393,7 @@
                       >
                         <q-item-section avatar>
                           <q-avatar size="32px" color="primary">
-                            {{ getInitials(member.name) }}
+                            {{ getInitials(member.name || member.email || '') }}
                           </q-avatar>
                         </q-item-section>
                         <q-item-section>
@@ -508,32 +509,57 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify, useQuasar } from 'quasar'
-import { scenarioService } from '../services/scenario.service'
-import { getProjectMembers } from '../services/project-details.service'
-import { executionService } from '../services/execution.service'
+import { scenarioService, type TestScenario, type ScenarioStep, type CreateScenarioData } from '../services/scenario.service'
+import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
+import { executionService, type Bug, type ExecutionHistory, type StepComment, type StepAttachment } from '../services/execution.service'
 
 const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 
+// Interfaces para tipos expandidos
+interface ExtendedStep extends ScenarioStep {
+  id: number
+  status?: 'PENDING' | 'PASSED' | 'FAILED' | 'BLOCKED'
+  actualResult?: string
+  attachments?: StepAttachment[]
+  comments?: StepComment[]
+}
+
+interface ExtendedScenario extends Omit<TestScenario, 'status' | 'steps'> {
+  testador?: {
+    id: number
+    name: string
+    email: string
+  }
+  steps: ExtendedStep[]
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'APPROVED' | 'REPROVED'
+}
+
+// Tipo para atualização de cenário que inclui status
+interface UpdateScenarioData {
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED'
+}
+
 // State
 const loading = ref(false)
-const scenario = ref<any>(null)
+const scenario = ref<ExtendedScenario | null>(null)
 const currentStepIndex = ref(0)
-const executionStatus = ref('NOT_STARTED') // NOT_STARTED, IN_PROGRESS, COMPLETED, FAILED
-const steps = ref<any[]>([])
+const executionStatus = ref<'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'>('NOT_STARTED')
+const steps = ref<ExtendedStep[]>([])
 const newComment = ref('')
 const showBugDialog = ref(false)
 const creatingBug = ref(false)
-const projectMembers = ref<any[]>([])
+const projectMembers = ref<ProjectMember[]>([])
 const showMentionMenu = ref(false)
-const mentionMenuTarget = ref<any>(null)
+const mentionMenuTarget = ref<HTMLElement | null>(null)
 const mentionQuery = ref('')
 const mentionStartPos = ref(0)
 const loadingComments = ref(false)
 const uploadingFile = ref(false)
-const bugs = ref<any[]>([])
-const executionHistory = ref<any[]>([])
+const bugs = ref<Bug[]>([])
+const executionHistory = ref<ExecutionHistory[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const bugForm = ref({
   title: '',
@@ -573,17 +599,17 @@ const filteredMembers = computed(() => {
 
 // Methods
 function goBack() {
-  const projectId = route.params.projectId
-  const packageId = route.params.packageId
-  const scenarioId = route.params.scenarioId
-  router.push(`/projects/${projectId}/packages/${packageId}/scenarios/${scenarioId}`)
+  const projectId = String(route.params.projectId ?? '')
+  const packageId = String(route.params.packageId ?? '')
+  const scenarioId = String(route.params.scenarioId ?? '')
+  void router.push(`/projects/${projectId}/packages/${packageId}/scenarios/${scenarioId}`)
 }
 
 function goBackToPackage() {
-  const projectId = route.params.projectId
-  const packageId = route.params.packageId
+  const projectId = String(route.params.projectId ?? '')
+  const packageId = String(route.params.packageId ?? '')
   // Voltar para a página do pacote após concluir a execução
-  router.push(`/projects/${projectId}/packages/${packageId}`)
+  void router.push(`/projects/${projectId}/packages/${packageId}`)
 }
 
 async function loadScenario() {
@@ -600,61 +626,81 @@ async function loadScenario() {
       executionService.getHistory(scenarioId).catch(() => [])
     ])
     
-    scenario.value = scenarioResponse.scenario
+    scenario.value = scenarioResponse.scenario as ExtendedScenario
     projectMembers.value = membersData
     bugs.value = bugsData
     executionHistory.value = historyData
     
     // Inicializar steps com status e actualResult
-    steps.value = (scenario.value.steps || []).map((step: any) => ({
-      ...step,
-      status: step.status || 'PENDING',
-      actualResult: step.actualResult || '',
-      attachments: [],
-      comments: []
-    }))
-    
-    // Carregar comentários e anexos da primeira etapa
-    if (steps.value.length > 0) {
-      await loadStepData(steps.value[0].id, 0)
+    if (scenario.value && scenario.value.steps) {
+      steps.value = scenario.value.steps.map((step): ExtendedStep => ({
+        ...step,
+        id: step.id || 0,
+        status: (step as ExtendedStep).status || 'PENDING',
+        actualResult: (step as ExtendedStep).actualResult || '',
+        attachments: [],
+        comments: []
+      }))
+      
+      // Carregar comentários e anexos da primeira etapa
+      if (steps.value.length > 0 && steps.value[0]?.id) {
+        await loadStepData(steps.value[0].id, 0)
+      }
+    } else {
+      steps.value = []
     }
     
     // Determinar status da execução baseado PRIMARIAMENTE no status do cenário
     // O status do cenário no backend é a fonte de verdade
-    
-    // Primeiro: verificar status concluído
-    if (scenario.value.status === 'PASSED' || scenario.value.status === 'FAILED' || 
-        scenario.value.status === 'APPROVED' || scenario.value.status === 'REPROVED') {
-      executionStatus.value = scenario.value.status === 'FAILED' || scenario.value.status === 'REPROVED' 
-        ? 'FAILED' 
-        : 'COMPLETED'
-    } 
-    // Segundo: verificar se está em execução (prioridade ao status EXECUTED do cenário)
-    else if (scenario.value.status === 'EXECUTED') {
-      // Se o cenário tem status EXECUTED, está em progresso, independente das etapas
-      executionStatus.value = 'IN_PROGRESS'
-    }
-    // Terceiro: verificar pelas etapas (caso o status do cenário não esteja atualizado)
-    else {
-      const hasCompletedSteps = steps.value.some(s => s.status === 'PASSED' || s.status === 'FAILED' || s.status === 'BLOCKED')
-      const allStepsCompleted = steps.value.length > 0 && steps.value.every(s => s.status && s.status !== 'PENDING')
-      const hasExecutedSteps = steps.value.some(s => s.status && s.status !== 'PENDING')
+    if (scenario.value) {
+      const scenarioStatus = scenario.value.status
       
-      if (allStepsCompleted) {
-        executionStatus.value = 'COMPLETED'
-      } else if (hasCompletedSteps || hasExecutedSteps) {
-        // Se há etapas executadas mas o cenário não está marcado como EXECUTED, ainda está em progresso
+      // Primeiro: verificar status concluído
+      if (scenarioStatus === 'PASSED' || scenarioStatus === 'FAILED' || 
+          scenarioStatus === 'APPROVED' || scenarioStatus === 'REPROVED') {
+        executionStatus.value = scenarioStatus === 'FAILED' || scenarioStatus === 'REPROVED' 
+          ? 'FAILED' 
+          : 'COMPLETED'
+      } 
+      // Segundo: verificar se está em execução (prioridade ao status EXECUTED do cenário)
+      else if (scenarioStatus === 'EXECUTED') {
+        // Se o cenário tem status EXECUTED, está em progresso, independente das etapas
         executionStatus.value = 'IN_PROGRESS'
-      } else {
-        // Cenário criado e nenhuma etapa foi executada ainda
-        executionStatus.value = 'NOT_STARTED'
+      }
+      // Terceiro: verificar pelas etapas (caso o status do cenário não esteja atualizado)
+      else {
+        const hasCompletedSteps = steps.value.some(s => s.status === 'PASSED' || s.status === 'FAILED' || s.status === 'BLOCKED')
+        const allStepsCompleted = steps.value.length > 0 && steps.value.every(s => s.status && s.status !== 'PENDING')
+        const hasExecutedSteps = steps.value.some(s => s.status && s.status !== 'PENDING')
+        
+        if (allStepsCompleted) {
+          executionStatus.value = 'COMPLETED'
+        } else if (hasCompletedSteps || hasExecutedSteps) {
+          // Se há etapas executadas mas o cenário não está marcado como EXECUTED, ainda está em progresso
+          executionStatus.value = 'IN_PROGRESS'
+        } else {
+          // Cenário criado e nenhuma etapa foi executada ainda
+          executionStatus.value = 'NOT_STARTED'
+        }
+      }
+    } else {
+      executionStatus.value = 'NOT_STARTED'
+    }
+  } catch (err: unknown) {
+    console.error('Erro ao carregar cenário:', err)
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
       }
     }
-  } catch (err: any) {
-    console.error('Erro ao carregar cenário:', err)
+    const axiosError = err && typeof err === 'object' && 'response' in err
+      ? err as AxiosError
+      : undefined
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao carregar cenário'
+      message: axiosError?.response?.data?.message || 'Erro ao carregar cenário'
     })
   } finally {
     loading.value = false
@@ -682,7 +728,7 @@ async function loadStepData(stepId: number, stepIndex: number) {
         steps.value[stepIndex].status = 'PENDING'
       }
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao carregar dados da etapa:', err)
   } finally {
     loadingComments.value = false
@@ -702,8 +748,8 @@ async function startExecution() {
     
     // Atualizar status do cenário no backend para "Em Execução"
     await scenarioService.updateScenario(scenarioId, {
-      status: 'EXECUTED' as any
-    })
+      status: 'EXECUTED'
+    } as UpdateScenarioData & Partial<CreateScenarioData>)
     
     // Atualizar status no objeto do cenário localmente
     if (scenario.value) {
@@ -728,7 +774,7 @@ async function startExecution() {
       type: 'positive',
       message: 'Execução iniciada!'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao iniciar execução:', err)
     // Reverter status em caso de erro
     executionStatus.value = 'NOT_STARTED'
@@ -750,7 +796,6 @@ async function finishExecution() {
     
     // Determinar status final baseado nas etapas
     const hasFailedSteps = steps.value.some(s => s.status === 'FAILED')
-    const allApproved = steps.value.every(s => s.status === 'PASSED')
     const hasPendingSteps = steps.value.some(s => !s.status || s.status === 'PENDING')
     
     if (hasPendingSteps) {
@@ -767,7 +812,7 @@ async function finishExecution() {
     // Atualizar status do cenário no backend
     await scenarioService.updateScenario(scenarioId, {
       status: finalStatus
-    })
+    } as UpdateScenarioData & Partial<CreateScenarioData>)
     
     // Atualizar status local
     executionStatus.value = hasFailedSteps ? 'FAILED' : 'COMPLETED'
@@ -805,7 +850,7 @@ async function finishExecution() {
       ],
       timeout: 5000
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao concluir execução:', err)
     Notify.create({
       type: 'negative',
@@ -843,10 +888,6 @@ async function restartExecution() {
         ok: {
           label: 'Reexecutar',
           color: 'positive'
-        },
-        cancel: {
-          label: 'Cancelar',
-          flat: true
         }
       }).onOk(() => resolve(true)).onCancel(() => resolve(false))
     })
@@ -877,8 +918,8 @@ async function restartExecution() {
     
     // Atualizar status do cenário no backend para EXECUTED (em execução)
     await scenarioService.updateScenario(scenarioId, {
-      status: 'EXECUTED' as any
-    })
+      status: 'EXECUTED'
+    } as UpdateScenarioData & Partial<CreateScenarioData>)
     
     // Atualizar status local
     executionStatus.value = 'IN_PROGRESS'
@@ -900,7 +941,7 @@ async function restartExecution() {
       type: 'positive',
       message: 'Cenário reiniciado! Você pode executar novamente.'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao reiniciar execução:', err)
     Notify.create({
       type: 'negative',
@@ -923,7 +964,7 @@ async function setStepStatus(status: string) {
   }
   if (currentStep.value) {
     const previousStatus = currentStep.value.status
-    currentStep.value.status = status
+    currentStep.value.status = status as 'PENDING' | 'PASSED' | 'FAILED' | 'BLOCKED'
     
     try {
       const scenarioId = Number(route.params.scenarioId)
@@ -936,9 +977,9 @@ async function setStepStatus(status: string) {
       )
       
       // Atualizar também no array de steps
-      const stepIndex = steps.value.findIndex(s => s.id === currentStep.value.id)
-      if (stepIndex !== -1) {
-        steps.value[stepIndex].status = status
+      const stepIndex = steps.value.findIndex(s => s.id === currentStep.value?.id)
+      if (stepIndex !== -1 && currentStep.value && steps.value[stepIndex]) {
+        steps.value[stepIndex].status = status as 'PENDING' | 'PASSED' | 'FAILED' | 'BLOCKED'
       }
       
       // Se a primeira etapa foi marcada como concluída/reprovada/bloqueada, a execução já iniciou
@@ -949,8 +990,8 @@ async function setStepStatus(status: string) {
         if (scenario.value && scenario.value.status === 'CREATED') {
           try {
             await scenarioService.updateScenario(scenarioId, {
-              status: 'EXECUTED' as any
-            })
+              status: 'EXECUTED'
+            } as UpdateScenarioData & Partial<CreateScenarioData>)
             scenario.value.status = 'EXECUTED'
           } catch (err) {
             console.error('Erro ao atualizar status do cenário:', err)
@@ -980,20 +1021,24 @@ async function setStepStatus(status: string) {
         position: 'top',
         timeout: 1500
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao salvar status da etapa:', err)
       // Reverter mudança em caso de erro
-      currentStep.value.status = previousStatus
+      if (currentStep.value && previousStatus) {
+        currentStep.value.status = previousStatus
+      }
       Notify.create({
         type: 'negative',
         message: 'Erro ao salvar status da etapa'
       })
     }
     
-    if (status === 'FAILED') {
+    if (status === 'FAILED' && currentStep.value) {
       // Pré-preencher formulário de bug
-      bugForm.value.title = `Falha na Etapa ${currentStepIndex.value + 1}: ${currentStep.value.action.substring(0, 50)}`
-      bugForm.value.description = `Ação: ${currentStep.value.action}\n\nResultado Esperado: ${currentStep.value.expected}\n\nProblema encontrado: `
+      const action = currentStep.value.action || ''
+      const expected = currentStep.value.expected || ''
+      bugForm.value.title = `Falha na Etapa ${currentStepIndex.value + 1}: ${action.substring(0, 50)}`
+      bugForm.value.description = `Ação: ${action}\n\nResultado Esperado: ${expected}\n\nProblema encontrado: `
       bugForm.value.relatedStep = currentStep.value.id
       bugForm.value.attachments = []
       showBugDialog.value = true
@@ -1006,7 +1051,7 @@ async function setStepStatus(status: string) {
   }
 }
 
-async function handleFileUpload(event: any) {
+async function handleFileUpload(event: Event) {
   // Bloquear upload se a execução estiver concluída
   if (executionStatus.value === 'COMPLETED' || executionStatus.value === 'FAILED') {
     Notify.create({
@@ -1016,7 +1061,13 @@ async function handleFileUpload(event: any) {
     })
     return
   }
-  const files = Array.from(event.target.files || []) as File[]
+  
+  const target = event.target as HTMLInputElement
+  if (!target || !target.files || !currentStep.value) {
+    return
+  }
+  
+  const files = Array.from(target.files)
   
   for (const file of files) {
     // Validar tipo
@@ -1042,6 +1093,14 @@ async function handleFileUpload(event: any) {
     uploadingFile.value = true
     
     try {
+      if (!currentStep.value?.id) {
+        Notify.create({
+          type: 'negative',
+          message: 'Erro: etapa não encontrada'
+        })
+        continue
+      }
+      
       const attachment = await executionService.uploadStepAttachment(currentStep.value.id, file)
       
       if (!currentStep.value.attachments) {
@@ -1059,11 +1118,22 @@ async function handleFileUpload(event: any) {
         type: 'positive',
         message: `Arquivo ${file.name} anexado!`
       })
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Erro ao fazer upload:', err)
+      interface AxiosError {
+        response?: {
+          data?: {
+            message?: string
+          }
+        }
+        message?: string
+      }
+      const axiosError = err && typeof err === 'object' && ('response' in err || 'message' in err)
+        ? err as AxiosError
+        : undefined
       Notify.create({
         type: 'negative',
-        message: `Erro ao anexar ${file.name}: ${err.response?.data?.message || err.message}`
+        message: `Erro ao anexar ${file.name}: ${axiosError?.response?.data?.message || axiosError?.message || 'Erro desconhecido'}`
       })
     } finally {
       uploadingFile.value = false
@@ -1071,7 +1141,9 @@ async function handleFileUpload(event: any) {
   }
   
   // Limpar input
-  event.target.value = ''
+  if (target) {
+    target.value = ''
+  }
 }
 
 function handleCommentKeydown(event: KeyboardEvent) {
@@ -1084,7 +1156,7 @@ function handleCommentKeydown(event: KeyboardEvent) {
     mentionStartPos.value = cursorPos
     mentionQuery.value = ''
     showMentionMenu.value = true
-    mentionMenuTarget.value = event.target
+    mentionMenuTarget.value = textarea
   } else if (showMentionMenu.value) {
     // Se o menu está aberto, atualizar a query
     if (event.key === 'Escape') {
@@ -1105,7 +1177,7 @@ function handleCommentKeydown(event: KeyboardEvent) {
   }
 }
 
-function selectMention(member: any) {
+function selectMention(member: ProjectMember) {
   const textarea = document.activeElement as HTMLTextAreaElement
   const cursorPos = textarea.selectionStart
   const textBeforeCursor = newComment.value.substring(0, cursorPos)
@@ -1140,16 +1212,28 @@ async function addComment() {
     let match
     while ((match = mentionRegex.exec(newComment.value)) !== null) {
       const mentionedName = match[1]
-      const member = projectMembers.value.find(m => m.name.includes(mentionedName))
+      if (!mentionedName) continue
+      const member = projectMembers.value.find(m => {
+        const name = m.name
+        return name && typeof name === 'string' && name.includes(mentionedName)
+      })
       if (member) {
         mentions.push(member.id)
       }
     }
     
     // Salvar no backend
+    if (!currentStep.value?.id) {
+      Notify.create({
+        type: 'negative',
+        message: 'Erro: etapa não encontrada'
+      })
+      return
+    }
+    
     const comment = await executionService.addStepComment(
       currentStep.value.id,
-      newComment.value,
+      newComment.value.trim(),
       mentions
     )
     
@@ -1178,11 +1262,22 @@ async function addComment() {
       type: 'positive',
       message: 'Comentário adicionado!'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao adicionar comentário:', err)
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+      message?: string
+    }
+    const axiosError = err && typeof err === 'object' && ('response' in err || 'message' in err)
+      ? err as AxiosError
+      : undefined
     Notify.create({
       type: 'negative',
-      message: `Erro ao adicionar comentário: ${err.response?.data?.message || err.message}`
+      message: `Erro ao adicionar comentário: ${axiosError?.response?.data?.message || axiosError?.message || 'Erro desconhecido'}`
     })
   }
 }
@@ -1202,12 +1297,26 @@ async function createBug() {
     const scenarioId = Number(route.params.scenarioId)
     
     // Criar bug primeiro
-    const bug = await executionService.createBug(scenarioId, {
+    const bugData: {
+      title: string
+      description?: string
+      severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      relatedStepId?: number
+    } = {
       title: bugForm.value.title,
-      description: bugForm.value.description,
-      severity: bugForm.value.severity as any,
-      relatedStepId: bugForm.value.relatedStep || currentStep.value?.id
-    })
+      severity: bugForm.value.severity as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    }
+    
+    if (bugForm.value.description && bugForm.value.description.trim()) {
+      bugData.description = bugForm.value.description.trim()
+    }
+    
+    const relatedStepId = bugForm.value.relatedStep || currentStep.value?.id
+    if (relatedStepId) {
+      bugData.relatedStepId = relatedStepId
+    }
+    
+    const bug = await executionService.createBug(scenarioId, bugData)
     
     // Fazer upload dos anexos se houver
     if (bugForm.value.attachments && bugForm.value.attachments.length > 0) {
@@ -1238,23 +1347,34 @@ async function createBug() {
       relatedStep: null,
       attachments: []
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao criar bug:', err)
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+      message?: string
+    }
+    const axiosError = err && typeof err === 'object' && ('response' in err || 'message' in err)
+      ? err as AxiosError
+      : undefined
     Notify.create({
       type: 'negative',
-      message: `Erro ao criar bug: ${err.response?.data?.message || err.message}`
+      message: `Erro ao criar bug: ${axiosError?.response?.data?.message || axiosError?.message || 'Erro desconhecido'}`
     })
   } finally {
     creatingBug.value = false
   }
 }
 
-function viewAttachment(attachment: any) {
+function viewAttachment(attachment: StepAttachment) {
   // TODO: Implementar lightbox
   window.open(attachment.url, '_blank')
 }
 
-function downloadAttachment(attachment: any) {
+function downloadAttachment(attachment: StepAttachment) {
   const link = document.createElement('a')
   link.href = attachment.url
   link.download = attachment.filename
@@ -1274,20 +1394,32 @@ async function deleteAttachment(attachmentId: number) {
     }
     
     // Atualizar também no array de steps
-    const stepIndex = steps.value.findIndex(s => s.id === currentStep.value?.id)
-    if (stepIndex !== -1) {
-      steps.value[stepIndex].attachments = attachments
+    if (currentStep.value?.id) {
+      const stepIndex = steps.value.findIndex(s => s.id === currentStep.value?.id)
+      if (stepIndex !== -1 && steps.value[stepIndex]) {
+        steps.value[stepIndex].attachments = attachments
+      }
     }
     
     Notify.create({
       type: 'positive',
       message: 'Evidência removida'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao excluir evidência:', err)
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    const axiosError = err && typeof err === 'object' && 'response' in err
+      ? err as AxiosError
+      : undefined
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao excluir evidência'
+      message: axiosError?.response?.data?.message || 'Erro ao excluir evidência'
     })
   }
 }
@@ -1313,7 +1445,8 @@ function getStatusLabel(status: string) {
   return labels[status] || status
 }
 
-function getStepStatusColor(status: string) {
+function getStepStatusColor(status: string | undefined) {
+  if (!status) return 'grey-6'
   const colors: Record<string, string> = {
     PENDING: 'grey-6',
     PASSED: 'positive',
@@ -1332,8 +1465,20 @@ function getFileIcon(mimeType: string) {
   return 'insert_drive_file'
 }
 
-function getInitials(name: string) {
-  return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+function getInitials(name: string | undefined) {
+  if (!name) return '?'
+  const parts = name.split(' ').filter(p => p.length > 0)
+  if (parts.length === 0) return '?'
+  const first = parts[0]
+  if (!first || first.length === 0) return '?'
+  const firstChar = first[0]
+  if (!firstChar) return '?'
+  if (parts.length === 1) return firstChar.toUpperCase()
+  const last = parts[parts.length - 1]
+  if (!last || last.length === 0) return firstChar.toUpperCase()
+  const lastChar = last[0]
+  if (!lastChar) return firstChar.toUpperCase()
+  return (firstChar + lastChar).toUpperCase()
 }
 
 function getStatusTranslation(status: string) {
@@ -1346,18 +1491,19 @@ function getStatusTranslation(status: string) {
   return translations[status] || status
 }
 
-function formatDate(date: string) {
+function formatDate(date: string | undefined) {
+  if (!date) return 'N/A'
   return new Date(date).toLocaleString('pt-BR')
 }
 
 onMounted(() => {
-  loadScenario()
+  void loadScenario()
 })
 
 // Carregar dados da etapa quando mudar de etapa
 watch(currentStepIndex, (newIndex) => {
   if (steps.value[newIndex] && steps.value[newIndex].id) {
-    loadStepData(steps.value[newIndex].id, newIndex)
+    void loadStepData(steps.value[newIndex].id, newIndex)
   }
 })
 </script>

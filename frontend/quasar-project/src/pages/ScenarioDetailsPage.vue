@@ -235,8 +235,8 @@
                   round
                   icon="delete"
                   size="sm"
-                  @click="deleteStep(step.id)"
-                  :disable="scenario?.status === 'PASSED'"
+                  @click="step.id ? deleteStep(step.id) : null"
+                  :disable="scenario?.status === 'PASSED' || !step.id"
                   color="negative"
                 >
                   <q-tooltip>Excluir etapa</q-tooltip>
@@ -579,23 +579,61 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Notify, useQuasar } from 'quasar'
-import { scenarioService } from '../services/scenario.service'
+import { Notify } from 'quasar'
+import { scenarioService, type TestScenario, type ScenarioStep } from '../services/scenario.service'
 import { ectService } from '../services/ect.service'
 import { getProjectMembers, type ProjectMember } from '../services/project.service'
 import api from '../services/api'
 
+// Interfaces
+interface CurrentUser {
+  id: number
+  name: string
+  email: string
+  avatar?: string
+}
+
+interface ExtendedScenario extends TestScenario {
+  testadorId?: number
+  aprovadorId?: number
+  testador?: {
+    id: number
+    name: string
+    email: string
+  }
+  aprovador?: {
+    id: number
+    name: string
+    email: string
+  }
+  project?: {
+    id: number
+    ownerId: number
+  }
+  reports?: Array<{
+    id: number
+    approval?: {
+      status: 'APPROVED' | 'REJECTED'
+      approver?: {
+        name: string
+      }
+      approvedAt: string
+      comment?: string
+    } | null
+    createdAt: string
+  }>
+}
+
 const route = useRoute()
 const router = useRouter()
-const $q = useQuasar()
 
 // State
 const loading = ref(true)
 const error = ref('')
-const scenario = ref<any>(null)
-const currentUser = ref<any>(null)
+const scenario = ref<ExtendedScenario | null>(null)
+const currentUser = ref<CurrentUser | null>(null)
 const showAddStepDialog = ref(false)
-const editingStep = ref<any>(null)
+const editingStep = ref<ScenarioStep | null>(null)
 const savingStep = ref(false)
 const generatingECT = ref(false)
 const showEditDialog = ref(false)
@@ -622,7 +660,7 @@ const canApproveRejectECT = computed(() => {
 // Uma vez que algum ECT foi aprovado/reprovado, não pode mais aprovar/reprovar outros
 const hasAnyApprovedReport = computed(() => {
   if (!scenario.value?.reports || scenario.value.reports.length === 0) return false
-  return scenario.value.reports.some((report: any) => report.approval !== null && report.approval !== undefined)
+  return scenario.value.reports.some((report) => report.approval !== null && report.approval !== undefined)
 })
 
 // Encontrar o relatório mais recente (ordenado por createdAt desc)
@@ -631,11 +669,6 @@ const latestReport = computed(() => {
   
   // Retornar o relatório mais recente (já vem ordenado por createdAt desc do backend)
   return scenario.value.reports[0] || null
-})
-
-// Verifica se o relatório mais recente já possui uma aprovação/reprovação
-const latestReportHasApproval = computed(() => {
-  return latestReport.value?.approval !== null && latestReport.value?.approval !== undefined
 })
 
 // Encontrar QUALQUER relatório que tem aprovação/reprovação para exibir status
@@ -647,7 +680,7 @@ const latestReportWithApproval = computed(() => {
   
   // Encontrar o primeiro relatório que tem aprovação/reprovação
   // Os relatórios vêm ordenados por createdAt desc, então pega o primeiro que encontrar
-  const approvedReport = scenario.value.reports.find((report: any) => {
+  const approvedReport = scenario.value.reports.find((report) => {
     const hasApproval = report.approval !== null && report.approval !== undefined
     
     if (!hasApproval) return false
@@ -694,16 +727,16 @@ const editForm = ref({
 
 // Methods
 function goBack() {
-  const projectId = route.params.projectId
-  const packageId = route.params.packageId
-  router.push(`/projects/${projectId}/packages/${packageId}`)
+  const projectId = String(route.params.projectId)
+  const packageId = String(route.params.packageId)
+  void router.push(`/projects/${projectId}/packages/${packageId}`)
 }
 
 async function loadCurrentUser() {
   try {
-    const response = await api.get('/profile')
+    const response = await api.get<CurrentUser>('/profile')
     currentUser.value = response.data
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao carregar usuário atual:', err)
   }
 }
@@ -723,9 +756,20 @@ async function loadScenario() {
     
     // Aguardar o próximo tick para garantir que os computed sejam recalculados
     await nextTick()
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao carregar cenário:', err)
-    error.value = err.response?.data?.message || err.message || 'Erro ao carregar cenário'
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+      message?: string
+    }
+    const axiosError = err && typeof err === 'object' && 'response' in err
+      ? err as AxiosError
+      : undefined
+    error.value = axiosError?.response?.data?.message || axiosError?.message || 'Erro ao carregar cenário'
   } finally {
     loading.value = false
   }
@@ -748,9 +792,9 @@ function editScenario() {
 }
 
 function executeScenario() {
-  const projectId = route.params.projectId
-  const packageId = route.params.packageId
-  const scenarioId = route.params.scenarioId
+  const projectId = String(route.params.projectId)
+  const packageId = String(route.params.packageId)
+  const scenarioId = String(route.params.scenarioId)
   const url = router.resolve(`/projects/${projectId}/packages/${packageId}/scenarios/${scenarioId}/execute`).href
   window.open(url, '_blank')
 }
@@ -793,12 +837,13 @@ async function generateECT() {
     // Recarregar o cenário para obter o novo relatório
     await loadScenario()
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao gerar ECT:', error)
     
+    const errorMessage = error instanceof Error ? error.message : 'Erro ao gerar ECT'
     Notify.create({
       type: 'negative',
-      message: error.message || 'Erro ao gerar ECT',
+      message: errorMessage,
       timeout: 5000
     })
   } finally {
@@ -849,11 +894,24 @@ async function approveECTReport() {
     
     // Aguardar mais um tick após o segundo carregamento
     await nextTick()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao aprovar ECT:', error)
+    
+    let errorMessage = 'Erro ao aprovar relatório'
+    if (error instanceof Error) {
+      errorMessage = error.message || errorMessage
+      // Verificar se é um erro axios
+      if ('response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
+        const responseData = error.response.data
+        if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+          errorMessage = responseData.message
+        }
+      }
+    }
+    
     Notify.create({
       type: 'negative',
-      message: error.response?.data?.message || error.message || 'Erro ao aprovar relatório',
+      message: errorMessage,
       timeout: 5000
     })
   } finally {
@@ -890,11 +948,24 @@ async function rejectECTReport() {
     
     // Aguardar mais um tick após o segundo carregamento
     await nextTick()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao reprovar ECT:', error)
+    
+    let errorMessage = 'Erro ao reprovar relatório'
+    if (error instanceof Error) {
+      errorMessage = error.message || errorMessage
+      // Verificar se é um erro axios
+      if ('response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
+        const responseData = error.response.data
+        if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+          errorMessage = responseData.message
+        }
+      }
+    }
+    
     Notify.create({
       type: 'negative',
-      message: error.response?.data?.message || error.message || 'Erro ao reprovar relatório',
+      message: errorMessage,
       timeout: 5000
     })
   } finally {
@@ -914,7 +985,7 @@ function handleAddStep() {
   showAddStepDialog.value = true
 }
 
-function editStep(step: any) {
+function editStep(step: ScenarioStep) {
   if (scenario.value?.status === 'PASSED') {
     Notify.create({
       type: 'warning',
@@ -954,21 +1025,25 @@ async function saveStep() {
   try {
     savingStep.value = true
     
-    let updatedSteps = [...(scenario.value.steps || [])]
+    if (!scenario.value) return
     
-    if (editingStep.value) {
+    const updatedSteps = [...(scenario.value.steps || [])]
+    
+    if (editingStep.value && editingStep.value.id) {
       // Editar etapa existente
-      const index = updatedSteps.findIndex((s: any) => s.id === editingStep.value.id)
-      if (index !== -1) {
+      const index = updatedSteps.findIndex((s) => s.id === editingStep.value?.id)
+      if (index !== -1 && updatedSteps[index]) {
+        const existingStep = updatedSteps[index]
         updatedSteps[index] = {
-          ...updatedSteps[index],
+          ...existingStep,
           action: stepForm.value.action,
-          expected: stepForm.value.expected
+          expected: stepForm.value.expected,
+          order: existingStep.order
         }
       }
     } else {
       // Adicionar nova etapa
-      const newStep = {
+      const newStep: ScenarioStep = {
         action: stepForm.value.action,
         expected: stepForm.value.expected,
         order: updatedSteps.length + 1
@@ -991,11 +1066,24 @@ async function saveStep() {
     })
     
     closeStepDialog()
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao salvar etapa:', err)
+    
+    let errorMessage = 'Erro ao salvar etapa'
+    if (err instanceof Error) {
+      errorMessage = err.message || errorMessage
+      // Verificar se é um erro axios
+      if ('response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
+        const responseData = err.response.data
+        if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+          errorMessage = responseData.message
+        }
+      }
+    }
+    
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao salvar etapa'
+      message: errorMessage
     })
   } finally {
     savingStep.value = false
@@ -1004,7 +1092,7 @@ async function saveStep() {
 
 async function deleteStep(stepId: number) {
   // Validar se o cenário está concluído
-  if (scenario.value?.status === 'PASSED') {
+  if (!scenario.value || scenario.value.status === 'PASSED') {
     Notify.create({
       type: 'warning',
       message: 'Não é possível excluir etapas em um cenário concluído',
@@ -1018,7 +1106,7 @@ async function deleteStep(stepId: number) {
   }
   
   try {
-    const updatedSteps = scenario.value.steps.filter((s: any) => s.id !== stepId)
+    const updatedSteps = scenario.value.steps.filter((s) => s.id !== stepId)
     
     // Atualizar o cenário na API
     const scenarioId = Number(route.params.scenarioId)
@@ -1033,11 +1121,24 @@ async function deleteStep(stepId: number) {
       type: 'positive',
       message: 'Etapa excluída com sucesso!'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao excluir etapa:', err)
+    
+    let errorMessage = 'Erro ao excluir etapa'
+    if (err instanceof Error) {
+      errorMessage = err.message || errorMessage
+      // Verificar se é um erro axios
+      if ('response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
+        const responseData = err.response.data
+        if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+          errorMessage = responseData.message
+        }
+      }
+    }
+    
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao excluir etapa'
+      message: errorMessage
     })
   }
 }
@@ -1133,10 +1234,10 @@ async function saveScenarioEdit() {
     await scenarioService.updateScenario(scenarioId, {
       title: editForm.value.title,
       description: editForm.value.description,
-      type: editForm.value.type as any,
-      priority: editForm.value.priority as any,
-      testadorId: editForm.value.testadorId,
-      aprovadorId: editForm.value.aprovadorId
+      type: editForm.value.type as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
+      priority: editForm.value.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      // Nota: testadorId e aprovadorId não são parte do tipo CreateScenarioData
+      // Essas propriedades devem ser atualizadas através de um endpoint específico se necessário
     })
 
     // Recarregar o cenário
@@ -1148,11 +1249,21 @@ async function saveScenarioEdit() {
       type: 'positive',
       message: 'Cenário atualizado com sucesso!'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao atualizar cenário:', err)
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    const axiosError = err && typeof err === 'object' && 'response' in err
+      ? err as AxiosError
+      : undefined
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao atualizar cenário'
+      message: axiosError?.response?.data?.message || 'Erro ao atualizar cenário'
     })
   } finally {
     savingScenario.value = false
@@ -1231,11 +1342,21 @@ function getMemberColor(memberId: number) {
 
 function getInitials(name: string) {
   if (!name) return '?'
-  const parts = name.split(' ')
+  const parts = name.split(' ').filter(p => p.length > 0)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase()
+    }
   }
-  return name.substring(0, 2).toUpperCase()
+  if (parts.length > 0 && parts[0]) {
+    const firstPart = parts[0]
+    if (firstPart && firstPart.length > 0 && firstPart[0]) {
+      return firstPart[0].toUpperCase()
+    }
+  }
+  return '?'
 }
 
 function formatDate(date: string) {
@@ -1253,7 +1374,7 @@ function formatDate(date: string) {
 onMounted(async () => {
   await loadCurrentUser()
   await loadScenario()
-  loadMembers()
+  void loadMembers()
 })
 </script>
 

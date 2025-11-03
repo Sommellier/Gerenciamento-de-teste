@@ -132,10 +132,17 @@ const isLoading = ref(false)
 const router = useRouter()
 const $q = useQuasar()
 
+interface User {
+  id: number
+  name: string
+  email: string
+  [key: string]: unknown
+}
+
 interface LoginResponse {
   accessToken: string
   refreshToken: string
-  user: any
+  user: User
 }
 
 async function handleLogin() {
@@ -173,10 +180,13 @@ async function handleLogin() {
     const redirect = router.currentRoute.value.query.redirect as string | undefined
     await router.replace(redirect ?? { name: 'dashboard' })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { data?: { error?: string } } }).response?.data?.error || 'Erro ao fazer login'
+      : 'Erro ao fazer login'
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.error || 'Erro ao fazer login',
+      message: errorMessage,
       position: 'top'
     })
   } finally {

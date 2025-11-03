@@ -217,14 +217,14 @@
           </button>
         </div>
         <div class="menu-content">
-          <button class="menu-action" @click="editProject(selectedProject)">
+          <button class="menu-action" @click="selectedProject && editProject(selectedProject)">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M11 4H4A2 2 0 0 0 2 6V20A2 2 0 0 0 4 22H18A2 2 0 0 0 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M18.5 2.5A2.121 2.121 0 0 1 21 5L12 14L8 15L9 11L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Editar
           </button>
-          <button class="menu-action danger" @click="deleteProject(selectedProject)">
+          <button class="menu-action danger" @click="selectedProject && deleteProject(selectedProject)">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M19,6V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V6M8,6V4A2,2 0 0,1 10,2H14A2,2 0 0,1 16,4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -271,7 +271,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from 'src/services/api'
@@ -280,8 +280,17 @@ const router = useRouter()
 const $q = useQuasar()
 
 // State
-const projects = ref<any[]>([])
-const allProjects = ref<any[]>([]) // Para busca local
+interface Project {
+  id: number
+  name: string
+  description?: string
+  createdAt?: string
+  updatedAt?: string
+  [key: string]: unknown
+}
+
+const projects = ref<Project[]>([])
+const allProjects = ref<Project[]>([]) // Para busca local
 const loading = ref(false)
 const searchQuery = ref('')
 const currentPage = ref(1)
@@ -291,38 +300,35 @@ const isSearching = ref(false)
 
 // Menu state
 const showMenu = ref(false)
-const selectedProject = ref<any>(null)
+const selectedProject = ref<Project | null>(null)
 
 // Delete dialog state
 const deleteDialog = ref(false)
-const projectToDelete = ref<any>(null)
+const projectToDelete = ref<Project | null>(null)
 const deleting = ref(false)
-
-// Computed
-const hasProjects = computed(() => projects.value.length > 0)
 
 // Navigation
 function goBack() {
-  router.push('/dashboard')
+  void router.push('/dashboard')
 }
 
 function goToProfile() {
-  router.push('/profile')
+  void router.push('/profile')
 }
 
 function createProject() {
-  router.push('/create-project')
+  void router.push('/create-project')
 }
 
-function viewProject(project: any) {
-  router.push(`/projects/${project.id}`)
+function viewProject(project: Project) {
+  void router.push(`/projects/${project.id}`)
 }
 
 // Pagination
 function goToPage(page: number) {
   if (page >= 1 && page <= totalPages.value) {
     currentPage.value = page
-    loadProjects()
+    void loadProjects()
   }
 }
 
@@ -346,7 +352,7 @@ function clearSearch() {
 }
 
 // Project actions
-function showProjectMenu(project: any) {
+function showProjectMenu(project: Project) {
   selectedProject.value = project
   showMenu.value = true
 }
@@ -361,12 +367,12 @@ function closeDeleteDialog() {
   projectToDelete.value = null
 }
 
-function editProject(project: any) {
+function editProject(project: Project) {
   closeMenu()
-  router.push(`/projects/${project.id}/edit`)
+  void router.push(`/projects/${project.id}/edit`)
 }
 
-function deleteProject(project: any) {
+function deleteProject(project: Project) {
   closeMenu()
   projectToDelete.value = project
   deleteDialog.value = true
@@ -384,7 +390,8 @@ async function confirmDelete() {
       position: 'top'
     })
     await loadProjects()
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error('Erro ao excluir projeto:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao excluir projeto',
@@ -410,7 +417,7 @@ async function loadProjects() {
       
       console.log('Loading projects with params:', params.toString())
       const response = await api.get<{
-        items: any[]
+        items: Project[]
         total: number
         page: number
         pageSize: number
@@ -436,22 +443,23 @@ async function loadProjects() {
       // Busca local nos projetos já carregados
       performLocalSearch()
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error loading projects:', err)
     
     // Mensagem de erro mais detalhada
     let errorMessage = 'Erro ao carregar projetos'
     
-    if (err.response) {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const axiosError = err as { response?: { status?: number; data?: { message?: string; error?: string } } }
       // Erro da resposta HTTP
-      errorMessage = err.response.data?.message || err.response.data?.error || errorMessage
-      console.error('Erro HTTP:', err.response.status, errorMessage)
-      console.error('Response data:', err.response.data)
-    } else if (err.request) {
+      errorMessage = axiosError.response?.data?.message || axiosError.response?.data?.error || errorMessage
+      console.error('Erro HTTP:', axiosError.response?.status, errorMessage)
+      console.error('Response data:', axiosError.response?.data)
+    } else if (err && typeof err === 'object' && 'request' in err) {
       // Erro de rede/conexão
       errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
       console.error('Erro de rede:', err.request)
-    } else if (err.message) {
+    } else if (err instanceof Error) {
       errorMessage = err.message
     }
     
@@ -497,7 +505,7 @@ function onSearch() {
   // Se a busca estiver vazia, recarrega todos os projetos
   if (!searchQuery.value || searchQuery.value.trim() === '') {
     currentPage.value = 1
-    loadProjects()
+    void loadProjects()
     return
   }
   
@@ -510,7 +518,8 @@ function onSearch() {
 }
 
 // Utility functions
-function formatDate(dateString: string) {
+function formatDate(dateString: string | undefined) {
+  if (!dateString) return 'N/A'
   const date = new Date(dateString)
   return date.toLocaleDateString('pt-BR', {
     day: '2-digit',
@@ -519,14 +528,10 @@ function formatDate(dateString: string) {
   })
 }
 
-function getProjectStatus(project: any) {
+function getProjectStatus(_project: Project) {
   // TODO: Implementar lógica de status baseada no projeto
+  void _project // Marcar como usado explicitamente
   return 'Ativo'
-}
-
-function getProjectStatusColor(project: any) {
-  // TODO: Implementar cores baseadas no status
-  return 'positive'
 }
 
 // Carrega todos os projetos para busca local
@@ -538,8 +543,8 @@ async function loadAllProjects() {
         'Pragma': 'no-cache'
       }
     })
-    allProjects.value = (response.data as any)?.items || []
-  } catch (err: any) {
+    allProjects.value = (response.data as { items?: Project[] })?.items || []
+  } catch (err: unknown) {
     console.error('Error loading all projects:', err)
   }
 }
@@ -968,6 +973,7 @@ onMounted(async () => {
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

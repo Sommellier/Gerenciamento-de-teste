@@ -43,7 +43,7 @@ export const projectService = {
     console.log('Fetching releases for project:', projectId)
     const response = await api.get<string[]>(`/projects/${projectId}/releases`)
     console.log('Releases response:', response.data)
-    return response.data as string[]
+    return response.data
   },
 
   // Buscar membros de um projeto
@@ -51,8 +51,8 @@ export const projectService = {
     console.log('Fetching members for project:', projectId)
     const response = await api.get<{ items?: ProjectMember[] } | ProjectMember[]>(`/projects/${projectId}/members`)
     console.log('Members response:', response.data)
-    const data = response.data as { items?: ProjectMember[] } | ProjectMember[]
-    return (Array.isArray(data) ? data : (data.items || [])) as ProjectMember[]
+    const data = response.data
+    return Array.isArray(data) ? data : (data.items || [])
   },
 
   // Adicionar nova release (simulado - adiciona à lista local)

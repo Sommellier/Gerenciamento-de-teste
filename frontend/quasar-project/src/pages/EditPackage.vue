@@ -245,21 +245,31 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
-import { getPackage, updatePackage } from '../services/package.service'
+import { getPackageDetails, updatePackage } from '../services/package.service'
 import { getProjectReleases, getProjectMembers, addRelease } from '../services/project.service'
-import type { TestPackage, TestPackageStep } from '../services/package.service'
 
 const router = useRouter()
 const route = useRoute()
 const $q = useQuasar()
 
 const packageId = computed(() => Number(route.params.id))
+const projectId = computed(() => Number(route.query.projectId))
 const loading = ref(true)
 const saving = ref(false)
 const loadingData = ref(false)
 
 // Formulário
-const form = ref({
+const form = ref<{
+  title: string
+  description: string
+  type: string | { label: string; value: string }
+  priority: string | { label: string; value: string }
+  environment: string | { label: string; value: string } | null
+  release: string | { label: string; value: string }
+  assigneeEmail: string | { label: string; value: string } | null
+  status: string | { label: string; value: string }
+  tags: string[]
+}>({
   title: '',
   description: '',
   type: '',
@@ -268,7 +278,7 @@ const form = ref({
   release: '',
   assigneeEmail: '',
   status: '',
-  tags: [] as string[]
+  tags: []
 })
 
 const tagsInput = ref('')
@@ -337,26 +347,25 @@ const onDateSelected = (date: string) => {
 const loadProjectData = async () => {
   try {
     loadingData.value = true
-    const projectId = Number(route.query.projectId)
+    const pid = projectId.value
     
-    if (!projectId || isNaN(projectId)) {
+    if (!pid || isNaN(pid)) {
       console.warn('ID do projeto não fornecido ou inválido')
       return
     }
     
     // Carregar releases e membros em paralelo
     const [releasesData, membersData] = await Promise.all([
-      getProjectReleases(projectId),
-      getProjectMembers(projectId)
+      getProjectReleases(pid),
+      getProjectMembers(pid)
     ])
       
     releases.value = releasesData
     members.value = membersData.map(member => ({
-      label: `${member.user.name} (${member.user.email})`,
-      value: member.user.email
+      label: `${member.name} (${member.email})`,
+      value: member.email
     }))
-    }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao carregar dados do projeto:', error)
     $q.notify({
       type: 'negative',
@@ -370,7 +379,12 @@ const loadProjectData = async () => {
 const loadPackage = async () => {
   try {
     loading.value = true
-    const packageData = await getPackage(packageId.value)
+    const pid = projectId.value
+    if (!pid || isNaN(pid)) {
+      console.warn('ID do projeto não fornecido ou inválido')
+      return
+    }
+    const packageData = await getPackageDetails(pid, packageId.value)
     
     form.value = {
       title: packageData.title,
@@ -380,12 +394,12 @@ const loadPackage = async () => {
       environment: packageData.environment || '',
       release: packageData.release,
       assigneeEmail: packageData.assigneeEmail || '',
-      status: packageData.status,
+      status: packageData.status || '',
       tags: packageData.tags || []
     }
     
     tagsInput.value = form.value.tags.join(', ')
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao carregar pacote:', error)
     $q.notify({
       type: 'negative',
@@ -411,7 +425,7 @@ const removeTag = (tagToRemove: string) => {
 }
 
 const goBack = () => {
-  router.back()
+  void router.back()
 }
 
 const openCreateReleaseDialog = () => {
@@ -419,7 +433,7 @@ const openCreateReleaseDialog = () => {
   showCreateReleaseDialog.value = true
 }
 
-const createNewRelease = async () => {
+const createNewRelease = () => {
   if (!newRelease.value.trim()) {
     $q.notify({
       type: 'negative',
@@ -432,7 +446,8 @@ const createNewRelease = async () => {
     creatingRelease.value = true
     
     // Adicionar a nova release à lista
-    releases.value = addRelease(releases.value, newRelease.value)
+    const updatedReleases = addRelease(releases.value, newRelease.value)
+    releases.value = updatedReleases
     
     // Selecionar a nova release
     form.value.release = newRelease.value
@@ -445,7 +460,7 @@ const createNewRelease = async () => {
       type: 'positive',
       message: 'Release criada com sucesso!'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao criar release:', error)
     $q.notify({
       type: 'negative',
@@ -461,23 +476,63 @@ const cancelCreateRelease = () => {
   newRelease.value = ''
 }
 
+const getOptionValue = (val: unknown): string => {
+  if (typeof val === 'object' && val !== null && 'value' in val) {
+    const option = val as { value: string }
+    return option.value
+  }
+  return typeof val === 'string' ? val : ''
+}
+
 const onSubmit = async () => {
   try {
     saving.value = true
 
+    const pid = projectId.value
+    if (!pid || isNaN(pid)) {
+      $q.notify({
+        type: 'negative',
+        message: 'ID do projeto inválido'
+      })
+      return
+    }
+
     // Converter objetos para valores antes de enviar
-    const updateData = {
+    const updateData: {
+      title: string
+      description: string
+      type: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
+      priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      release: string
+      tags: string[]
+      status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
+      environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
+      assigneeEmail?: string
+    } = {
       title: form.value.title,
       description: form.value.description,
-      type: typeof form.value.type === 'object' ? form.value.type.value : form.value.type,
-      priority: typeof form.value.priority === 'object' ? form.value.priority.value : form.value.priority,
-      environment: typeof form.value.environment === 'object' ? form.value.environment.value : form.value.environment,
-      release: typeof form.value.release === 'object' ? form.value.release.value : form.value.release,
-      assigneeEmail: typeof form.value.assigneeEmail === 'object' ? form.value.assigneeEmail.value : form.value.assigneeEmail,
+      type: getOptionValue(form.value.type) as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
+      priority: getOptionValue(form.value.priority) as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
+      release: getOptionValue(form.value.release),
       tags: form.value.tags
     }
 
-    await updatePackage(packageId.value, updateData)
+    const statusValue = getOptionValue(form.value.status)
+    if (statusValue) {
+      updateData.status = statusValue as 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
+    }
+
+    const environmentValue = getOptionValue(form.value.environment)
+    if (environmentValue) {
+      updateData.environment = environmentValue as 'DEV' | 'QA' | 'STAGING' | 'PROD'
+    }
+
+    const assigneeEmailValue = getOptionValue(form.value.assigneeEmail)
+    if (assigneeEmailValue) {
+      updateData.assigneeEmail = assigneeEmailValue
+    }
+
+    await updatePackage(pid, packageId.value, updateData)
 
     $q.notify({
       type: 'positive',
@@ -485,11 +540,14 @@ const onSubmit = async () => {
     })
 
     goBack()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao atualizar pacote:', error)
+    const errorMessage = error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Erro ao atualizar pacote'
+      : 'Erro ao atualizar pacote'
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Erro ao atualizar pacote'
+      message: errorMessage
     })
   } finally {
     saving.value = false

@@ -55,36 +55,6 @@
               :loading="approving"
             />
             
-            <!-- Ações de aprovação/reprovação (apenas para EM_TESTE) -->
-            <template v-if="packageData?.status === 'EM_TESTE'">
-              <q-btn
-                color="positive"
-                icon="check_circle"
-                label="Aprovar"
-                @click="handleApprove"
-                class="action-btn"
-                :loading="approving"
-              />
-              <q-btn
-                color="negative"
-                icon="cancel"
-                label="Reprovar"
-                @click="showRejectDialog = true"
-                class="action-btn"
-              />
-            </template>
-            
-            <!-- Ação de reenvio (para REPROVADO) -->
-            <q-btn
-              v-if="packageData?.status === 'REPROVADO'"
-              color="primary"
-              icon="refresh"
-              label="Reenviar para Teste"
-              @click="handleSendToTest"
-              class="action-btn"
-              :loading="sendingToTest"
-            />
-            
             <!-- Ações normais (desabilitadas quando CONCLUIDO ou APROVADO) -->
             <q-btn
               color="white"
@@ -194,7 +164,7 @@
               <q-icon name="check_circle" size="32px" />
             </div>
             <div class="metric-content">
-              <div class="metric-value">{{ Math.round(packageData.metrics.successRate) }}%</div>
+              <div class="metric-value">{{ Math.round(packageData.metrics.successRate ?? 0) }}%</div>
               <div class="metric-label">Status de Conclusão</div>
             </div>
           </div>
@@ -204,7 +174,7 @@
               <q-icon name="trending_up" size="32px" />
             </div>
             <div class="metric-content">
-              <div class="metric-value">{{ Math.round(packageData.metrics.executionRate) }}%</div>
+              <div class="metric-value">{{ Math.round(packageData.metrics.executionRate ?? 0) }}%</div>
               <div class="metric-label">Taxa de Execução</div>
             </div>
           </div>
@@ -330,29 +300,6 @@
                     >
                       <q-tooltip>Duplicar cenário</q-tooltip>
                     </q-btn>
-                    <!-- Botões de aprovar/reprovar cenário (apenas para owner/manager) -->
-                    <template v-if="canApprovePackage">
-                      <q-btn
-                        v-if="scenario.status !== 'APPROVED'"
-                        flat
-                        icon="check_circle"
-                        color="positive"
-                        size="sm"
-                        @click.stop="approveScenario(scenario)"
-                      >
-                        <q-tooltip>Aprovar cenário</q-tooltip>
-                      </q-btn>
-                      <q-btn
-                        v-if="scenario.status !== 'REPROVED'"
-                        flat
-                        icon="cancel"
-                        color="negative"
-                        size="sm"
-                        @click.stop="reproveScenario(scenario)"
-                      >
-                        <q-tooltip>Reprovar cenário</q-tooltip>
-                      </q-btn>
-                    </template>
                     <q-btn
                       flat
                       icon="delete"
@@ -502,7 +449,7 @@
                     />
                   </div>
                   
-                  <p class="bug-description">{{ formatBugDescription(bug.description) || 'Sem descrição' }}</p>
+                  <p class="bug-description">{{ formatBugDescription(bug.description ?? '') || 'Sem descrição' }}</p>
                   
                   <div class="bug-meta">
                     <div class="meta-item">
@@ -1077,76 +1024,6 @@
       </q-card>
     </q-dialog>
 
-    <!-- Reject Package Dialog -->
-    <q-dialog v-model="showRejectDialog" persistent>
-      <q-card class="reject-dialog glass-card" style="min-width: 500px; max-width: 600px">
-        <q-card-section class="dialog-header">
-          <div class="dialog-header-content">
-            <h3 class="dialog-title">Reprovar Pacote</h3>
-            <q-btn
-              flat
-              round
-              icon="close"
-              @click="showRejectDialog = false; rejectionReason = ''"
-              class="close-btn"
-              color="white"
-            />
-          </div>
-        </q-card-section>
-
-        <q-card-section class="dialog-body">
-          <div class="reject-warning">
-            <q-icon name="warning" size="48px" color="negative" />
-            <p class="warning-text">
-              Você está prestes a reprovar o pacote <strong>{{ packageData?.title }}</strong>.
-            </p>
-            <p class="warning-text">
-              Por favor, informe o motivo da reprovação. O testador responsável será notificado por e-mail.
-            </p>
-          </div>
-
-          <q-form @submit.prevent="handleReject" class="reject-form">
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="description" class="label-icon" />
-                Motivo da Reprovação *
-              </label>
-              <q-input
-                v-model="rejectionReason"
-                placeholder="Descreva o motivo da reprovação..."
-                filled
-                dark
-                label-color="white"
-                input-class="text-white"
-                type="textarea"
-                rows="6"
-                :rules="[val => !!val && val.trim().length > 0 || 'Motivo da reprovação é obrigatório']"
-                class="form-input"
-              />
-            </div>
-
-            <div class="dialog-actions-form">
-              <q-btn
-                flat
-                label="Cancelar"
-                @click="showRejectDialog = false; rejectionReason = ''"
-                class="cancel-btn"
-                color="white"
-              />
-              <q-btn
-                type="submit"
-                label="Reprovar"
-                color="negative"
-                :loading="rejecting"
-                class="reject-btn"
-                unelevated
-              />
-            </div>
-          </q-form>
-        </q-card-section>
-      </q-card>
-    </q-dialog>
-
     <!-- Edit Bug Dialog -->
     <q-dialog v-model="showEditBugDialog" persistent>
       <q-card style="min-width: 500px">
@@ -1294,11 +1171,63 @@ import { ref, onMounted, onActivated, onBeforeUnmount, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'
 import VueApexCharts from 'vue3-apexcharts'
-import { packageService } from '../services/package.service'
+import { packageService, type TestPackage, type TestScenario } from '../services/package.service'
 import { scenarioService } from '../services/scenario.service'
-import { getProjectMembers } from '../services/project-details.service'
-import { executionService } from '../services/execution.service'
+import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
+import { executionService, type Bug, type StepAttachment } from '../services/execution.service'
 import api from '../services/api'
+
+// Interfaces
+interface CurrentUser {
+  id: number
+  name: string
+  email: string
+  avatar?: string
+}
+
+interface ExtendedPackage extends TestPackage {
+  project: {
+    id: number
+    name: string
+    description?: string
+    ownerId: number
+  }
+  metrics: {
+    totalScenarios: number
+    totalSteps: number
+    packageSteps: number
+    scenariosByType: Record<string, number>
+    scenariosByPriority: Record<string, number>
+    successRate?: number
+    executionRate?: number
+    executionsByMonth?: Record<string, number>
+  }
+}
+
+interface ExtendedBug extends Bug {
+  scenario?: {
+    id: number
+    title: string
+  }
+}
+
+interface ExtendedScenario extends TestScenario {
+  testadorId?: number
+  aprovadorId?: number
+}
+
+interface BugEditForm {
+  id: number
+  title: string
+  description: string
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+  status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED'
+}
+
+interface FilterOption {
+  label: string
+  value: string
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -1306,24 +1235,25 @@ const router = useRouter()
 // Reactive data
 const loading = ref(true)
 const error = ref('')
-const packageData = ref<any>(null)
+const packageData = ref<ExtendedPackage | null>(null)
 const activeTab = ref('scenarios')
-const bugs = ref<any[]>([])
-const members = ref<any[]>([])
-const currentUser = ref<any>(null)
+const bugs = ref<ExtendedBug[]>([])
+const members = ref<ProjectMember[]>([])
+const currentUser = ref<CurrentUser | null>(null)
 
 // Bug management state
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectedBug = ref<any>(null)
 const showBugDetailsDialog = ref(false)
 const showEditBugDialog = ref(false)
 const showDeleteBugDialog = ref(false)
-const bugEditForm = ref<any>(null)
+const bugEditForm = ref<BugEditForm | null>(null)
 const savingBug = ref(false)
 const deletingBug = ref(false)
 
 // Bug filters
-const bugStatusFilter = ref<any>(null)
-const bugScenarioFilter = ref<any>(null)
+const bugStatusFilter = ref<FilterOption | null>(null)
+const bugScenarioFilter = ref<FilterOption | null>(null)
 
 // Edit/Delete dialogs
 const showEditDialog = ref(false)
@@ -1341,7 +1271,7 @@ const editForm = ref({
 // Scenario dialogs
 const showEditScenarioDialog = ref(false)
 const showDeleteScenarioDialog = ref(false)
-const selectedScenario = ref<any>(null)
+const selectedScenario = ref<ExtendedScenario | null>(null)
 const scenarioEditForm = ref({
   title: '',
   description: '',
@@ -1351,12 +1281,8 @@ const scenarioEditForm = ref({
   aprovadorId: null as number | null
 })
 
-// Approval/Rejection state
+// Approval state
 const approving = ref(false)
-const rejecting = ref(false)
-const sendingToTest = ref(false)
-const showRejectDialog = ref(false)
-const rejectionReason = ref('')
 
 // Computed
 const projectId = computed(() => parseInt(route.params.projectId as string))
@@ -1370,10 +1296,9 @@ const canApprovePackage = computed(() => {
   const isOwner = packageData.value.project.ownerId === currentUser.value.id
   if (isOwner) return true
   
-  // Se não é owner, verificar se é manager (mesmo sem membros carregados, pode verificar no backend)
-  // Mas vamos verificar nos membros se existirem
+  // Se não é owner, verificar se é manager
   if (members.value.length > 0) {
-    const userMember = members.value.find(m => m.id === currentUser.value.id)
+    const userMember = members.value.find(m => m.id === currentUser.value?.id)
     const isManager = userMember?.role === 'MANAGER'
     return isManager
   }
@@ -1385,7 +1310,7 @@ const canApprovePackage = computed(() => {
 // Verificar se todos os cenários estão aprovados
 const allScenariosApproved = computed(() => {
   if (!packageData.value?.scenarios || packageData.value.scenarios.length === 0) return false
-  return packageData.value.scenarios.every((scenario: any) => scenario.status === 'APPROVED')
+  return packageData.value.scenarios.every((scenario: TestScenario) => (scenario.status as string) === 'APPROVED')
 })
 
 // Verificar se pode aprovar pacote (todos cenários aprovados e usuário é owner/manager)
@@ -1476,11 +1401,11 @@ const filteredBugs = computed(() => {
   let filtered = [...bugs.value]
   
   if (bugStatusFilter.value) {
-    filtered = filtered.filter(bug => bug.status === bugStatusFilter.value.value)
+    filtered = filtered.filter(bug => bug.status === bugStatusFilter.value?.value)
   }
   
   if (bugScenarioFilter.value) {
-    filtered = filtered.filter(bug => bug.scenario?.title === bugScenarioFilter.value.value)
+    filtered = filtered.filter(bug => bug.scenario?.title === bugScenarioFilter.value?.value)
   }
   
   return filtered
@@ -1498,9 +1423,12 @@ const priorityChartSeries = computed(() => {
     CRITICAL: 0
   }
   
-  scenarios.forEach((scenario: any) => {
-    if (scenario.priority && priorityCounts.hasOwnProperty(scenario.priority)) {
-      priorityCounts[scenario.priority as keyof typeof priorityCounts]++
+  scenarios.forEach((scenario: TestScenario) => {
+    if (scenario.priority && Object.prototype.hasOwnProperty.call(priorityCounts, scenario.priority)) {
+      const priority = scenario.priority
+      if (priority === 'LOW' || priority === 'MEDIUM' || priority === 'HIGH' || priority === 'CRITICAL') {
+        priorityCounts[priority]++
+      }
     }
   })
   
@@ -1587,8 +1515,10 @@ const monthlyChartOptions = computed(() => {
   const sortedMonths = Object.keys(executionsByMonth).sort()
   const monthLabels = sortedMonths.map(monthKey => {
     const [year, month] = monthKey.split('-')
+    if (!year || !month) return monthKey
     const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-    const monthName = monthNames[parseInt(month) - 1]
+    const monthIndex = parseInt(month) - 1
+    const monthName = (monthIndex >= 0 && monthIndex < monthNames.length) ? monthNames[monthIndex] : month
     const currentYear = new Date().getFullYear()
     // Mostrar ano apenas se não for o ano atual
     return parseInt(year) !== currentYear ? `${monthName} ${year}` : monthName
@@ -1658,12 +1588,12 @@ const successRateChartSeries = computed(() => {
   
   // Calcular estatísticas dos cenários - mostrar os 5 principais status
   // CREATED, EXECUTED, PASSED, FAILED, APPROVED, REPROVED (mas agrupar APPROVED e REPROVED se necessário)
-  const createdScenarios = scenarios.filter((s: any) => s.status === 'CREATED' || !s.status).length
-  const executedScenarios = scenarios.filter((s: any) => s.status === 'EXECUTED').length
-  const passedScenarios = scenarios.filter((s: any) => s.status === 'PASSED').length
-  const failedScenarios = scenarios.filter((s: any) => s.status === 'FAILED').length
-  const approvedScenarios = scenarios.filter((s: any) => s.status === 'APPROVED').length
-  const reprovedScenarios = scenarios.filter((s: any) => s.status === 'REPROVED').length
+  const createdScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'CREATED' || !s.status).length
+  const executedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'EXECUTED').length
+  const passedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'PASSED').length
+  const failedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'FAILED').length
+  const approvedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'APPROVED').length
+  const reprovedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'REPROVED').length
   
   // Retornar todos os status separadamente (incluindo Aprovado e Reprovado separados)
   return [createdScenarios, executedScenarios, passedScenarios, failedScenarios, approvedScenarios, reprovedScenarios]
@@ -1681,7 +1611,7 @@ const successRateChartOptions = computed(() => {
     colors: ['#9E9E9E', '#2196F3', '#4CAF50', '#F44336', '#10B981', '#EF4444'],
     dataLabels: {
       enabled: true,
-      formatter: function (val: number, opts: any) {
+      formatter: function (val: number, opts: { w: { config: { series: number[] } }; seriesIndex: number }) {
         return opts.w.config.series[opts.seriesIndex] + ' (' + val.toFixed(1) + '%)'
       },
       style: {
@@ -1705,7 +1635,7 @@ const successRateChartOptions = computed(() => {
     },
     tooltip: {
       y: {
-        formatter: function (val: number, opts: any) {
+        formatter: function (val: number, opts: { seriesIndex: number }) {
           const labels = ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado']
           return labels[opts.seriesIndex] + ': ' + val + ' cenários'
         }
@@ -1733,18 +1663,6 @@ const successRateChartOptions = computed(() => {
   }
 })
 
-// Funções auxiliares para cálculos de data
-const getMonthsBetween = (startDate: Date, endDate: Date): number => {
-  const yearDiff = endDate.getFullYear() - startDate.getFullYear()
-  const monthDiff = endDate.getMonth() - startDate.getMonth()
-  return yearDiff * 12 + monthDiff + 1 // +1 para incluir o mês atual
-}
-
-const getMonthName = (monthIndex: number): string => {
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-  return months[monthIndex]
-}
-
 // Flag para evitar múltiplas chamadas simultâneas
 const isLoadingPackageDetails = ref(false)
 
@@ -1766,26 +1684,37 @@ const loadPackageDetails = async () => {
       throw new Error('Nenhum dado retornado do servidor')
     }
     
-    packageData.value = data
+    packageData.value = data as ExtendedPackage
     
     // Carregar bugs reais do pacote
     await loadPackageBugs()
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error loading package details:', err)
     
     // Formatar mensagem de erro mais detalhada
     let errorMessage = 'Erro ao carregar detalhes do pacote'
     
-    if (err.response) {
-      // Erro da resposta HTTP
-      errorMessage = err.response.data?.message || err.response.data?.error || errorMessage
-      console.error('Erro HTTP:', err.response.status, errorMessage)
-    } else if (err.request) {
-      // Erro de rede/conexão
-      errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
-      console.error('Erro de rede:', err.request)
-    } else if (err.message) {
-      errorMessage = err.message
+    if (err && typeof err === 'object') {
+      // Verificar se é um erro de resposta HTTP
+      if ('response' in err && err.response && typeof err.response === 'object') {
+        const response = err.response as { status?: number; data?: { message?: string; error?: string } }
+        console.error('Erro HTTP:', response.status, errorMessage)
+        
+        if ('data' in err.response && err.response.data && typeof err.response.data === 'object') {
+          const responseData = err.response.data as { message?: string; error?: string }
+          if ('message' in responseData && typeof responseData.message === 'string') {
+            errorMessage = responseData.message
+          } else if ('error' in responseData && typeof responseData.error === 'string') {
+            errorMessage = responseData.error
+          }
+        }
+      } else if ('request' in err) {
+        // Erro de rede/conexão
+        errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
+        console.error('Erro de rede:', err.request)
+      } else if ('message' in err && typeof err.message === 'string') {
+        errorMessage = err.message
+      }
     }
     
     error.value = errorMessage
@@ -1804,7 +1733,7 @@ const loadPackageBugs = async () => {
   try {
     const bugsData = await executionService.getPackageBugs(projectId.value, packageId.value)
     bugs.value = bugsData
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error loading package bugs:', err)
     // Não mostrar erro ao usuário, apenas logar
     bugs.value = []
@@ -1812,15 +1741,15 @@ const loadPackageBugs = async () => {
 }
 
 const goBack = () => {
-  router.push(`/projects/${projectId.value}/packages`)
+  void router.push(`/projects/${projectId.value}/packages`)
 }
 
-const viewScenario = (scenario: any) => {
-  router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios/${scenario.id}`)
+const viewScenario = (scenario: ExtendedScenario | TestScenario) => {
+  void router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios/${scenario.id}`)
 }
 
 const goToCreateScenario = () => {
-  router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios`)
+  void router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios`)
 }
 
 const editPackage = () => {
@@ -1847,30 +1776,14 @@ const editPackage = () => {
   showEditDialog.value = true
 }
 
-// Approval handlers
-const handleApprove = async () => {
+
+// Carregar usuário atual
+const loadCurrentUser = async () => {
   try {
-    approving.value = true
-    
-    await packageService.approvePackage(projectId.value, packageId.value)
-    
-    Notify.create({
-      type: 'positive',
-      message: 'Pacote aprovado com sucesso!',
-      position: 'top'
-    })
-    
-    // Recarregar dados
-    await loadPackageDetails()
-  } catch (error: any) {
-    console.error('Erro ao aprovar pacote:', error)
-    Notify.create({
-      type: 'negative',
-      message: error.response?.data?.message || 'Erro ao aprovar pacote',
-      position: 'top'
-    })
-  } finally {
-    approving.value = false
+    const response = await api.get<CurrentUser>('/profile')
+    currentUser.value = response.data
+  } catch (err: unknown) {
+    console.error('Erro ao carregar usuário atual:', err)
   }
 }
 
@@ -1898,11 +1811,18 @@ const handleApprovePackageWhenAllScenariosApproved = async () => {
     
     // Recarregar dados
     await loadPackageDetails()
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao aprovar pacote:', error)
+    let errorMessage = 'Erro ao aprovar pacote'
+    if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
+      const responseData = error.response.data
+      if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+        errorMessage = responseData.message
+      }
+    }
     Notify.create({
       type: 'negative',
-      message: error.response?.data?.message || 'Erro ao aprovar pacote',
+      message: errorMessage,
       position: 'top'
     })
   } finally {
@@ -1910,88 +1830,13 @@ const handleApprovePackageWhenAllScenariosApproved = async () => {
   }
 }
 
-// Carregar usuário atual
-const loadCurrentUser = async () => {
-  try {
-    const response = await api.get('/profile')
-    currentUser.value = response.data
-  } catch (err: any) {
-    console.error('Erro ao carregar usuário atual:', err)
-  }
-}
-
-const handleReject = async () => {
-  if (!rejectionReason.value || rejectionReason.value.trim().length === 0) {
-    Notify.create({
-      type: 'warning',
-      message: 'Por favor, informe o motivo da reprovação',
-      position: 'top'
-    })
-    return
-  }
-
-  try {
-    rejecting.value = true
-    
-    await packageService.rejectPackage(
-      projectId.value,
-      packageId.value,
-      rejectionReason.value.trim()
-    )
-    
-    Notify.create({
-      type: 'positive',
-      message: 'Pacote reprovado. Notificação enviada ao testador.',
-      position: 'top'
-    })
-    
-    // Fechar diálogo e recarregar
-    showRejectDialog.value = false
-    rejectionReason.value = ''
-    await loadPackageDetails()
-  } catch (error: any) {
-    console.error('Erro ao reprovar pacote:', error)
-    Notify.create({
-      type: 'negative',
-      message: error.response?.data?.message || 'Erro ao reprovar pacote',
-      position: 'top'
-    })
-  } finally {
-    rejecting.value = false
-  }
-}
-
-const handleSendToTest = async () => {
-  try {
-    sendingToTest.value = true
-    
-    await packageService.sendPackageToTest(projectId.value, packageId.value)
-    
-    Notify.create({
-      type: 'positive',
-      message: 'Pacote reenviado para teste!',
-      position: 'top'
-    })
-    
-    // Recarregar dados
-    await loadPackageDetails()
-  } catch (error: any) {
-    console.error('Erro ao reenviar pacote:', error)
-    Notify.create({
-      type: 'negative',
-      message: error.response?.data?.message || 'Erro ao reenviar pacote',
-      position: 'top'
-    })
-  } finally {
-    sendingToTest.value = false
-  }
-}
-
 const confirmDelete = () => {
   showDeleteDialog.value = true
 }
 
-const savePackage = async () => {
+const savePackage = () => {
+  if (!packageData.value) return
+  
   try {
     // Aqui você implementaria a chamada para a API
     // await packageService.updatePackage(projectId.value, packageId.value, editForm.value)
@@ -1999,8 +1844,14 @@ const savePackage = async () => {
     // Por enquanto, apenas atualizar os dados localmente
     packageData.value = {
       ...packageData.value,
-      ...editForm.value
-    }
+      ...editForm.value,
+      id: packageData.value.id,
+      tags: packageData.value.tags,
+      release: packageData.value.release,
+      steps: packageData.value.steps,
+      scenarios: packageData.value.scenarios,
+      metrics: packageData.value.metrics
+    } as ExtendedPackage
     
     showEditDialog.value = false
     
@@ -2009,16 +1860,17 @@ const savePackage = async () => {
       message: 'Pacote atualizado com sucesso!',
       position: 'top'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: 'Erro ao atualizar pacote: ' + error.message,
+      message: 'Erro ao atualizar pacote: ' + errorMessage,
       position: 'top'
     })
   }
 }
 
-const deletePackage = async () => {
+const deletePackage = () => {
   try {
     // Aqui você implementaria a chamada para a API
     // await packageService.deletePackage(projectId.value, packageId.value)
@@ -2035,20 +1887,21 @@ const deletePackage = async () => {
     setTimeout(() => {
       goBack()
     }, 1500)
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: 'Erro ao excluir pacote: ' + error.message,
+      message: 'Erro ao excluir pacote: ' + errorMessage,
       position: 'top'
     })
   }
 }
 
-const executeScenario = (scenario: any) => {
-  router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios/${scenario.id}`)
+const executeScenario = (scenario: ExtendedScenario | TestScenario) => {
+  void router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios/${scenario.id}`)
 }
 
-const editScenario = (scenario: any) => {
+const editScenario = (scenario: ExtendedScenario) => {
   selectedScenario.value = scenario
   scenarioEditForm.value = {
     title: scenario.title,
@@ -2068,10 +1921,8 @@ const saveScenarioEdits = async () => {
     await scenarioService.updateScenario(selectedScenario.value.id, {
       title: scenarioEditForm.value.title,
       description: scenarioEditForm.value.description,
-      type: scenarioEditForm.value.type as any,
-      priority: scenarioEditForm.value.priority as any,
-      testadorId: scenarioEditForm.value.testadorId,
-      aprovadorId: scenarioEditForm.value.aprovadorId
+      type: scenarioEditForm.value.type as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
+      priority: scenarioEditForm.value.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
     })
 
     showEditScenarioDialog.value = false
@@ -2084,16 +1935,17 @@ const saveScenarioEdits = async () => {
 
     // Recarregar os dados
     await loadPackageDetails()
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: 'Erro ao atualizar cenário: ' + error.message,
+      message: 'Erro ao atualizar cenário: ' + errorMessage,
       position: 'top'
     })
   }
 }
 
-const duplicateScenario = async (scenario: any) => {
+const duplicateScenario = async (scenario: ExtendedScenario | TestScenario) => {
   try {
     await scenarioService.duplicateScenario(scenario.id)
     
@@ -2105,66 +1957,18 @@ const duplicateScenario = async (scenario: any) => {
     
     // Recarregar os dados
     await loadPackageDetails()
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: 'Erro ao duplicar cenário: ' + error.message,
+      message: 'Erro ao duplicar cenário: ' + errorMessage,
       position: 'top'
     })
   }
 }
 
-// Aprovar cenário (apenas owner/manager)
-const approveScenario = async (scenario: any) => {
-  try {
-    await scenarioService.updateScenario(scenario.id, {
-      status: 'APPROVED'
-    } as any)
-    
-    Notify.create({
-      type: 'positive',
-      message: 'Cenário aprovado com sucesso!',
-      position: 'top'
-    })
-    
-    // Recarregar dados
-    await loadPackageDetails()
-  } catch (error: any) {
-    console.error('Erro ao aprovar cenário:', error)
-    Notify.create({
-      type: 'negative',
-      message: error.response?.data?.message || 'Erro ao aprovar cenário',
-      position: 'top'
-    })
-  }
-}
 
-// Reprovar cenário (apenas owner/manager)
-const reproveScenario = async (scenario: any) => {
-  try {
-    await scenarioService.updateScenario(scenario.id, {
-      status: 'REPROVED'
-    } as any)
-    
-    Notify.create({
-      type: 'positive',
-      message: 'Cenário reprovado com sucesso!',
-      position: 'top'
-    })
-    
-    // Recarregar dados
-    await loadPackageDetails()
-  } catch (error: any) {
-    console.error('Erro ao reprovar cenário:', error)
-    Notify.create({
-      type: 'negative',
-      message: error.response?.data?.message || 'Erro ao reprovar cenário',
-      position: 'top'
-    })
-  }
-}
-
-const confirmDeleteScenario = (scenario: any) => {
+const confirmDeleteScenario = (scenario: ExtendedScenario) => {
   selectedScenario.value = scenario
   showDeleteScenarioDialog.value = true
 }
@@ -2185,21 +1989,22 @@ const deleteScenario = async () => {
 
     // Recarregar os dados
     await loadPackageDetails()
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: 'Erro ao excluir cenário: ' + error.message,
+      message: 'Erro ao excluir cenário: ' + errorMessage,
       position: 'top'
     })
   }
 }
 
-const viewBug = (bug: any) => {
+const viewBug = (bug: ExtendedBug | Bug) => {
   selectedBug.value = bug
   showBugDetailsDialog.value = true
 }
 
-const editBug = (bug: any) => {
+const editBug = (bug: ExtendedBug | Bug) => {
   selectedBug.value = bug
   bugEditForm.value = {
     id: bug.id,
@@ -2217,6 +2022,8 @@ const editBugFromDetails = () => {
 }
 
 const saveBugEdit = async () => {
+  if (!bugEditForm.value) return
+  
   if (!bugEditForm.value.title.trim()) {
     Notify.create({
       type: 'negative',
@@ -2237,12 +2044,12 @@ const saveBugEdit = async () => {
     })
     
     // Atualizar localmente
-    const bugIndex = bugs.value.findIndex(b => b.id === bugEditForm.value.id)
-    if (bugIndex !== -1) {
+    const bugIndex = bugs.value.findIndex(b => b.id === bugEditForm.value?.id)
+    if (bugIndex !== -1 && bugEditForm.value && bugs.value[bugIndex]) {
       bugs.value[bugIndex] = {
         ...bugs.value[bugIndex],
         ...bugEditForm.value
-      }
+      } as ExtendedBug
     }
     
     Notify.create({
@@ -2252,18 +2059,25 @@ const saveBugEdit = async () => {
     
     showEditBugDialog.value = false
     bugEditForm.value = null
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao atualizar bug:', err)
+    let errorMessage = 'Erro ao atualizar bug'
+    if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
+      const responseData = err.response.data
+      if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+        errorMessage = responseData.message
+      }
+    }
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao atualizar bug'
+      message: errorMessage
     })
   } finally {
     savingBug.value = false
   }
 }
 
-const resolveBug = async (bug: any) => {
+const resolveBug = async (bug: ExtendedBug | Bug) => {
   try {
     // Atualizar status para resolvido
     await executionService.updateBug(bug.id, {
@@ -2272,7 +2086,7 @@ const resolveBug = async (bug: any) => {
     
     // Atualizar localmente
     const bugIndex = bugs.value.findIndex(b => b.id === bug.id)
-    if (bugIndex !== -1) {
+    if (bugIndex !== -1 && bugs.value[bugIndex]) {
       bugs.value[bugIndex].status = 'RESOLVED'
     }
     
@@ -2284,16 +2098,23 @@ const resolveBug = async (bug: any) => {
       type: 'positive',
       message: 'Bug marcado como resolvido!'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao resolver bug:', err)
+    let errorMessage = 'Erro ao resolver bug'
+    if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
+      const responseData = err.response.data
+      if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+        errorMessage = responseData.message
+      }
+    }
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao resolver bug'
+      message: errorMessage
     })
   }
 }
 
-const confirmDeleteBug = (bug: any) => {
+const confirmDeleteBug = (bug: ExtendedBug | Bug) => {
   selectedBug.value = bug
   showDeleteBugDialog.value = true
 }
@@ -2316,11 +2137,18 @@ const deleteBugConfirmed = async () => {
     
     showDeleteBugDialog.value = false
     selectedBug.value = null
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao excluir bug:', err)
+    let errorMessage = 'Erro ao excluir bug'
+    if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
+      const responseData = err.response.data
+      if (responseData && typeof responseData === 'object' && 'message' in responseData && typeof responseData.message === 'string') {
+        errorMessage = responseData.message
+      }
+    }
     Notify.create({
       type: 'negative',
-      message: err.response?.data?.message || 'Erro ao excluir bug'
+      message: errorMessage
     })
   } finally {
     deletingBug.value = false
@@ -2356,13 +2184,8 @@ const formatBugDescription = (description: string) => {
   return formatted
 }
 
-const truncateText = (text: string, maxLength: number) => {
-  if (!text) return ''
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
-}
 
-const downloadBugAttachment = async (attachment: any) => {
+const downloadBugAttachment = async (attachment: StepAttachment) => {
   try {
     const api = (await import('../services/api')).default
     const baseURL = api.defaults.baseURL || 'http://localhost:3000/api'
@@ -2406,7 +2229,7 @@ const downloadBugAttachment = async (attachment: any) => {
       message: 'Anexo baixado com sucesso!',
       position: 'top'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao baixar anexo:', err)
     Notify.create({
       type: 'negative',
@@ -2497,7 +2320,6 @@ const getStatusLabel = (status: string | undefined) => {
     // Scenario/Package status
     'CRIADO': 'Criado',
     'EM_EXECUCAO': 'Em Execução',
-    'APROVADO': 'Concluído',
     'REJEITADO': 'Rejeitado',
     'CREATED': 'Criado',
     'EXECUTED': 'Executado',
@@ -2508,7 +2330,6 @@ const getStatusLabel = (status: string | undefined) => {
     // New package approval status
     'EM_TESTE': 'Em Teste',
     'CONCLUIDO': 'Concluído',
-    'REPROVADO': 'Reprovado',
     'APROVADO': 'Aprovado'
   }
   return labels[status] || status
@@ -2516,13 +2337,23 @@ const getStatusLabel = (status: string | undefined) => {
 
 const getInitials = (name?: string) => {
   if (!name) return '?'
-  const parts = name.split(' ')
-  if (parts.length === 1) return parts[0][0].toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  const parts = name.split(' ').filter(p => p.length > 0)
+  if (parts.length === 0) return '?'
+  const first = parts[0]
+  if (!first || first.length === 0) return '?'
+  const firstChar = first[0]
+  if (!firstChar) return '?'
+  if (parts.length === 1) return firstChar.toUpperCase()
+  const last = parts[parts.length - 1]
+  if (!last || last.length === 0) return firstChar.toUpperCase()
+  const lastChar = last[0]
+  if (!lastChar) return firstChar.toUpperCase()
+  return (firstChar + lastChar).toUpperCase()
 }
 
 // Utility functions
-const getTypeColor = (type: string) => {
+const getTypeColor = (type: string | undefined) => {
+  if (!type) return 'grey'
   const colors: Record<string, string> = {
     'FUNCIONAL': 'primary',
     'INTEGRACAO': 'secondary',
@@ -2532,7 +2363,8 @@ const getTypeColor = (type: string) => {
   return colors[type] || 'grey'
 }
 
-const getTypeLabel = (type: string) => {
+const getTypeLabel = (type: string | undefined) => {
+  if (!type) return 'Desconhecido'
   const labels: Record<string, string> = {
     'FUNCIONAL': 'Funcional',
     'INTEGRACAO': 'Integração',
@@ -2542,7 +2374,8 @@ const getTypeLabel = (type: string) => {
   return labels[type] || type
 }
 
-const getPriorityColor = (priority: string) => {
+const getPriorityColor = (priority: string | undefined) => {
+  if (!priority) return 'grey'
   const colors: Record<string, string> = {
     'ALTA': 'negative',
     'MEDIA': 'warning',
@@ -2551,7 +2384,8 @@ const getPriorityColor = (priority: string) => {
   return colors[priority] || 'grey'
 }
 
-const getPriorityLabel = (priority: string) => {
+const getPriorityLabel = (priority: string | undefined) => {
+  if (!priority) return 'Desconhecido'
   const labels: Record<string, string> = {
     'ALTA': 'Alta',
     'MEDIA': 'Média',
@@ -2576,12 +2410,11 @@ const getStatusColor = (status: string | undefined) => {
     'EM_TESTE': 'blue',
     'CONCLUIDO': 'positive',
     'REPROVADO': 'negative',
-    'APROVADO': 'positive'
   }
   return colors[status] || 'grey'
 }
 
-const formatDate = (date: string | Date) => {
+const formatDate = (date: string | Date | undefined) => {
   if (!date) return 'N/A'
   return new Date(date).toLocaleDateString('pt-BR')
 }
@@ -2599,7 +2432,7 @@ const loadMembers = async () => {
   try {
     isLoadingMembers.value = true
     members.value = await getProjectMembers(projectId.value)
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error loading members:', error)
     members.value = []
   } finally {
@@ -2620,19 +2453,19 @@ const handleVisibilityChange = () => {
     }
     // Adicionar debounce de 1 segundo para evitar múltiplas chamadas
     visibilityTimeout = setTimeout(() => {
-      loadPackageDetails()
-      loadMembers()
+      void loadPackageDetails()
+      void loadMembers()
     }, 1000)
   }
 }
 
 // Lifecycle
 onMounted(() => {
-  loadPackageDetails()
-  loadMembers().then(() => {
+  void loadPackageDetails()
+  void loadMembers().then(() => {
     hasInitiallyLoaded.value = true
   })
-  loadCurrentUser()
+  void loadCurrentUser()
   
   // Adicionar listener para quando a página volta a ficar visível
   document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -2641,8 +2474,8 @@ onMounted(() => {
 // Recarregar dados quando a página é ativada apenas se os dados ainda não foram carregados
 onActivated(() => {
   if (!hasInitiallyLoaded.value) {
-    loadPackageDetails()
-    loadMembers().then(() => {
+    void loadPackageDetails()
+    void loadMembers().then(() => {
       hasInitiallyLoaded.value = true
     })
   }
@@ -3223,6 +3056,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 4;
+  line-clamp: 4;
   -webkit-box-orient: vertical;
   white-space: pre-wrap;
   word-break: break-word;
@@ -3622,33 +3456,6 @@ onBeforeUnmount(() => {
   color: white;
 }
 
-/* Reject Dialog Styles */
-.reject-dialog {
-  background: rgba(255, 255, 255, 0.08) !important;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-}
-
-.reject-warning {
-  text-align: center;
-  padding: 20px;
-  margin-bottom: 24px;
-  background: rgba(244, 67, 54, 0.1);
-  border-radius: 12px;
-  border: 1px solid rgba(244, 67, 54, 0.3);
-}
-
-.warning-text {
-  color: white;
-  margin-top: 12px;
-  line-height: 1.6;
-}
-
-.reject-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
 
 .dialog-header-content {
   display: flex;

@@ -113,6 +113,7 @@ class InviteService {
     // Primeiro precisamos obter o token do convite
     // Por enquanto, vamos simular - em uma implementação real,
     // você precisaria de um endpoint que retorne o token ou aceite por ID
+    void _inviteId // Marcar como usado explicitamente
     throw new Error('Método não implementado - use acceptInvite com token')
   }
 
@@ -123,6 +124,7 @@ class InviteService {
     // Primeiro precisamos obter o token do convite
     // Por enquanto, vamos simular - em uma implementação real,
     // você precisaria de um endpoint que retorne o token ou aceite por ID
+    void _inviteId // Marcar como usado explicitamente
     throw new Error('Método não implementado - use declineInvite com token')
   }
 }

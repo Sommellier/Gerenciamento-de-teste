@@ -195,19 +195,19 @@
     <!-- Scenario menu -->
     <q-menu
       v-model="showMenu"
-      :target="menuTarget"
+      :target="menuTarget || false"
       :position="menuPosition"
       class="scenario-menu"
     >
       <q-list style="min-width: 160px">
-        <q-item clickable @click="editScenario(selectedScenario)">
+        <q-item clickable @click="selectedScenario && editScenario(selectedScenario)">
           <q-item-section avatar>
             <q-icon name="edit" />
           </q-item-section>
           <q-item-section>Editar</q-item-section>
         </q-item>
         <q-separator />
-        <q-item clickable @click="deleteScenario(selectedScenario)" class="text-negative">
+        <q-item clickable @click="selectedScenario && deleteScenario(selectedScenario)" class="text-negative">
           <q-item-section avatar>
             <q-icon name="delete" />
           </q-item-section>
@@ -243,17 +243,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from 'src/services/api'
+import { type TestScenario } from '../services/scenario.service'
+
+// Interface estendida para incluir propriedades adicionais que podem vir da API
+interface ExtendedScenario extends TestScenario {
+  release?: string
+}
 
 const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 
 // State
-const scenarios = ref<any[]>([])
+const scenarios = ref<ExtendedScenario[]>([])
 const loading = ref(false)
 const searchQuery = ref('')
 const currentPage = ref(1)
@@ -263,44 +269,45 @@ const projectName = ref('')
 
 // Menu state
 const showMenu = ref(false)
-const menuTarget = ref(null)
+const menuTarget = ref<HTMLElement | null>(null)
 const menuPosition = ref('bottom right')
-const selectedScenario = ref<any>(null)
+const selectedScenario = ref<ExtendedScenario | null>(null)
 
 // Delete dialog state
 const deleteDialog = ref(false)
-const scenarioToDelete = ref<any>(null)
+const scenarioToDelete = ref<ExtendedScenario | null>(null)
 const deleting = ref(false)
-
-// Computed
-const hasScenarios = computed(() => scenarios.value.length > 0)
 
 // Navigation
 function goBack() {
-  router.push(`/projects/${route.params.projectId}`)
+  const projectId = String(route.params.projectId ?? '')
+  void router.push(`/projects/${projectId}`)
 }
 
 function createScenario() {
-  router.push(`/projects/${route.params.projectId}/create-scenario`)
+  const projectId = String(route.params.projectId ?? '')
+  void router.push(`/projects/${projectId}/create-scenario`)
 }
 
-function viewScenario(scenario: any) {
+function viewScenario(scenario: ExtendedScenario) {
   // TODO: Implementar visualização de cenário
+  void scenario // Marcar como usado explicitamente
 }
 
 // Scenario actions
-function showScenarioMenu(scenario: any, event: Event) {
+function showScenarioMenu(scenario: ExtendedScenario, event: Event) {
   selectedScenario.value = scenario
-  menuTarget.value = event.target
+  menuTarget.value = event.target as HTMLElement | null
   showMenu.value = true
 }
 
-function editScenario(scenario: any) {
+function editScenario(_scenario: ExtendedScenario) {
+  void _scenario // Marcar como usado explicitamente
   showMenu.value = false
   // TODO: Implementar edição de cenário
 }
 
-function deleteScenario(scenario: any) {
+function deleteScenario(scenario: ExtendedScenario) {
   showMenu.value = false
   scenarioToDelete.value = scenario
   deleteDialog.value = true
@@ -311,14 +318,16 @@ async function confirmDelete() {
   
   deleting.value = true
   try {
-    await api.delete(`/projects/${route.params.projectId}/scenarios/${scenarioToDelete.value.id}`)
+    const projectId = String(route.params.projectId ?? '')
+    await api.delete(`/projects/${projectId}/scenarios/${scenarioToDelete.value.id}`)
     $q.notify({
       type: 'positive',
       message: 'Cenário excluído com sucesso!',
       position: 'top'
     })
     await loadScenarios()
-  } catch (err: any) {
+  } catch (err: unknown) {
+    console.error('Erro ao excluir cenário:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao excluir cenário',
@@ -341,13 +350,14 @@ async function loadScenarios() {
       params.append('q', searchQuery.value.trim())
     }
 
-    const response = await api.get(`/projects/${route.params.projectId}/scenarios?${params}`)
+    const projectId = String(route.params.projectId ?? '')
+    const response = await api.get(`/projects/${projectId}/scenarios?${params}`)
     
     // A API retorna os cenários diretamente, não em formato paginado
     scenarios.value = Array.isArray(response.data) ? response.data : []
     totalPages.value = 1
     totalScenarios.value = scenarios.value.length
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error loading scenarios:', err)
     $q.notify({
       type: 'negative',
@@ -369,13 +379,13 @@ function onSearch() {
   
   if (!searchQuery.value || searchQuery.value.trim() === '') {
     currentPage.value = 1
-    loadScenarios()
+    void loadScenarios()
     return
   }
   
   searchTimeout = setTimeout(() => {
     currentPage.value = 1
-    loadScenarios()
+    void loadScenarios()
   }, 500)
 }
 
@@ -447,13 +457,19 @@ function getScenarioPriorityLabel(priority: string) {
 onMounted(async () => {
   // Carregar nome do projeto
   try {
-    const response = await api.get(`/projects/${route.params.projectId}`)
-    projectName.value = response.data.name
-  } catch (err) {
+    interface ProjectResponse {
+      name: string
+    }
+    const projectId = String(route.params.projectId ?? '')
+    const response = await api.get<ProjectResponse>(`/projects/${projectId}`)
+    if (response.data && 'name' in response.data) {
+      projectName.value = response.data.name
+    }
+  } catch (err: unknown) {
     console.error('Error loading project name:', err)
   }
   
-  loadScenarios()
+  void loadScenarios()
 })
 </script>
 
@@ -621,6 +637,7 @@ onMounted(async () => {
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

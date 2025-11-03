@@ -131,7 +131,10 @@ class ScenarioService {
   }
 
   // Criar novo cenário
-  async createScenario(packageId: number, data: any): Promise<{ message: string; scenario: TestScenario }> {
+  async createScenario(
+    packageId: number,
+    data: CreateScenarioData & { projectId: number; testadorId?: number; aprovadorId?: number }
+  ): Promise<{ message: string; scenario: TestScenario }> {
     const projectId = data.projectId
     const response = await api.post(`/projects/${projectId}/packages/${packageId}/scenarios`, data)
     return response.data as { message: string; scenario: TestScenario }
