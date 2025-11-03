@@ -120,8 +120,8 @@
                     <h3>{{ packageItem.title }}</h3>
                   </div>
                   <q-chip
-                    :label="getStatusLabel(packageItem.status)"
-                    :color="getStatusColor(packageItem.status)"
+                    :label="getStatusLabel(packageItem.status || 'CREATED')"
+                    :color="getStatusColor(packageItem.status || 'CREATED')"
                     text-color="white"
                     size="sm"
                     class="status-chip"
@@ -298,7 +298,7 @@ const loadPackages = async () => {
     // Extrair releases únicas
     const releases = [...new Set(data.map(pkg => pkg.release))].sort().reverse()
     releaseOptions.value = releases
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao carregar pacotes:', error)
     $q.notify({
       type: 'negative',
@@ -310,34 +310,33 @@ const loadPackages = async () => {
 }
 
 const goToCreatePackage = () => {
-  router.push(`/projects/${projectId.value}/create-package`)
+  void router.push(`/projects/${projectId.value}/create-package`)
 }
 
 const goBack = () => {
-  router.push(`/projects/${projectId.value}`)
+  void router.push(`/projects/${projectId.value}`)
 }
 
 const goToPackageDetails = (packageId: number) => {
-  router.push(`/projects/${projectId.value}/packages/${packageId}`)
+  void router.push(`/projects/${projectId.value}/packages/${packageId}`)
 }
 
 const editPackage = (packageId?: number) => {
   if (packageId) {
-    router.push(`/projects/${projectId.value}/packages/${packageId}/edit`)
+    void router.push(`/projects/${projectId.value}/packages/${packageId}/edit`)
   }
 }
 
 const goToScenarios = (packageId: number) => {
-  router.push(`/projects/${projectId.value}/packages/${packageId}/scenarios`)
+  void router.push(`/projects/${projectId.value}/packages/${packageId}/scenarios`)
 }
 
-const deletePackageAction = async (packageId?: number) => {
+const deletePackageAction = (packageId?: number) => {
   if (!packageId) return
 
   $q.dialog({
     title: 'Confirmar Exclusão',
     message: 'Tem certeza que deseja excluir este pacote? Esta ação não pode ser desfeita.',
-    cancel: true,
     persistent: true,
     ok: {
       label: 'Excluir',
@@ -347,20 +346,23 @@ const deletePackageAction = async (packageId?: number) => {
       label: 'Cancelar',
       color: 'grey'
     }
-  }).onOk(async () => {
-    try {
-      await deletePackage(projectId.value, packageId)
-      $q.notify({
-        type: 'positive',
-        message: 'Pacote excluído com sucesso!'
-      })
-      loadPackages()
-    } catch (error: any) {
-      $q.notify({
-        type: 'negative',
-        message: 'Erro ao excluir pacote'
-      })
-    }
+  }).onOk(() => {
+    void (async () => {
+      try {
+        await deletePackage(projectId.value, packageId)
+        $q.notify({
+          type: 'positive',
+          message: 'Pacote excluído com sucesso!'
+        })
+        void loadPackages()
+      } catch (error: unknown) {
+        console.error('Erro ao excluir pacote:', error)
+        $q.notify({
+          type: 'negative',
+          message: 'Erro ao excluir pacote'
+        })
+      }
+    })()
   })
 }
 
@@ -429,7 +431,7 @@ const formatDate = (dateString: string) => {
 
 // Lifecycle
 onMounted(() => {
-  loadPackages()
+  void loadPackages()
 })
 </script>
 
@@ -700,6 +702,7 @@ onMounted(() => {
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

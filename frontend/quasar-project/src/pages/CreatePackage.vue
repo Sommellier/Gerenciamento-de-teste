@@ -348,12 +348,26 @@ const loadProjectData = async () => {
     ])
     
     releases.value = releasesData
-    const membersDataAny = membersData as any[]
-    members.value = membersDataAny.map(member => ({
-      label: `${member.user?.name ?? member.name} (${member.user?.email ?? member.email})`,
-      value: member.user?.email ?? member.email
-    }))
-  } catch (error: any) {
+    interface Member {
+      user?: {
+        name?: string
+        email?: string
+      }
+      name?: string
+      email?: string
+    }
+    const membersDataTyped = membersData as Member[]
+    members.value = membersDataTyped
+      .map(member => {
+        const email = member.user?.email ?? member.email ?? ''
+        if (!email) return null
+        return {
+          label: `${member.user?.name ?? member.name ?? email} (${email})`,
+          value: email
+        }
+      })
+      .filter((member): member is { label: string; value: string } => member !== null)
+  } catch (error: unknown) {
     console.error('Erro ao carregar dados do projeto:', error)
     $q.notify({
       type: 'negative',
@@ -386,7 +400,7 @@ const openCreateReleaseDialog = () => {
   showCreateReleaseDialog.value = true
 }
 
-const createNewRelease = async () => {
+const createNewRelease = () => {
   if (!newRelease.value.trim()) {
     $q.notify({
       type: 'negative',
@@ -399,7 +413,8 @@ const createNewRelease = async () => {
     creatingRelease.value = true
     
     // Adicionar a nova release à lista
-    releases.value = addRelease(releases.value, newRelease.value)
+    const updatedReleases = addRelease(releases.value, newRelease.value)
+    releases.value = updatedReleases || [...releases.value, newRelease.value]
     
     // Selecionar a nova release
     form.value.release = newRelease.value
@@ -412,7 +427,7 @@ const createNewRelease = async () => {
       type: 'positive',
       message: 'Release criada com sucesso!'
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao criar release:', error)
     $q.notify({
       type: 'negative',
@@ -436,21 +451,49 @@ const onSubmit = async () => {
     console.log('onSubmit - projectId:', projectId)
     
     // Converter objetos para valores antes de enviar
-    const getOptionValue = (val: unknown) => {
-      return typeof val === 'object' && val !== null && (val as any).value !== undefined
-        ? (val as any).value
-        : (val as any)
+    interface SelectOption {
+      value: string
+    }
+    
+    const getOptionValue = (val: unknown): string => {
+      if (typeof val === 'object' && val !== null && 'value' in val) {
+        const option = val as SelectOption
+        return option.value
+      }
+      return typeof val === 'string' ? val : ''
     }
 
-    const packageData = {
+    type PackageType = 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
+    type PackagePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    type PackageEnvironment = 'DEV' | 'QA' | 'STAGING' | 'PROD'
+
+    const assigneeEmailValue = getOptionValue(form.value.assigneeEmail)
+    const environmentValue = getOptionValue(form.value.environment)
+    
+    const packageData: {
+      title: string
+      description?: string
+      type: PackageType
+      priority: PackagePriority
+      environment?: PackageEnvironment
+      release: string
+      assigneeEmail?: string
+      tags: string[]
+    } = {
       title: form.value.title,
       description: form.value.description,
-      type: getOptionValue(form.value.type) as any,
-      priority: getOptionValue(form.value.priority) as any,
-      environment: getOptionValue(form.value.environment) as any,
-      release: getOptionValue(form.value.release) as any,
-      assigneeEmail: getOptionValue(form.value.assigneeEmail) as any,
+      type: getOptionValue(form.value.type) as PackageType,
+      priority: getOptionValue(form.value.priority) as PackagePriority,
+      release: getOptionValue(form.value.release),
       tags: form.value.tags
+    }
+    
+    if (environmentValue) {
+      packageData.environment = environmentValue as PackageEnvironment
+    }
+    
+    if (assigneeEmailValue) {
+      packageData.assigneeEmail = assigneeEmailValue
     }
     console.log('onSubmit - packageData:', packageData)
 
@@ -461,12 +504,15 @@ const onSubmit = async () => {
       message: 'Pacote criado com sucesso!'
     })
 
-    router.push(`/projects/${projectId}`)
-  } catch (error: any) {
+    void router.push(`/projects/${projectId}`)
+  } catch (error: unknown) {
     console.error('Erro ao criar pacote:', error)
+    const errorMessage = error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Erro ao criar pacote'
+      : 'Erro ao criar pacote'
     $q.notify({
       type: 'negative',
-      message: error.response?.data?.message || 'Erro ao criar pacote'
+      message: errorMessage
     })
   } finally {
     loading.value = false
@@ -475,7 +521,7 @@ const onSubmit = async () => {
 
 // Carregar dados ao montar o componente
 onMounted(() => {
-  loadProjectData()
+  void loadProjectData()
 })
 </script>
 

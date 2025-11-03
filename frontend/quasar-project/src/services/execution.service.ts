@@ -51,7 +51,7 @@ export interface ExecutionHistory {
   id: number
   action: string
   description?: string
-  metadata?: any
+  metadata?: Record<string, unknown>
   user: {
     id: number
     name: string
@@ -132,11 +132,11 @@ class ExecutionService {
   }
 
   // Anexos de bugs
-  async uploadBugAttachment(bugId: number, file: File): Promise<any> {
+  async uploadBugAttachment(bugId: number, file: File): Promise<StepAttachment> {
     const formData = new FormData()
     formData.append('file', file)
 
-    const response = await api.post<{ attachment: any }>(`/bugs/${bugId}/attachments`, formData, {
+    const response = await api.post<{ attachment: StepAttachment }>(`/bugs/${bugId}/attachments`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
@@ -145,8 +145,8 @@ class ExecutionService {
   }
 
   // Atualizar status da etapa
-  async updateStepStatus(stepId: number, status: string, actualResult?: string): Promise<any> {
-    const response = await api.put<{ step: any }>(`/execution/steps/${stepId}/status`, {
+  async updateStepStatus(stepId: number, status: string, actualResult?: string): Promise<unknown> {
+    const response = await api.put<{ step: unknown }>(`/execution/steps/${stepId}/status`, {
       status,
       actualResult
     })
@@ -158,7 +158,7 @@ class ExecutionService {
     scenarioId: number,
     action: string,
     description?: string,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): Promise<ExecutionHistory> {
     const response = await api.post<{ history: ExecutionHistory }>(`/scenarios/${scenarioId}/history`, {
       action,

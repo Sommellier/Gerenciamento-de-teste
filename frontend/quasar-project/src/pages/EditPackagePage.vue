@@ -63,6 +63,8 @@
                 outlined
                 class="form-input"
                 :rules="typeRules"
+                emit-value
+                map-options
               />
               <q-select
                 v-model="packageForm.priority"
@@ -71,6 +73,8 @@
                 outlined
                 class="form-input"
                 :rules="priorityRules"
+                emit-value
+                map-options
               />
             </div>
             <div class="form-row">
@@ -80,6 +84,8 @@
                 label="Ambiente"
                 outlined
                 class="form-input"
+                emit-value
+                map-options
               />
               <q-input
                 v-model="packageForm.release"
@@ -181,22 +187,37 @@ const loading = ref(false)
 const packageForm = ref({
   name: '',
   description: '',
-  type: 'Functional',
-  priority: 'Medium',
+  type: 'FUNCTIONAL' as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
+  priority: 'MEDIUM' as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL',
   tags: [] as string[],
   assigneeId: null as number | null,
   assigneeEmail: '',
-  environment: 'QA',
+  environment: 'QA' as 'DEV' | 'QA' | 'STAGING' | 'PROD' | null,
   release: '2024-09'
 })
 
 const tagsInput = ref('')
-const formRef = ref<any>(null)
+const formRef = ref<{ validate?: () => Promise<boolean> } | null>(null)
 
 // Opções
-const packageTypes = ['Functional', 'Regression', 'Smoke', 'E2E']
-const priorityOptions = ['Low', 'Medium', 'High', 'Critical']
-const environmentOptions = ['Dev', 'QA', 'Staging', 'Prod']
+const packageTypes = [
+  { label: 'Funcional', value: 'FUNCTIONAL' },
+  { label: 'Regressão', value: 'REGRESSION' },
+  { label: 'Smoke', value: 'SMOKE' },
+  { label: 'End-to-End', value: 'E2E' }
+]
+const priorityOptions = [
+  { label: 'Baixa', value: 'LOW' },
+  { label: 'Média', value: 'MEDIUM' },
+  { label: 'Alta', value: 'HIGH' },
+  { label: 'Crítica', value: 'CRITICAL' }
+]
+const environmentOptions = [
+  { label: 'Desenvolvimento', value: 'DEV' },
+  { label: 'QA', value: 'QA' },
+  { label: 'Staging', value: 'STAGING' },
+  { label: 'Produção', value: 'PROD' }
+]
 
 // Computed
 const projectId = computed(() => Number(route.params.projectId))
@@ -229,7 +250,7 @@ const releaseRules = [
 
 // Funções
 const goBack = () => {
-  router.push(`/projects/${projectId.value}/packages`)
+  void router.push(`/projects/${projectId.value}/packages`)
 }
 
 const getTagColor = (tag: string) => {
@@ -264,12 +285,31 @@ async function onSubmit() {
 
   updatingPackage.value = true
   try {
-    // Converter tipos para o formato esperado pelo backend
-    const packageData = {
-      ...packageForm.value,
-      type: packageForm.value.type.toUpperCase(),
-      priority: packageForm.value.priority.toUpperCase(),
-      environment: packageForm.value.environment?.toUpperCase(),
+    // Preparar dados para a API
+    const packageData: {
+      title: string
+      description: string
+      type: 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
+      priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+      release: string
+      tags: string[]
+      environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
+      assigneeEmail?: string
+    } = {
+      title: packageForm.value.name,
+      description: packageForm.value.description,
+      type: packageForm.value.type,
+      priority: packageForm.value.priority,
+      release: packageForm.value.release,
+      tags: packageForm.value.tags
+    }
+
+    if (packageForm.value.environment) {
+      packageData.environment = packageForm.value.environment
+    }
+
+    if (packageForm.value.assigneeEmail) {
+      packageData.assigneeEmail = packageForm.value.assigneeEmail
     }
     
     await updatePackage(projectId.value, packageId.value, packageData)
@@ -281,7 +321,7 @@ async function onSubmit() {
     })
     
     goBack()
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error updating package:', error)
     $q.notify({
       type: 'negative',
@@ -308,20 +348,20 @@ async function loadData() {
 
     // Preencher formulário com dados do pacote
     packageForm.value = {
-      name: packageData.name,
+      name: packageData.title,
       description: packageData.description || '',
-      type: packageData.type.charAt(0) + packageData.type.slice(1).toLowerCase(),
-      priority: packageData.priority.charAt(0) + packageData.priority.slice(1).toLowerCase(),
+      type: packageData.type,
+      priority: packageData.priority,
       tags: packageData.tags || [],
       assigneeId: null, // TODO: Implementar busca por assignee
       assigneeEmail: packageData.assigneeEmail || '',
-      environment: packageData.environment ? packageData.environment.charAt(0) + packageData.environment.slice(1).toLowerCase() : 'QA',
+      environment: packageData.environment || 'QA',
       release: packageData.release
     }
 
     // Preencher tags input
     tagsInput.value = packageForm.value.tags.join(', ')
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error loading data:', error)
     $q.notify({
       type: 'negative',
@@ -333,7 +373,7 @@ async function loadData() {
 }
 
 onMounted(() => {
-  loadData()
+  void loadData()
 })
 </script>
 

@@ -234,7 +234,11 @@ const uploadFile = async () => {
   }
 }
 
-const onFileRejected = (rejectedEntries: any[]) => {
+interface RejectedEntry {
+  failedPropValidation: string
+}
+
+const onFileRejected = (rejectedEntries: RejectedEntry[]) => {
   const reasons = rejectedEntries.map(entry => entry.failedPropValidation).join(', ')
   Notify.create({
     type: 'negative',
@@ -254,7 +258,8 @@ const downloadFile = (evidence: ScenarioEvidence) => {
   link.click()
 }
 
-const deleteEvidence = async (evidenceId: number) => {
+const deleteEvidence = (evidenceId: number) => {
+  void evidenceId
   try {
     // Em produção, implementar endpoint para deletar evidência
     Notify.create({
@@ -315,20 +320,20 @@ const getExecutionStatusLabel = (status: string) => {
 // Watchers
 watch(() => props.modelValue, (newValue) => {
   if (newValue) {
-    loadEvidences()
+    void loadEvidences()
   }
 })
 
 watch(() => props.scenario, () => {
   if (props.modelValue) {
-    loadEvidences()
+    void loadEvidences()
   }
 })
 
 // Lifecycle
 onMounted(() => {
   if (props.modelValue) {
-    loadEvidences()
+    void loadEvidences()
   }
 })
 </script>

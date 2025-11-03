@@ -16,7 +16,7 @@
             <q-expansion-item
               v-for="(step, index) in scenario?.steps"
               :key="index"
-              :label="`Passo ${step.stepOrder}: ${step.action}`"
+              :label="`Passo ${step.order ?? (index + 1)}: ${step.action}`"
               :default-opened="true"
               class="q-mb-sm"
             >
@@ -47,7 +47,7 @@
                   <!-- Checkbox para marcar passo como executado -->
                   <q-checkbox
                     v-model="stepResults[index]"
-                    :label="`Passo ${step.stepOrder} executado com sucesso`"
+                    :label="`Passo ${step.order ?? (index + 1)} executado com sucesso`"
                     color="green"
                   />
                   
@@ -219,7 +219,7 @@ const onExecute = async () => {
       failedSteps.forEach(({ index }) => {
         const step = props.scenario?.steps[index]
         if (step) {
-          consolidatedNotes += `- Passo ${step.stepOrder}: ${step.action}`
+          consolidatedNotes += `- Passo ${step.order ?? (index + 1)}: ${step.action}`
           if (stepNotes.value[index]) {
             consolidatedNotes += ` - ${stepNotes.value[index]}`
           }

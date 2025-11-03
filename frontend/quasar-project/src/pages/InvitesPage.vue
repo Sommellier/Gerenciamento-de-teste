@@ -170,7 +170,7 @@
               <div class="card-actions">
                 <button 
                   class="action-button"
-                  @click="showInviteMenu(invite, $event)"
+                  @click="showInviteMenu(invite)"
                   aria-label="Mais opções"
                 >
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -226,7 +226,7 @@
                 <button 
                   class="accept-button"
                   @click="acceptInvite(invite)"
-                  :disabled="processingInvite === invite.id"
+                  :disabled="processingInvite === invite.id || processingInvite !== null"
                 >
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -237,7 +237,7 @@
                 <button 
                   class="decline-button"
                   @click="declineInvite(invite)"
-                  :disabled="processingInvite === invite.id"
+                  :disabled="processingInvite === invite.id || processingInvite !== null"
                 >
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
@@ -346,7 +346,7 @@
           <button 
             class="confirm-button success" 
             @click="confirmAccept"
-            :disabled="processingInvite"
+            :disabled="processingInvite !== null"
           >
             Aceitar
           </button>
@@ -374,7 +374,7 @@
           <button 
             class="confirm-button error" 
             @click="confirmDecline"
-            :disabled="processingInvite"
+            :disabled="processingInvite !== null"
           >
             Recusar
           </button>
@@ -404,8 +404,6 @@ const processingInvite = ref<number | null>(null)
 
 // Menu state
 const showMenu = ref(false)
-const menuTarget = ref<HTMLElement | null>(null)
-const menuPosition = ref('bottom right')
 const selectedInvite = ref<Invite | null>(null)
 
 // Dialog state
@@ -413,18 +411,16 @@ const acceptDialog = ref(false)
 const declineDialog = ref(false)
 const inviteToProcess = ref<Invite | null>(null)
 
-// Options
-const statusOptions = [
-  { label: 'Pendente', value: 'PENDING' },
-  { label: 'Aceito', value: 'ACCEPTED' },
-  { label: 'Recusado', value: 'DECLINED' },
-  { label: 'Expirado', value: 'EXPIRED' }
-]
+// Options removed - not used
 
 // Methods
-const goBack = () => router.push('/dashboard')
+const goBack = () => {
+  void router.push('/dashboard')
+}
 
-const goToProfile = () => router.push('/profile')
+const goToProfile = () => {
+  void router.push('/profile')
+}
 
 const loadInvites = async () => {
   loading.value = true
@@ -502,61 +498,36 @@ const closeDeclineDialog = () => {
   inviteToProcess.value = null
 }
 
-const getStatusColor = (status) => {
-  const colors = {
-    PENDING: 'orange',
-    ACCEPTED: 'positive',
-    DECLINED: 'negative',
-    EXPIRED: 'grey'
-  }
-  return colors[status] || 'grey'
-}
+type InviteStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
+type InviteRole = 'OWNER' | 'MANAGER' | 'TESTER' | 'APPROVER'
 
-const getStatusIcon = (status) => {
-  const icons = {
-    PENDING: 'schedule',
-    ACCEPTED: 'check_circle',
-    DECLINED: 'cancel',
-    EXPIRED: 'timer_off'
-  }
-  return icons[status] || 'help'
-}
+// Helper functions removed - not used
 
-const getStatusLabel = (status) => {
-  const labels = {
+const getStatusLabel = (status: string): string => {
+  const labels: Record<InviteStatus, string> = {
     PENDING: 'Pendente',
     ACCEPTED: 'Aceito',
     DECLINED: 'Recusado',
     EXPIRED: 'Expirado'
   }
-  return labels[status] || 'Desconhecido'
+  return status in labels ? labels[status as InviteStatus] : 'Desconhecido'
 }
 
-const getRoleColor = (role) => {
-  const colors = {
-    OWNER: 'purple',
-    MANAGER: 'blue',
-    TESTER: 'green',
-    APPROVER: 'orange'
-  }
-  return colors[role] || 'grey'
-}
-
-const getRoleLabel = (role) => {
-  const labels = {
+const getRoleLabel = (role: string): string => {
+  const labels: Record<InviteRole, string> = {
     OWNER: 'Proprietário',
     MANAGER: 'Gerente',
     TESTER: 'Testador',
     APPROVER: 'Aprovador'
   }
-  return labels[role] || 'Desconhecido'
+  return role in labels ? labels[role as InviteRole] : 'Desconhecido'
 }
 
-const formatDate = (date) => {
+const formatDate = (date: string | Date): string => {
   return new Date(date).toLocaleDateString('pt-BR')
 }
 
-const showInviteMenu = (invite: Invite, event: Event) => {
+const showInviteMenu = (invite: Invite) => {
   selectedInvite.value = invite
   showMenu.value = true
 }
@@ -597,7 +568,17 @@ const confirmAccept = async () => {
     // Recarregar a lista para garantir sincronização
     await loadInvites()
   } catch (error: unknown) {
-    const message = (error as any)?.response?.data?.message || 'Erro ao aceitar convite'
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    const axiosError = error && typeof error === 'object' && 'response' in error
+      ? error as AxiosError
+      : undefined
+    const message = axiosError?.response?.data?.message || 'Erro ao aceitar convite'
     $q.notify({
       type: 'negative',
       message,
@@ -634,7 +615,17 @@ const confirmDecline = async () => {
     // Recarregar a lista para garantir sincronização
     await loadInvites()
   } catch (error: unknown) {
-    const message = (error as any)?.response?.data?.message || 'Erro ao recusar convite'
+    interface AxiosError {
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    const axiosError = error && typeof error === 'object' && 'response' in error
+      ? error as AxiosError
+      : undefined
+    const message = axiosError?.response?.data?.message || 'Erro ao recusar convite'
     $q.notify({
       type: 'negative',
       message,

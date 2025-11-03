@@ -14,9 +14,19 @@ export const ectService = {
       const response = await api.post<ECTGenerationResponse>(`/scenarios/${scenarioId}/ect`)
       console.log('ECT gerado com sucesso:', response.data)
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao gerar ECT:', error)
-      throw new Error(error.response?.data?.message || 'Erro ao gerar ECT')
+      interface AxiosError {
+        response?: {
+          data?: {
+            message?: string
+          }
+        }
+      }
+      const axiosError = error && typeof error === 'object' && 'response' in error
+        ? error as AxiosError
+        : undefined
+      throw new Error(axiosError?.response?.data?.message || 'Erro ao gerar ECT')
     }
   },
 
@@ -56,35 +66,65 @@ export const ectService = {
       window.URL.revokeObjectURL(url)
       
       console.log('Download iniciado:', fileName)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao baixar relatório:', error)
-      throw new Error(error.response?.data?.message || 'Erro ao baixar relatório')
+      interface AxiosError {
+        response?: {
+          data?: {
+            message?: string
+          }
+        }
+      }
+      const axiosError = error && typeof error === 'object' && 'response' in error
+        ? error as AxiosError
+        : undefined
+      throw new Error(axiosError?.response?.data?.message || 'Erro ao baixar relatório')
     }
   },
 
   // Aprovar relatório ECT
-  async approveReport(reportId: number, comment?: string): Promise<any> {
+  async approveReport(reportId: number, comment?: string): Promise<unknown> {
     try {
       console.log('Aprovando relatório:', reportId)
       const response = await api.post(`/reports/${reportId}/approve`, { comment })
       console.log('Relatório aprovado com sucesso:', response.data)
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao aprovar relatório:', error)
-      throw new Error(error.response?.data?.message || 'Erro ao aprovar relatório')
+      interface AxiosError {
+        response?: {
+          data?: {
+            message?: string
+          }
+        }
+      }
+      const axiosError = error && typeof error === 'object' && 'response' in error
+        ? error as AxiosError
+        : undefined
+      throw new Error(axiosError?.response?.data?.message || 'Erro ao aprovar relatório')
     }
   },
 
   // Reprovar relatório ECT
-  async rejectReport(reportId: number, comment: string): Promise<any> {
+  async rejectReport(reportId: number, comment: string): Promise<unknown> {
     try {
       console.log('Reprovando relatório:', reportId)
       const response = await api.post(`/reports/${reportId}/reject`, { comment })
       console.log('Relatório reprovado com sucesso:', response.data)
       return response.data
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao reprovar relatório:', error)
-      throw new Error(error.response?.data?.message || 'Erro ao reprovar relatório')
+      interface AxiosError {
+        response?: {
+          data?: {
+            message?: string
+          }
+        }
+      }
+      const axiosError = error && typeof error === 'object' && 'response' in error
+        ? error as AxiosError
+        : undefined
+      throw new Error(axiosError?.response?.data?.message || 'Erro ao reprovar relatório')
     }
   }
 }

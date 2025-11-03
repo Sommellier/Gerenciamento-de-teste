@@ -86,8 +86,9 @@ describe('server.ts (Express app)', () => {
 
     it('registra middlewares helmet/cors/morgan na inicialização', () => {
         // como o app já foi importado, apenas verificamos as chamadas
+        // cors é chamado 3 vezes: app.use(cors), app.options, e app.use('/uploads', cors)
         expect(helmetMock).toHaveBeenCalledTimes(1)
-        expect(corsMock).toHaveBeenCalledTimes(1)
+        expect(corsMock).toHaveBeenCalledTimes(3)
         expect(morganMock).toHaveBeenCalledWith('dev')
     })
 

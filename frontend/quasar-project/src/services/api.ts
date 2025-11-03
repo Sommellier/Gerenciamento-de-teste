@@ -62,7 +62,7 @@ api.interceptors.response.use(
           const originalRequest = error.config
           originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`
           return axios(originalRequest)
-        } catch (refreshError) {
+        } catch {
           // Refresh falhou, limpar tokens e redirecionar para login
           localStorage.removeItem('token')
           localStorage.removeItem('refreshToken')
@@ -85,7 +85,7 @@ api.interceptors.response.use(
       }
     }
     
-    return Promise.reject(error)
+    return Promise.reject(error instanceof Error ? error : new Error(String(error)))
   }
 )
 

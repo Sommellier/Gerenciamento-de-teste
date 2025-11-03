@@ -30,7 +30,7 @@
                     :src="getAvatarUrl(profile.avatar)" 
                     :alt="profile?.name || 'Avatar'"
                   />
-                  <span v-else>{{ getInitials(profile?.name || profile?.email) }}</span>
+                  <span v-else>{{ getInitials(profile?.name || profile?.email || '') }}</span>
                   <q-btn
                     round
                     dense
@@ -99,7 +99,7 @@
                     :src="getAvatarUrl(profile.avatar)" 
                     :alt="profile?.name || 'Avatar'"
                   />
-                  <span v-else>{{ getInitials(profile?.name || profile?.email) }}</span>
+                  <span v-else>{{ getInitials(profile?.name || profile?.email || '') }}</span>
                 </q-avatar>
                 
                 <!-- Upload Progress -->
@@ -453,8 +453,21 @@ import api from '../services/api'
 const router = useRouter()
 const $q = useQuasar()
 
+// Interfaces
+interface UserProfile {
+  id: number
+  name: string
+  email: string
+  avatar?: string
+  stats?: {
+    projectsOwned: number
+    projectsParticipating: number
+    testExecutions: number
+  }
+}
+
 // State
-const profile = ref<any>(null)
+const profile = ref<UserProfile | null>(null)
 const loading = ref(false)
 const submitting = ref(false)
 const isEditing = ref(false)
@@ -471,8 +484,8 @@ const showNewPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 // Form ref
-const formRef = ref<any>(null)
-const fileInput = ref<any>(null)
+const formRef = ref<{ validate?: () => Promise<boolean> } | null>(null)
+const fileInput = ref<HTMLInputElement | null>(null)
 
 // Avatar upload
 const avatarPreview = ref<string | null>(null)
@@ -482,7 +495,6 @@ const uploadError = ref<string | null>(null)
 
 // Dialogs
 const successDialog = ref(false)
-const successText = ref('')
 const errorDialog = ref(false)
 const errorText = ref('')
 const showDeleteConfirmDialog = ref(false)
@@ -504,11 +516,6 @@ const nameRules = [
   (val: string) => /^[A-Za-zÀ-ÖØ-öø-ÿ\s]+$/.test(val) || 'Nome contém caracteres inválidos'
 ]
 
-const emailRules = [
-  (val: string) => !!val || 'E-mail é obrigatório',
-  (val: string) => /.+@.+\..+/.test(val) || 'E-mail inválido'
-]
-
 const passwordRules = [
   (val: string) => !val || val.length >= 8 || 'Senha deve ter pelo menos 8 caracteres'
 ]
@@ -519,18 +526,18 @@ const confirmPasswordRules = computed(() => [
 
 // Watch for password changes to validate in real time
 watch([newPassword, confirmPassword], () => {
-  if (confirmPassword.value && formRef.value) {
-    formRef.value.validate()
+  if (confirmPassword.value && formRef.value?.validate) {
+    void formRef.value.validate()
   }
 })
 
 // Methods
 function goBack() {
-  router.push('/dashboard')
+  void router.push('/dashboard')
 }
 
 function goToProjects() {
-  router.push('/projects')
+  void router.push('/projects')
 }
 
 function goToExecutions() {
@@ -558,11 +565,21 @@ function cancelEdit() {
 
 function getInitials(nameOrEmail: string) {
   if (!nameOrEmail) return '?'
-  const parts = nameOrEmail.split(' ')
+  const parts = nameOrEmail.split(' ').filter(p => p.length > 0)
   if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
+    const first = parts[0]
+    const second = parts[1]
+    if (first && second && first[0] && second[0]) {
+      return (first[0] + second[0]).toUpperCase()
+    }
   }
-  return nameOrEmail[0].toUpperCase()
+  if (parts.length > 0 && parts[0]) {
+    const firstPart = parts[0]
+    if (firstPart && firstPart.length > 0 && firstPart[0]) {
+      return firstPart[0].toUpperCase()
+    }
+  }
+  return '?'
 }
 
 function getAvatarUrl(avatar: string) {
@@ -617,14 +634,29 @@ async function uploadAvatar(file: File) {
     const formData = new FormData()
     formData.append('avatar', file)
 
-    const response = await api.post('/upload/avatar', formData, {
-      onUploadProgress: (progressEvent) => {
-        uploadProgress.value = progressEvent.progress || 0
+    interface AvatarUploadResponse {
+      user: UserProfile
+    }
+    interface ProgressEvent {
+      loaded: number
+      total?: number
+      progress?: number
+    }
+    const response = await api.post<AvatarUploadResponse>('/upload/avatar', formData, {
+      // @ts-expect-error - onUploadProgress is a valid axios option but not in the types
+      onUploadProgress: (progressEvent: ProgressEvent) => {
+        if (progressEvent.total && progressEvent.total > 0) {
+          uploadProgress.value = progressEvent.loaded / progressEvent.total
+        } else if (progressEvent.progress !== undefined) {
+          uploadProgress.value = progressEvent.progress
+        }
       }
     })
 
     // Atualizar perfil local
-    profile.value = response.data.user
+    if (response.data && response.data.user) {
+      profile.value = response.data.user
+    }
     avatarPreview.value = null
     
     $q.notify({
@@ -632,7 +664,7 @@ async function uploadAvatar(file: File) {
       message: 'Foto atualizada com sucesso!',
       position: 'top'
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     uploadError.value = getCustomErrorMessage(err)
     $q.notify({
       type: 'negative',
@@ -648,14 +680,27 @@ async function uploadAvatar(file: File) {
 async function loadProfile() {
   loading.value = true
   try {
-    const response = await api.get('/profile')
-    profile.value = response.data
-    
-    // Populate form
-    name.value = profile.value.name || ''
-    email.value = profile.value.email || ''
-    originalName.value = name.value
-  } catch (err: any) {
+    interface ProfileResponse {
+      id: number
+      name: string
+      email: string
+      avatar?: string
+      stats?: {
+        projectsOwned: number
+        projectsParticipating: number
+        testExecutions: number
+      }
+    }
+    const response = await api.get<ProfileResponse>('/profile')
+    if (response.data) {
+      profile.value = response.data
+      
+      // Populate form
+      name.value = profile.value?.name || ''
+      email.value = profile.value?.email || ''
+      originalName.value = name.value
+    }
+  } catch (err: unknown) {
     console.error('Error loading profile:', err)
     $q.notify({
       type: 'negative',
@@ -672,18 +717,25 @@ async function submitForm() {
   if (!profile.value || !isEditing.value) return
 
   // Validar formulário
-  if (!await formRef.value?.validate()) {
-    $q.notify({
-      type: 'negative',
-      message: 'Por favor, corrija os erros no formulário',
-      position: 'top'
-    })
-    return
+  if (formRef.value?.validate) {
+    const isValid = await formRef.value.validate()
+    if (!isValid) {
+      $q.notify({
+        type: 'negative',
+        message: 'Por favor, corrija os erros no formulário',
+        position: 'top'
+      })
+      return
+    }
   }
 
   submitting.value = true
   try {
-    const updateData: any = {
+    interface UpdateUserData {
+      name: string
+      password?: string
+    }
+    const updateData: UpdateUserData = {
       name: name.value
     }
 
@@ -692,10 +744,23 @@ async function submitForm() {
       updateData.password = newPassword.value
     }
 
-    const response = await api.put(`/users/${profile.value.id}`, updateData)
+    interface UpdateUserResponse {
+      id: number
+      name: string
+      email: string
+      avatar?: string
+      stats?: {
+        projectsOwned: number
+        projectsParticipating: number
+        testExecutions: number
+      }
+    }
+    const response = await api.put<UpdateUserResponse>(`/users/${profile.value.id}`, updateData)
     
     // Atualizar perfil local
-    profile.value = response.data
+    if (response.data) {
+      profile.value = response.data
+    }
     originalName.value = name.value
     
     // Feedback de sucesso
@@ -711,7 +776,7 @@ async function submitForm() {
     // Limpar campos de senha
     newPassword.value = ''
     confirmPassword.value = ''
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error updating profile:', err)
     errorText.value = getCustomErrorMessage(err)
     errorDialog.value = true
@@ -747,9 +812,9 @@ async function deleteAccount() {
     
     // Redirecionar para login
     setTimeout(() => {
-      router.push('/login')
+      void router.push('/login')
     }, 2000)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error deleting account:', err)
     errorText.value = getCustomErrorMessage(err)
     errorDialog.value = true
@@ -760,41 +825,54 @@ async function deleteAccount() {
   }
 }
 
-function getCustomErrorMessage(err: any): string {
-  if (err.response?.data?.message) {
-    const message = err.response.data.message
-    if (message.includes('Email already exists')) {
-      return 'Este e-mail já está sendo usado por outro usuário'
+interface AxiosError {
+  response?: {
+    status?: number
+    data?: {
+      message?: string
     }
-    if (message.includes('Invalid name')) {
-      return 'Nome contém caracteres inválidos'
+  }
+}
+
+function getCustomErrorMessage(err: unknown): string {
+  if (err && typeof err === 'object' && 'response' in err) {
+    const axiosError = err as AxiosError
+    const message = axiosError.response?.data?.message
+    if (message) {
+      if (message.includes('Email already exists')) {
+        return 'Este e-mail já está sendo usado por outro usuário'
+      }
+      if (message.includes('Invalid name')) {
+        return 'Nome contém caracteres inválidos'
+      }
+      if (message.includes('Invalid email format')) {
+        return 'Formato de e-mail inválido'
+      }
+      if (message.includes('Password must be at least 8 characters')) {
+        return 'Senha deve ter pelo menos 8 caracteres'
+      }
+      if (message.includes('Current password is incorrect')) {
+        return 'Senha atual incorreta'
+      }
+      return message
     }
-    if (message.includes('Invalid email format')) {
-      return 'Formato de e-mail inválido'
+    
+    const status = axiosError.response?.status
+    if (status === 401) {
+      return 'Sessão expirada. Faça login novamente'
     }
-    if (message.includes('Password must be at least 8 characters')) {
-      return 'Senha deve ter pelo menos 8 caracteres'
+    if (status === 403) {
+      return 'Você não tem permissão para realizar esta ação'
     }
-    if (message.includes('Current password is incorrect')) {
-      return 'Senha atual incorreta'
+    if (status === 404) {
+      return 'Usuário não encontrado'
     }
-    return message
-  }
-  
-  if (err.response?.status === 401) {
-    return 'Sessão expirada. Faça login novamente'
-  }
-  if (err.response?.status === 403) {
-    return 'Você não tem permissão para realizar esta ação'
-  }
-  if (err.response?.status === 404) {
-    return 'Usuário não encontrado'
-  }
-  if (err.response?.status === 409) {
-    return 'E-mail já está sendo usado'
-  }
-  if (err.response?.status === 500) {
-    return 'Erro interno do servidor. Tente novamente'
+    if (status === 409) {
+      return 'E-mail já está sendo usado'
+    }
+    if (status === 500) {
+      return 'Erro interno do servidor. Tente novamente'
+    }
   }
   
   return 'Erro inesperado. Tente novamente'
@@ -802,7 +880,7 @@ function getCustomErrorMessage(err: any): string {
 
 // Lifecycle
 onMounted(() => {
-  loadProfile()
+  void loadProfile()
 })
 </script>
 

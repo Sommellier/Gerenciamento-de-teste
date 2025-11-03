@@ -138,7 +138,7 @@ class PackageService {
   /**
    * Executa um pacote (marca como executado)
    */
-  async executePackage(packageId: number): Promise<void> {
+  executePackage(packageId: number): void {
     // Por enquanto, apenas simula a execução
     // Em uma implementação real, isso marcaria o pacote como executado
     console.log('Executing package:', packageId)

@@ -181,8 +181,8 @@ async function handleRegister() {
     })
 
     // Aguarda um pouco antes de redirecionar
-    setTimeout(async () => {
-      await router.push('/login')
+    setTimeout(() => {
+      void router.push('/login')
     }, 2000)
 
   } catch (error: unknown) {
