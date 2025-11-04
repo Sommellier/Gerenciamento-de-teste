@@ -113,28 +113,51 @@ describe('addMemberByEmail.use-case', () => {
     })).rejects.toMatchObject({ statusCode: 409 })
   })
 
-  it('sucesso (usuário EXISTE e ainda não é membro): cria membership e NÃO chama createInvite', async () => {
+  it('sucesso (usuário EXISTE e ainda não é membro): cria convite e NÃO cria membership', async () => {
     const { owner, existing, project } = await seedBase()
+
+    const fakeInvite = {
+      id: 123,
+      projectId: project.id,
+      email: existing.email,
+      role: 'TESTER' as Role,
+      token: 'tok-xyz',
+      status: 'PENDING' as const,
+      invitedById: owner.id,
+      expiresAt: new Date(Date.now() + 7 * 864e5),
+      acceptedAt: null,
+      declinedAt: null,
+      createdAt: new Date()
+    }
+
+    spyCreateInvite.mockResolvedValue(fakeInvite as any)
 
     const res = await addMemberByEmail({
       projectId: project.id, requesterId: owner.id, email: existing.email, role: 'TESTER'
     })
 
-    expect(res.kind).toBe('member')
-    if (res.kind === 'member') {
-      expect(res.member.projectId).toBe(project.id)
-      expect(res.member.userId).toBe(existing.id)
-      expect(res.member.role).toBe('TESTER')
+    expect(res.kind).toBe('invite')
+    if (res.kind === 'invite') {
+      expect(res.invite.projectId).toBe(project.id)
+      expect(res.invite.email).toBe(existing.email)
+      expect(res.invite.role).toBe('TESTER')
     }
 
-    // não passou pelo fluxo de convite
-    expect(spyCreateInvite).not.toHaveBeenCalled()
+    // sempre passa pelo fluxo de convite
+    expect(spyCreateInvite).toHaveBeenCalledTimes(1)
+    expect(spyCreateInvite).toHaveBeenCalledWith({
+      projectId: project.id,
+      email: existing.email,
+      role: 'TESTER',
+      invitedById: owner.id,
+      resendIfPending: true
+    })
 
-    // membership realmente persistido
+    // membership NÃO deve ser criado
     const stored = await prisma.userOnProject.findUnique({
       where: { userId_projectId: { userId: existing.id, projectId: project.id } }
     })
-    expect(stored?.role).toBe('TESTER')
+    expect(stored).toBeNull()
   })
 
   it('sucesso (usuário NÃO existe): chama createInvite com e-mail normalizado e retorna kind=invite', async () => {

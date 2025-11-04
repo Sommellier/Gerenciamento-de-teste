@@ -516,6 +516,7 @@ import {
   type ProjectDetails,
   type ProjectMember
 } from '../services/project-details.service'
+import api from '../services/api'
 
 // Composables
 const route = useRoute()
@@ -1019,7 +1020,7 @@ function getRoleColor(role: string) {
 }
 
 // Member management functions
-function addMember() {
+async function addMember() {
   try {
     addingMember.value = true
     
@@ -1047,39 +1048,40 @@ function addMember() {
       return
     }
 
-    // Aqui você implementaria a chamada para a API
-    // await memberService.addMember(projectId.value, addMemberForm.value)
-    
-    // Mock: adicionar membro localmente
-    const emailParts = addMemberForm.value.email.split('@')
-    const mockName = emailParts[0] || addMemberForm.value.email
-    const roleValue = addMemberForm.value.role as 'OWNER' | 'ADMIN' | 'MANAGER' | 'TESTER' | 'APPROVER'
-    const newMember: ProjectMember = {
-      id: Date.now(),
-      name: mockName,
+    // Chamar a API para enviar o convite
+    await api.post(`/projects/${projectId.value}/members/by-email`, {
       email: addMemberForm.value.email,
-      role: roleValue
-    }
-    
-    members.value.push(newMember)
+      role: addMemberForm.value.role
+    })
     
     // Limpar formulário e fechar diálogo
     addMemberForm.value = { email: '', role: '' }
     showAddMemberDialog.value = false
     
+    // Mostrar mensagem de sucesso informando que o convite foi enviado
     $q.notify({
       type: 'positive',
-      message: 'Membro adicionado com sucesso!',
-      position: 'top'
+      message: 'Convite enviado com sucesso! O membro aparecerá na lista após aceitar o convite.',
+      position: 'top',
+      timeout: 5000
     })
   } catch (error: unknown) {
-    console.error('Erro ao adicionar membro:', error)
+    console.error('Erro ao enviar convite:', error)
     interface ErrorWithMessage {
       message?: string
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
     }
-    const errorMessage = error && typeof error === 'object' && 'message' in error
-      ? (error as ErrorWithMessage).message || 'Erro ao adicionar membro'
-      : 'Erro ao adicionar membro'
+    let errorMessage = 'Erro ao enviar convite'
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as ErrorWithMessage
+      errorMessage = err.response?.data?.message || err.message || errorMessage
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = (error as ErrorWithMessage).message || errorMessage
+    }
     $q.notify({
       type: 'negative',
       message: errorMessage,

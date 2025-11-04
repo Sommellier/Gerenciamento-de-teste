@@ -6,7 +6,7 @@ describe('Fluxo de criação de conta @regressao', () => {
     const senha = 'Segredo123'
 
     // Cenário
-    cy.visit('http://localhost:9000/')
+    cy.visit('http://localhost:9001/')
     cy.criarConta({ nome: 'Luiz Quase Lucas Teste', email, senha})
     cy.login({ email, senha})
     cy.deleçãoDeConta()

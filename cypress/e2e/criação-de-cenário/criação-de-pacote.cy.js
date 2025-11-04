@@ -8,7 +8,7 @@ describe('Fluxo de criação de pacote @regressao', () => {
       const nomeProjeto = `Meu projeto ${Date.now()}-${id}`;
       const descricaoProjeto = "Descrição de projeto para teste automatizado"
       // Cenário
-      cy.visit('http://localhost:9000/')
+      cy.visit('http://localhost:9001/')
       cy.login({ email, senha})
       cy.criarCenario(nomeProjeto, descricaoProjeto)
       cy.validarCriacaoProjeto(nomeProjeto, descricaoProjeto).click()
