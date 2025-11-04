@@ -55,32 +55,26 @@ export async function addMemberByEmail({
 
   const emailNorm = normalizeEmail(email)
 
-  // 4) Usuário já existe?
+  // 4) Verificar se o usuário já é membro do projeto
   const user = await prisma.user.findUnique({ where: { email: emailNorm }, select: { id: true } })
 
-  if (!user) {
-    // 4a) Sem conta → gera/reenfila convite
-    const invite = await createInvite({
-      projectId,
-      email: emailNorm,
-      role,
-      invitedById: requesterId,
-      resendIfPending
+  if (user) {
+    // Se o usuário existe, verificar se já é membro
+    const existing = await prisma.userOnProject.findUnique({
+      where: { userId_projectId: { userId: user.id, projectId } },
+      select: { userId: true }
     })
-    return { kind: 'invite', invite }
+    if (existing) throw new AppError('Usuário já faz parte do projeto', 409)
   }
 
-  // 4b) Já tem conta → não pode duplicar associação
-  const existing = await prisma.userOnProject.findUnique({
-    where: { userId_projectId: { userId: user.id, projectId } },
-    select: { userId: true }
-  })
-  if (existing) throw new AppError('Usuário já faz parte do projeto', 409)
-
-  // 5) Cria associação
-  const member = await prisma.userOnProject.create({
-    data: { projectId, userId: user.id, role }
+  // 5) Sempre criar um convite (não adicionar membro diretamente)
+  const invite = await createInvite({
+    projectId,
+    email: emailNorm,
+    role,
+    invitedById: requesterId,
+    resendIfPending
   })
 
-  return { kind: 'member', member }
+  return { kind: 'invite', invite }
 }
