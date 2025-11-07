@@ -58,7 +58,7 @@ export const projectService = {
   // Adicionar nova release (simulado - adiciona à lista local)
   addRelease(releases: string[], newRelease: string): string[] {
     if (!releases.includes(newRelease)) {
-      return [...releases, newRelease].sort().reverse()
+      return [...releases, newRelease].sort((a, b) => b.localeCompare(a, 'pt-BR', { numeric: true, sensitivity: 'base' }))
     }
     return releases
   }
