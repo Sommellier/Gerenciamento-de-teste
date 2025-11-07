@@ -188,7 +188,10 @@ export async function createScenarioInPackage({
       tags: JSON.parse(scenario.tags || '[]')
     }
   } catch (error) {
-    console.error('Error in createScenarioInPackage:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in createScenarioInPackage:', error)
+    }
     throw error
   }
 }

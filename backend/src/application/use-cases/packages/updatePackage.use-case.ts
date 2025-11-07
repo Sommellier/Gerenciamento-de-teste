@@ -154,7 +154,10 @@ export async function updatePackage({
       tags: JSON.parse(updatedPackage.tags || '[]')
     }
   } catch (error) {
-    console.error('Error in updatePackage:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in updatePackage:', error)
+    }
     throw error
   }
 }

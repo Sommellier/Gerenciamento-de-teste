@@ -52,7 +52,10 @@ export async function registerExecutionHistory({
 
     return history
   } catch (error) {
-    console.error('Error in registerExecutionHistory:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in registerExecutionHistory:', error)
+    }
     throw error
   }
 }

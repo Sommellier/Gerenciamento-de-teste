@@ -46,7 +46,10 @@ export async function getStepComments({ stepId, userId }: GetStepCommentsInput) 
       mentions: comment.mentions ? JSON.parse(comment.mentions) : []
     }))
   } catch (error) {
-    console.error('Error in getStepComments:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getStepComments:', error)
+    }
     throw error
   }
 }

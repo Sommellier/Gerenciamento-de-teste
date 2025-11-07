@@ -42,7 +42,10 @@ export async function getPackageScenarios({ packageId, projectId }: GetPackageSc
 
     return scenariosWithParsedTags
   } catch (error) {
-    console.error('Error in getPackageScenarios:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getPackageScenarios:', error)
+    }
     throw error
   }
 }

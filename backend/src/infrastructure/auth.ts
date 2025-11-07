@@ -15,7 +15,10 @@ export const auth: RequestHandler = (req, res, next) => {
 
     const secret = process.env.JWT_SECRET
     if (!secret) {
-      console.error('JWT_SECRET não configurado')
+      // Não logar em ambiente de teste - é um erro esperado
+      if (process.env.NODE_ENV !== 'test') {
+        console.error('JWT_SECRET não configurado')
+      }
       res.status(500).json({ message: 'JWT secret not configured' })
       return
     }
@@ -36,7 +39,10 @@ export const auth: RequestHandler = (req, res, next) => {
     ;(req as any).user = { id: payload.userId }
     next()
   } catch (error) {
-    console.error('Erro de autenticação')
+    // Não logar erros esperados de autenticação em ambiente de teste
+    if (process.env.NODE_ENV !== 'test') {
+      console.error('Erro de autenticação', error)
+    }
     res.status(401).json({ message: 'Token inválido' })
   }
 }

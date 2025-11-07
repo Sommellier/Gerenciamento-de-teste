@@ -191,17 +191,25 @@ describe('getPackageDetails.controller', () => {
 
       await getPackageDetailsController(req, res, next)
 
-      expect(res.status).toHaveBeenCalledWith(500)
+      // Quando o pacote não existe, o use-case retorna 404 (AppError esperado)
+      expect(res.status).toHaveBeenCalledWith(404)
       expect(res.json).toHaveBeenCalledWith({ 
-        message: expect.stringContaining('Erro ao buscar detalhes do pacote') 
+        message: 'Pacote não encontrado' 
       })
     })
 
     it('deve tratar erros não-AppError corretamente', async () => {
       const { getPackageDetailsController } = require('../../../controllers/packages/getPackageDetails.controller')
       
+      // Mock do use case para retornar um erro que não seja AppError
+      const originalGetPackageDetails = require('../../../application/use-cases/packages/getPackageDetails.use-case').getPackageDetails
+      const mockGetPackageDetails = jest.fn().mockRejectedValueOnce(new Error('Database connection failed'))
+      
+      // Substituir temporariamente o use case
+      require('../../../application/use-cases/packages/getPackageDetails.use-case').getPackageDetails = mockGetPackageDetails
+
       const req = {
-        params: { projectId: 'invalid', packageId: 'invalid' },
+        params: { projectId: '1', packageId: '1' },
         user: { id: 1 }
       } as any
 
@@ -214,10 +222,10 @@ describe('getPackageDetails.controller', () => {
 
       await getPackageDetailsController(req, res, next)
 
-      expect(res.status).toHaveBeenCalledWith(500)
-      expect(res.json).toHaveBeenCalledWith({ 
-        message: expect.stringContaining('Erro ao buscar detalhes do pacote') 
-      })
+      expect(next).toHaveBeenCalledWith(expect.any(Error))
+      
+      // Restaurar o use case original
+      require('../../../application/use-cases/packages/getPackageDetails.use-case').getPackageDetails = originalGetPackageDetails
     })
 
     it('deve processar parâmetros numéricos corretamente', async () => {

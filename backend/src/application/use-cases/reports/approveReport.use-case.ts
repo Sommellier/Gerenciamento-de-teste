@@ -37,16 +37,11 @@ export async function approveReport({ reportId, approverId, comment }: ApproveRe
   })
 
   if (!report) {
-    console.error('🔴 [approveReport] Relatório não encontrado:', reportId)
     throw new AppError('Relatório não encontrado', 404)
   }
 
   // Verificar se já foi aprovado/reprovado
   if (report.approval) {
-    console.error('🔴 [approveReport] Relatório já foi aprovado/reprovado:', {
-      reportId,
-      approvalStatus: report.approval.status
-    })
     throw new AppError('Relatório já foi aprovado ou reprovado', 400)
   }
 

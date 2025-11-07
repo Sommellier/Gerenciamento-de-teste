@@ -59,7 +59,10 @@ export async function updateBug({
 
     return updatedBug
   } catch (error) {
-    console.error('Error in updateBug:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in updateBug:', error)
+    }
     throw error
   }
 }

@@ -77,7 +77,10 @@ export async function getPackageBugs({ packageId, projectId, userId }: GetPackag
 
     return bugs
   } catch (error) {
-    console.error('Error in getPackageBugs:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getPackageBugs:', error)
+    }
     throw error
   }
 }

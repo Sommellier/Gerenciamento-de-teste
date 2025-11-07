@@ -10,7 +10,6 @@ interface RejectReportInput {
 
 export async function rejectReport({ reportId, rejectorId, comment }: RejectReportInput) {
   if (!comment || comment.trim().length === 0) {
-    console.error('🔴 [rejectReport] Comentário obrigatório não fornecido')
     throw new AppError('Comentário é obrigatório para reprovação', 400)
   }
 
@@ -42,16 +41,11 @@ export async function rejectReport({ reportId, rejectorId, comment }: RejectRepo
   })
 
   if (!report) {
-    console.error('🔴 [rejectReport] Relatório não encontrado:', reportId)
     throw new AppError('Relatório não encontrado', 404)
   }
 
   // Verificar se já foi aprovado/reprovado
   if (report.approval) {
-    console.error('🔴 [rejectReport] Relatório já foi aprovado/reprovado:', {
-      reportId,
-      approvalStatus: report.approval.status
-    })
     throw new AppError('Relatório já foi aprovado ou reprovado', 400)
   }
 

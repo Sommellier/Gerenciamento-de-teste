@@ -97,7 +97,10 @@ export async function createBug({
 
     return bug
   } catch (error) {
-    console.error('Error in createBug:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in createBug:', error)
+    }
     throw error
   }
 }

@@ -56,7 +56,10 @@ export async function getBugs({ scenarioId, userId }: GetBugsInput) {
 
     return bugs
   } catch (error) {
-    console.error('Error in getBugs:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getBugs:', error)
+    }
     throw error
   }
 }

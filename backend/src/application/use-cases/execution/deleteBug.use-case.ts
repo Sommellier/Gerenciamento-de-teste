@@ -24,7 +24,10 @@ export async function deleteBug({ bugId, userId }: DeleteBugInput) {
 
     return { message: 'Bug excluído com sucesso' }
   } catch (error) {
-    console.error('Error in deleteBug:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in deleteBug:', error)
+    }
     throw error
   }
 }

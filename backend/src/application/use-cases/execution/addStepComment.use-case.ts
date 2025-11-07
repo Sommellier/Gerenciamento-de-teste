@@ -55,7 +55,10 @@ export async function addStepComment({
 
     return comment
   } catch (error) {
-    console.error('Error in addStepComment:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in addStepComment:', error)
+    }
     throw error
   }
 }

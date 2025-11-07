@@ -149,7 +149,10 @@ export async function updateScenarioInPackage({
       tags: JSON.parse(updatedScenario.tags || '[]')
     }
   } catch (error) {
-    console.error('Error in updateScenarioInPackage:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in updateScenarioInPackage:', error)
+    }
     throw error
   }
 }

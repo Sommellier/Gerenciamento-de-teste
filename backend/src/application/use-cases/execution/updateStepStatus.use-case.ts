@@ -35,7 +35,10 @@ export async function updateStepStatus({
 
     return updatedStep
   } catch (error) {
-    console.error('Error in updateStepStatus:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in updateStepStatus:', error)
+    }
     throw error
   }
 }

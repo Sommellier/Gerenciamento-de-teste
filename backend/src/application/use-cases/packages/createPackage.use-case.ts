@@ -94,7 +94,10 @@ export async function createPackage({
       tags: JSON.parse(testPackage.tags || '[]')
     }
   } catch (error) {
-    console.error('Error in createPackage:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in createPackage:', error)
+    }
     throw error
   }
 }
