@@ -143,11 +143,11 @@ jobs:
             -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste-frontend
             -Dsonar.organization=sommellier
             -Dsonar.sources=src
-            -Dsonar.exclusions=**/*.d.ts,**/node_modules/**,**/dist/**,**/.quasar/**,public/**,tests/**
-            -Dsonar.tests=tests/unit
-            -Dsonar.test.inclusions=tests/unit/**/*.{spec,test}.{ts,js}
+            -Dsonar.exclusions=**/*.d.ts,**/node_modules/**,**/dist/**,**/.quasar/**,public/**,testes/**
+            -Dsonar.tests=testes/unit
+            -Dsonar.test.inclusions=testes/unit/**/*.{spec,test}.{ts,js}
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-            -Dsonar.coverage.exclusions=src/main.ts,src/router/**,src/boot/**,tests/**
+            -Dsonar.coverage.exclusions=src/main.ts,src/router/**,src/boot/**,testes/**
             -Dsonar.newCode.referenceBranch=main
             -Dsonar.language=ts
             -Dsonar.sourceEncoding=UTF-8
