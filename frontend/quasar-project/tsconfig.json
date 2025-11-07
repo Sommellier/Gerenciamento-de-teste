@@ -14,10 +14,13 @@
   "exclude": [
     "node_modules",
     "dist",
+    "testes",
+    "tests",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",
     "**/*.spec.tsx",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "tsconfig.test.json"
   ]
 }
