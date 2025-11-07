@@ -29,12 +29,13 @@ describe('ErrorNotFound', () => {
             props: ['class'],
           },
           'q-btn': {
-            template: '<button @click="handleClick" class="q-btn" v-bind="$attrs"><slot>{{ label }}</slot></button>',
+            template: '<button @click="handleClick" class="q-btn"><slot>{{ label }}</slot></button>',
             props: ['label', 'color', 'to'],
             methods: {
               handleClick() {
-                if (this.$attrs.to) {
-                  router.push(this.$attrs.to)
+                const to = this.to || this.$attrs.to
+                if (to) {
+                  router.push(to)
                 }
               },
             },
