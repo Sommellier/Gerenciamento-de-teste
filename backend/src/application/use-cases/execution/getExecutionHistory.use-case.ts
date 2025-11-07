@@ -42,7 +42,10 @@ export async function getExecutionHistory({ scenarioId, userId }: GetExecutionHi
       metadata: entry.metadata ? JSON.parse(entry.metadata) : null
     }))
   } catch (error) {
-    console.error('Error in getExecutionHistory:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getExecutionHistory:', error)
+    }
     throw error
   }
 }

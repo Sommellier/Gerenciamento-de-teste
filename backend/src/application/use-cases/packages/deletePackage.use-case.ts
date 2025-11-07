@@ -27,7 +27,10 @@ export async function deletePackage({ packageId, projectId }: DeletePackageInput
 
     return { message: 'Pacote deletado com sucesso' }
   } catch (error) {
-    console.error('Error in deletePackage:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in deletePackage:', error)
+    }
     throw error
   }
 }

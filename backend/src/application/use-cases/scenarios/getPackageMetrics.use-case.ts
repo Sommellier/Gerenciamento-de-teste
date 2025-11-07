@@ -109,7 +109,10 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
       }
     }
   } catch (error) {
-    console.error('Error in getPackageMetrics:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getPackageMetrics:', error)
+    }
     throw error
   }
 }

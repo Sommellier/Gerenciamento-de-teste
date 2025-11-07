@@ -197,9 +197,13 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
       }
     }
   } catch (error) {
-    console.error('Error in getPackageDetails:', error)
-    if (error instanceof Error) {
-      throw new AppError(`Erro ao buscar detalhes do pacote: ${error.message}`, 500)
+    // Apenas logar e converter erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getPackageDetails:', error)
+      if (error instanceof Error) {
+        throw new AppError(`Erro ao buscar detalhes do pacote: ${error.message}`, 500)
+      }
+      throw error
     }
     throw error
   }

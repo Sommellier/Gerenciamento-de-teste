@@ -119,7 +119,10 @@ export async function createScenario({
       tags: JSON.parse(scenario.tags || '[]')
     }
   } catch (error) {
-    console.error('Error in createScenario:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in createScenario:', error)
+    }
     throw error
   }
 }

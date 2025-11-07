@@ -33,7 +33,10 @@ export async function deleteScenarioInPackage({
 
     return { message: 'Cenário deletado com sucesso' }
   } catch (error) {
-    console.error('Error in deleteScenarioInPackage:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in deleteScenarioInPackage:', error)
+    }
     throw error
   }
 }

@@ -76,7 +76,10 @@ export async function uploadStepAttachment({
 
     return attachment
   } catch (error) {
-    console.error('Error in uploadStepAttachment:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in uploadStepAttachment:', error)
+    }
     throw error
   }
 }

@@ -172,7 +172,10 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
       scenarioMetrics
     }
   } catch (error) {
-    console.error('Erro no getProjectDetails:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Erro no getProjectDetails:', error)
+    }
     throw error
   }
 }

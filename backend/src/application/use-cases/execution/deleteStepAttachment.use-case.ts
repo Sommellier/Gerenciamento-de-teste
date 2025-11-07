@@ -73,7 +73,10 @@ export async function deleteStepAttachment({
 
     return { success: true }
   } catch (error) {
-    console.error('Error in deleteStepAttachment:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in deleteStepAttachment:', error)
+    }
     throw error
   }
 }

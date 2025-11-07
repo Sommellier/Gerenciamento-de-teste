@@ -79,7 +79,10 @@ export async function uploadBugAttachment({
 
     return attachment
   } catch (error) {
-    console.error('Error in uploadBugAttachment:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in uploadBugAttachment:', error)
+    }
     throw error
   }
 }

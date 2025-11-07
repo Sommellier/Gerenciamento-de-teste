@@ -49,7 +49,10 @@ export async function getStepAttachments({
 
     return attachments
   } catch (error) {
-    console.error('Error in getStepAttachments:', error)
+    // Apenas logar erros inesperados, não AppErrors esperados
+    if (!(error instanceof AppError)) {
+      console.error('Error in getStepAttachments:', error)
+    }
     throw error
   }
 }
