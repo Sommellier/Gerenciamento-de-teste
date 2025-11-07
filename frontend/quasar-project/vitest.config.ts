@@ -8,12 +8,13 @@ import vue from '@vitejs/plugin-vue'
 
 export default mergeConfig(
   defineViteConfig({
-    plugins: [
-      tsconfigPaths({
-        projects: ['./tsconfig.json'],
-      }),
-      vue(),
-    ],
+      plugins: [
+        tsconfigPaths({
+          projects: ['./tsconfig.test.json'],
+          ignoreConfigErrors: true,
+        }),
+        vue(),
+      ],
     resolve: {
       alias: {
         'src': fileURLToPath(new URL('./src', import.meta.url)),

@@ -97,6 +97,31 @@ jobs:
         run: npm install
         working-directory: ./frontend/quasar-project
 
+      # Gerar .quasar/tsconfig.json necessário para o tsconfig.json principal
+      - name: Generate Quasar TypeScript Config
+        run: |
+          mkdir -p .quasar
+          cat > .quasar/tsconfig.json << 'EOF'
+          {
+            "compilerOptions": {
+              "target": "ES2022",
+              "lib": ["ES2022", "DOM", "DOM.Iterable"],
+              "module": "ESNext",
+              "moduleResolution": "bundler",
+              "jsx": "preserve",
+              "strict": true,
+              "esModuleInterop": true,
+              "skipLibCheck": true,
+              "resolveJsonModule": true,
+              "allowSyntheticDefaultImports": true,
+              "forceConsistentCasingInFileNames": true,
+              "isolatedModules": true,
+              "noEmit": true
+            }
+          }
+          EOF
+        working-directory: ./frontend/quasar-project
+
       # Gera cobertura com Vitest (@vitest/coverage-v8)
       - name: Run Tests with Coverage (frontend)
         run: npm run test:cov

@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "downlevelIteration": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "jsx": "preserve",
+    "types": ["vitest/globals", "node", "@vue/test-utils"],
+    "baseUrl": ".",
+    "paths": {
+      "src/*": ["./src/*"],
+      "components/*": ["./src/components/*"],
+      "layouts/*": ["./src/layouts/*"],
+      "pages/*": ["./src/pages/*"],
+      "assets/*": ["./src/assets/*"],
+      "boot/*": ["./src/boot/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "testes/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".quasar"
+  ]
+}
+
