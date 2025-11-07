@@ -136,11 +136,12 @@ jobs:
         uses: SonarSource/sonarcloud-github-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FRONTEND }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           projectBaseDir: ./frontend/quasar-project
           args: >
-            -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste-frontend
+            -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste
+            -Dsonar.projectName=Gerenciamento-de-teste
             -Dsonar.organization=sommellier
             -Dsonar.sources=src
             -Dsonar.exclusions=**/*.d.ts,**/node_modules/**,**/dist/**,**/.quasar/**,public/**,testes/**
