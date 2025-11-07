@@ -1,6 +1,7 @@
 import api from './api'
 
-const USE_MOCK = false
+// Permitir que USE_MOCK seja configurado via variável de ambiente para testes
+const USE_MOCK = process.env.USE_MOCK === 'true' || false
 
 export interface ProjectMember {
   id: number
