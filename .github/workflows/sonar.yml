@@ -95,15 +95,15 @@ jobs:
       # =========================
       - name: Install Dependencies (frontend)
         run: npm install
-        working-directory: ./frontend
+        working-directory: ./frontend/quasar-project
 
       # Gera cobertura com Vitest (@vitest/coverage-v8)
       - name: Run Tests with Coverage (frontend)
         run: npm run test:cov
-        working-directory: ./frontend
+        working-directory: ./frontend/quasar-project
 
       - name: Verify Coverage File Exists (frontend)
-        working-directory: ./frontend
+        working-directory: ./frontend/quasar-project
         run: |
           test -f coverage/lcov.info
 
@@ -113,7 +113,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN_FRONTEND }}
         with:
-          projectBaseDir: ./frontend
+          projectBaseDir: ./frontend/quasar-project
           args: >
             -Dsonar.projectKey=Sommellier_Gerenciamento-de-teste-frontend
             -Dsonar.organization=sommellier

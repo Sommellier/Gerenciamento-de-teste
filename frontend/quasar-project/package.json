@@ -12,6 +12,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:cov": "vitest run --coverage",
     "test:watch:cov": "vitest --coverage",
     "test:run": "vitest run",
     "dev": "quasar dev",
