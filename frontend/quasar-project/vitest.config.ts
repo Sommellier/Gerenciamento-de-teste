@@ -8,12 +8,13 @@ import vue from '@vitejs/plugin-vue'
 
 export default mergeConfig(
   defineViteConfig({
-    plugins: [
-      tsconfigPaths({
-        projects: ['./tsconfig.json'],
-      }),
-      vue(),
-    ],
+      plugins: [
+        tsconfigPaths({
+          projects: ['./tsconfig.test.json'],
+          ignoreConfigErrors: true,
+        }),
+        vue(),
+      ],
     resolve: {
       alias: {
         'src': fileURLToPath(new URL('./src', import.meta.url)),
@@ -29,20 +30,36 @@ export default mergeConfig(
     test: {
       globals: true,
       environment: 'jsdom',
-      setupFiles: ['./tests/setup.ts'],
-      include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+      setupFiles: ['./testes/setup.ts'],
+      include: [
+        'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+        'testes/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'
+      ],
       exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
       coverage: {
         provider: 'v8',
-        reporter: ['text', 'json', 'html'],
+        reportsDirectory: 'coverage',
+        reporter: ['text', 'html', 'lcov', 'json'],
+        all: true,
+        include: ['src/**/*.{ts,tsx,js,vue}'],
         exclude: [
           'node_modules/',
+          'testes/',
           'tests/',
           'src/**/*.d.ts',
           'src/**/*.config.*',
           'src/**/*.spec.ts',
           'src/**/*.test.ts',
+          'src/**/__mocks__/**',
+          'dist/',
+          '.idea/',
+          '.git/',
+          '.cache/',
         ],
+        lines: 70,
+        functions: 70,
+        branches: 60,
+        statements: 70,
       },
     },
   })

@@ -1297,7 +1297,7 @@ const canApprovePackage = computed(() => {
   if (isOwner) return true
   
   // Se não é owner, verificar se é manager
-  if (members.value.length > 0) {
+  if (members.value && Array.isArray(members.value) && members.value.length > 0) {
     const userMember = members.value.find(m => m.id === currentUser.value?.id)
     const isManager = userMember?.role === 'MANAGER'
     return isManager

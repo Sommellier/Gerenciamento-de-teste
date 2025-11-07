@@ -347,11 +347,11 @@
                 <div v-if="currentStep.comments && currentStep.comments.length > 0" class="comments-list">
                   <div v-for="comment in currentStep.comments" :key="comment.id" class="comment-item">
                     <q-avatar size="32px" color="primary">
-                      {{ getInitials(comment.user.name || '') }}
+                      {{ getInitials(comment.user?.name || '') }}
                     </q-avatar>
                     <div class="comment-content">
                       <div class="comment-header">
-                        <strong>{{ comment.user.name || 'Desconhecido' }}</strong>
+                        <strong>{{ comment.user?.name || 'Desconhecido' }}</strong>
                         <span class="comment-date">{{ formatDate(comment.createdAt || '') }}</span>
                       </div>
                       <p>{{ comment.text || '' }}</p>
@@ -1458,8 +1458,8 @@ function getStepStatusColor(status: string | undefined) {
   return colors[status] || 'grey-6'
 }
 
-function isImage(mimeType: string) {
-  return mimeType.startsWith('image/')
+function isImage(mimeType: string | undefined) {
+  return mimeType?.startsWith('image/') ?? false
 }
 
 function getFileIcon(mimeType: string) {

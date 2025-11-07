@@ -11,7 +11,9 @@
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test:coverage": "vitest run --coverage",
+    "test:cov": "vitest run --coverage",
+    "test:watch:cov": "vitest --coverage",
     "test:run": "vitest run",
     "dev": "quasar dev",
     "build": "npx quasar build"

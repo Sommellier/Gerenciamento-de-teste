@@ -414,8 +414,8 @@
             <template v-slot:body-cell-avatar="props">
               <q-td :props="props">
                 <q-avatar size="32px" color="primary" text-color="white">
-                  <img v-if="props.row.avatar" :src="getAvatarUrl(props.row.avatar)" />
-                  <span v-else>{{ getInitials(props.row.name || props.row.email) }}</span>
+                  <img v-if="props.row && props.row.avatar" :src="getAvatarUrl(props.row.avatar)" />
+                  <span v-else>{{ getInitials((props.row && props.row.name) || (props.row && props.row.email) || '') }}</span>
                 </q-avatar>
               </q-td>
             </template>
@@ -423,11 +423,11 @@
             <template v-slot:body-cell-role="props">
               <q-td :props="props">
                 <q-chip
-                  :color="getRoleColor(props.row.role)"
+                  :color="getRoleColor(props.row && props.row.role ? props.row.role : '')"
                   text-color="white"
                   size="sm"
                 >
-                  {{ props.row.role }}
+                  {{ props.row && props.row.role ? props.row.role : '' }}
                 </q-chip>
               </q-td>
             </template>

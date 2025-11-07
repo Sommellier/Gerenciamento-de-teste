@@ -647,8 +647,9 @@ const resendInvite = () => {
 
 const viewProject = () => {
   if (!selectedInvite.value) return
+  const projectId = selectedInvite.value.projectId
   closeMenu()
-  void router.push(`/projects/${selectedInvite.value.projectId}`)
+  void router.push(`/projects/${projectId}`)
 }
 
 onMounted(() => {
