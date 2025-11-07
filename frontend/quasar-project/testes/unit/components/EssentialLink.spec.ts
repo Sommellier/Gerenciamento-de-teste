@@ -14,7 +14,7 @@ describe('EssentialLink', () => {
       global: {
         stubs: {
           'q-item': {
-            template: '<a :href="href" :target="target" class="q-item" v-bind="$attrs"><slot /></a>',
+            template: '<a :href="$attrs.href || href" :target="$attrs.target || target || \'_blank\'" class="q-item" v-bind="$attrs"><slot /></a>',
             props: ['href', 'target', 'clickable', 'tag'],
           },
           'q-item-section': {

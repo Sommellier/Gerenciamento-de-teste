@@ -13,13 +13,7 @@ export default mergeConfig(
           projects: ['./tsconfig.test.json'],
           ignoreConfigErrors: true,
         }),
-        vue({
-          template: {
-            compilerOptions: {
-              isCustomElement: (tag) => tag.startsWith('q-')
-            }
-          }
-        }),
+        vue(),
       ],
     resolve: {
       alias: {

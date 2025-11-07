@@ -33,8 +33,8 @@ describe('ErrorNotFound', () => {
             props: ['label', 'color', 'to'],
             methods: {
               handleClick() {
-                if (this.to) {
-                  router.push(this.to)
+                if (this.$attrs.to) {
+                  router.push(this.$attrs.to)
                 }
               },
             },
