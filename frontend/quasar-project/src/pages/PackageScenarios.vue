@@ -262,7 +262,7 @@ import { Notify } from 'quasar'
 import { scenarioService, type CreateScenarioData } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 import { TYPE_OPTIONS, PRIORITY_OPTIONS } from '../utils/constants'
-import { getInitials, getMemberColor, createRequiredRule } from '../utils/helpers'
+import { createRequiredRule } from '../utils/helpers'
 import MemberOptionItem from '../components/scenarios/MemberOptionItem.vue'
 
 // Composables
