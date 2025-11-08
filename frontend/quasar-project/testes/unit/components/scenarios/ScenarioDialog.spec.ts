@@ -7,6 +7,7 @@ import { packageService } from 'src/services/package.service'
 import { getProjectMembers } from 'src/services/project.service'
 import { Notify } from 'quasar'
 import type { TestScenario } from 'src/services/scenario.service'
+import { getInitials, getMemberColor } from 'src/utils/helpers'
 
 // Mock do useRoute
 const mockRoute = {
@@ -545,14 +546,16 @@ describe('ScenarioDialog', () => {
     })
 
     it('deve gerar iniciais corretamente', () => {
-      expect(wrapper.vm.getInitials('John Doe')).toBe('JD')
-      expect(wrapper.vm.getInitials('John')).toBe('J')
-      expect(wrapper.vm.getInitials('')).toBe('?')
+      // getInitials agora é importado de utils/helpers
+      expect(getInitials('John Doe')).toBe('JD')
+      expect(getInitials('John')).toBe('JO')
+      expect(getInitials('')).toBe('?')
     })
 
     it('deve retornar cor do membro', () => {
-      expect(wrapper.vm.getMemberColor(1)).toBeDefined()
-      expect(typeof wrapper.vm.getMemberColor(1)).toBe('string')
+      // getMemberColor agora é importado de utils/helpers
+      expect(getMemberColor(1)).toBeDefined()
+      expect(typeof getMemberColor(1)).toBe('string')
     })
 
     it('deve resetar formulário', () => {

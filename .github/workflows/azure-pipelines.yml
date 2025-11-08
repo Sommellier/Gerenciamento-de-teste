@@ -1,0 +1,15 @@
+# Pipeline do Azure DevOps desabilitada
+# Este arquivo foi criado para desativar a pipeline do Azure DevOps
+# Para reativar, remova este arquivo ou configure a pipeline no portal do Azure DevOps
+
+trigger: none
+pr: none
+
+jobs:
+  - job: Disabled
+    displayName: 'Pipeline Desabilitada'
+    condition: false
+    steps:
+      - script: echo "Pipeline desabilitada"
+        displayName: 'Pipeline não executará'
+

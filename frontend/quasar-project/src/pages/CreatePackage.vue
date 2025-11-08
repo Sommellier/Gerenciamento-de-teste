@@ -34,7 +34,7 @@
               <q-input
                 v-model="form.title"
                 label="Título do Pacote *"
-                :rules="[val => !!val || 'Título é obrigatório']"
+                :rules="createRequiredRule('Título')"
                 filled
                 dark
                 label-color="white"
@@ -68,7 +68,7 @@
                   filled
                   dark
                   label-color="white"
-                  :rules="[val => !!val || 'Tipo é obrigatório']"
+                  :rules="createRequiredRule('Tipo')"
                   class="form-input"
                 />
               </div>
@@ -80,7 +80,7 @@
                   filled
                   dark
                   label-color="white"
-                  :rules="[val => !!val || 'Prioridade é obrigatória']"
+                  :rules="createRequiredRule('Prioridade')"
                   class="form-input"
                 />
               </div>
@@ -107,7 +107,7 @@
                     filled
                     dark
                     label-color="white"
-                    :rules="[val => !!val || 'Release é obrigatória']"
+                    :rules="createRequiredRule('Release')"
                     class="form-input"
                     :loading="loadingData"
                     hint="Selecione uma release existente"
@@ -204,9 +204,7 @@
             hint="Selecione a data da release"
             readonly
             @click="showDatePicker = true"
-            :rules="[
-              val => !!val || 'Data da release é obrigatória'
-            ]"
+            :rules="createRequiredRule('Data da release')"
           >
             <template v-slot:append>
               <q-icon name="event" class="cursor-pointer">
@@ -253,6 +251,8 @@ import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { createPackage } from '../services/package.service'
 import { getProjectReleases, getProjectMembers, addRelease } from '../services/project.service'
+import { TYPE_OPTIONS, PRIORITY_OPTIONS, ENVIRONMENT_OPTIONS } from '../utils/constants'
+import { createRequiredRule, getOptionValue } from '../utils/helpers'
 
 const router = useRouter()
 const route = useRoute()
@@ -285,27 +285,10 @@ const newRelease = ref('')
 const creatingRelease = ref(false)
 const showDatePicker = ref(false)
 
-// Opções dos selects
-const typeOptions = [
-  { label: 'Funcional', value: 'FUNCTIONAL' },
-  { label: 'Regressão', value: 'REGRESSION' },
-  { label: 'Smoke', value: 'SMOKE' },
-  { label: 'End-to-End', value: 'E2E' }
-]
-
-const priorityOptions = [
-  { label: 'Baixa', value: 'LOW' },
-  { label: 'Média', value: 'MEDIUM' },
-  { label: 'Alta', value: 'HIGH' },
-  { label: 'Crítica', value: 'CRITICAL' }
-]
-
-const environmentOptions = [
-  { label: 'Desenvolvimento', value: 'DEV' },
-  { label: 'QA', value: 'QA' },
-  { label: 'Staging', value: 'STAGING' },
-  { label: 'Produção', value: 'PROD' }
-]
+// Opções dos selects (importadas de utils/constants)
+const typeOptions = TYPE_OPTIONS
+const priorityOptions = PRIORITY_OPTIONS
+const environmentOptions = ENVIRONMENT_OPTIONS
 
 // Computed para opções de release
 const releaseOptions = computed(() => {
@@ -318,7 +301,9 @@ const releaseOptions = computed(() => {
 // Função para validar datas (não permitir datas passadas)
 const dateOptions = (date: string) => {
   const today = new Date()
+  today.setHours(0, 0, 0, 0) // Resetar horas para comparar apenas a data
   const selectedDate = new Date(date)
+  selectedDate.setHours(0, 0, 0, 0) // Resetar horas para comparar apenas a data
   return selectedDate >= today
 }
 
@@ -450,19 +435,7 @@ const onSubmit = async () => {
     const projectId = route.params.projectId as string
     console.log('onSubmit - projectId:', projectId)
     
-    // Converter objetos para valores antes de enviar
-    interface SelectOption {
-      value: string
-    }
-    
-    const getOptionValue = (val: unknown): string => {
-      if (typeof val === 'object' && val !== null && 'value' in val) {
-        const option = val as SelectOption
-        return option.value
-      }
-      return typeof val === 'string' ? val : ''
-    }
-
+    // Converter objetos para valores antes de enviar (getOptionValue importado de utils/helpers)
     type PackageType = 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
     type PackagePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
     type PackageEnvironment = 'DEV' | 'QA' | 'STAGING' | 'PROD'
