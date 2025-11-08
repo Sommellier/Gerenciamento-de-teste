@@ -104,17 +104,7 @@
                     <q-icon name="person" />
                   </template>
                   <template v-slot:option="scope">
-                    <q-item v-bind="scope.itemProps">
-                      <q-item-section avatar>
-                        <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
-                          {{ getInitials(scope.opt.label) }}
-                        </q-avatar>
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label>{{ scope.opt.label }}</q-item-label>
-                        <q-item-label caption>{{ scope.opt.email }}</q-item-label>
-                      </q-item-section>
-                    </q-item>
+                    <MemberOptionItem :scope="scope" />
                   </template>
                 </q-select>
               </div>
@@ -189,17 +179,7 @@
                     <q-icon name="verified_user" />
                   </template>
                   <template v-slot:option="scope">
-                    <q-item v-bind="scope.itemProps">
-                      <q-item-section avatar>
-                        <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
-                          {{ getInitials(scope.opt.label) }}
-                        </q-avatar>
-                      </q-item-section>
-                      <q-item-section>
-                        <q-item-label>{{ scope.opt.label }}</q-item-label>
-                        <q-item-label caption>{{ scope.opt.email }}</q-item-label>
-                      </q-item-section>
-                    </q-item>
+                    <MemberOptionItem :scope="scope" />
                   </template>
                 </q-select>
               </div>
@@ -281,6 +261,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'
 import { scenarioService, type CreateScenarioData } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
+import { TYPE_OPTIONS, PRIORITY_OPTIONS } from '../utils/constants'
+import { getInitials, getMemberColor, createRequiredRule } from '../utils/helpers'
+import MemberOptionItem from '../components/scenarios/MemberOptionItem.vue'
 
 // Composables
 const route = useRoute()
@@ -309,53 +292,29 @@ const members = ref<ProjectMember[]>([])
 // Computed
 const packageId = computed(() => parseInt(route.params.packageId as string))
 
-// Membros que podem ser testadores (OWNER, ADMIN, MANAGER, TESTER)
-const testerOptions = computed(() => {
+// Helper para criar opções de membros baseado nos roles permitidos
+const createMemberOptions = (allowedRoles: string[]) => {
   if (!Array.isArray(members.value)) {
     return []
   }
   return members.value
-    .filter(member => {
-      const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'TESTER'
-    })
+    .filter(member => allowedRoles.includes(member.role))
     .map(member => ({
       label: member.name || member.email,
       value: member.id,
       email: member.email
     }))
-})
+}
+
+// Membros que podem ser testadores (OWNER, ADMIN, MANAGER, TESTER)
+const testerOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'TESTER']))
 
 // Membros que podem ser aprovadores (OWNER, ADMIN, MANAGER, APPROVER)
-const approverOptions = computed(() => {
-  if (!Array.isArray(members.value)) {
-    return []
-  }
-  return members.value
-    .filter(member => {
-      const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'APPROVER'
-    })
-    .map(member => ({
-      label: member.name || member.email,
-      value: member.id,
-      email: member.email
-    }))
-})
+const approverOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'APPROVER']))
 
-const typeOptions = [
-  { label: 'Funcional', value: 'FUNCTIONAL' },
-  { label: 'Regressão', value: 'REGRESSION' },
-  { label: 'Smoke', value: 'SMOKE' },
-  { label: 'End-to-End', value: 'E2E' }
-]
-
-const priorityOptions = [
-  { label: 'Baixa', value: 'LOW' },
-  { label: 'Média', value: 'MEDIUM' },
-  { label: 'Alta', value: 'HIGH' },
-  { label: 'Crítica', value: 'CRITICAL' }
-]
+// Opções dos selects (importadas de utils/constants)
+const typeOptions = TYPE_OPTIONS
+const priorityOptions = PRIORITY_OPTIONS
 
 // Validation rules
 const nameRules = [
@@ -364,21 +323,10 @@ const nameRules = [
   (val: string) => val.length <= 100 || 'Nome deve ter no máximo 100 caracteres'
 ]
 
-const testerRules = [
-  (val: number) => !!val || 'Testador responsável é obrigatório'
-]
-
-const approverRules = [
-  (val: number) => !!val || 'Aprovador responsável é obrigatório'
-]
-
-const typeRules = [
-  (val: string) => !!val || 'Tipo do cenário é obrigatório'
-]
-
-const priorityRules = [
-  (val: string) => !!val || 'Prioridade do cenário é obrigatória'
-]
+const testerRules = createRequiredRule('Testador responsável')
+const approverRules = createRequiredRule('Aprovador responsável')
+const typeRules = createRequiredRule('Tipo do cenário')
+const priorityRules = createRequiredRule('Prioridade do cenário')
 
 // Methods
 function goBack() {
@@ -386,29 +334,7 @@ function goBack() {
   void router.push(`/projects/${projectId}/packages/${packageId.value}`)
 }
 
-function getInitials(name: string) {
-  if (!name) return '?'
-  const parts = name.split(' ').filter(p => p.length > 0)
-  if (parts.length >= 2) {
-    const first = parts[0]
-    const second = parts[1]
-    if (first && second && first[0] && second[0]) {
-      return (first[0] + second[0]).toUpperCase()
-    }
-  }
-  if (parts.length > 0 && parts[0]) {
-    const firstPart = parts[0]
-    if (firstPart && firstPart.length > 0 && firstPart[0]) {
-      return firstPart[0].toUpperCase()
-    }
-  }
-  return '?'
-}
-
-function getMemberColor(memberId: number) {
-  const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
-  return colors[memberId % colors.length]
-}
+// getInitials e getMemberColor agora são importados de utils/helpers
 
 // Load members from project
 async function loadMembers() {
