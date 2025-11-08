@@ -25,33 +25,15 @@ Desenvolver uma aplicação web completa para planejamento, execução e acompan
 
 Objetivos Específicos
 
-Autenticação e segurança
-Implementar cadastro/login, recuperação de senha e sessões com JWT, criptografia de senhas e proteção de rotas via middlewares.
+* Implementar cadastro/login, recuperação de senha e sessões com JWT, criptografia de senhas e proteção de rotas via middlewares.
+* Criar cenários com título, pré-condições, passos e resultados esperados; vincular a requisitos/módulos e manter histórico de execuções.
+* Permitir upload e associação de imagens/PDF (até 5 MB por arquivo) e armazenar com integridade.
+* Atribuir responsáveis e registrar resultados (aprovado, reprovado, pendente).
+* Gerar relatórios filtráveis por status, responsável e projeto; preparar exportação (PDF) e dashboard com indicadores.
+* Cobrir fluxos críticos (login, criação/execução de cenários, upload, relatórios) com testes unitários, integrados e E2E, integrados ao pipeline de CI/CD.
+* Testabilidade e CI/CD: cobrir fluxos críticos (login, criação/execução de cenários, upload, relatórios) com testes unitários/integrados/E2E e integrar ao pipeline de CI/CD.
 
-Modelagem e cadastro de cenários
-Criar cenários com título, pré-condições, passos e resultados esperados; vincular a requisitos/módulos e manter histórico de execuções.
-
-Evidências de teste
-Permitir upload e associação de imagens/PDF (até 5 MB por arquivo) e armazenar com integridade.
-
-Atribuição e status
-Atribuir responsáveis e registrar resultados (aprovado, reprovado, pendente).
-
-Relatórios e métricas
-Gerar relatórios filtráveis por status, responsável e projeto; preparar exportação (PDF/CSV) e dashboard com indicadores.
-
-Arquitetura e stack
-Desenvolver frontend em Vue.js + Quasar, backend em Node.js + Express, ORM Prisma e PostgreSQL; comunicação via REST/HTTPS.
-
-Qualidade e desempenho
-Garantir API com validação (express-validator), metas de latência < 500 ms em 90% das requisições, concorrência de 100 usuários e disponibilidade ≥ 99% mensal.
-
-Testabilidade e CI/CD
-Cobrir fluxos críticos (login, criação/execução de cenários, upload, relatórios) com testes unitários, integrados e E2E, integrados ao pipeline de CI/CD.
-
-Testabilidade e CI/CD: cobrir fluxos críticos (login, criação/execução de cenários, upload, relatórios) com testes unitários/integrados/E2E e integrar ao pipeline de CI/CD.
-
-#
+## Documentação adicional
 
 > [!Note]
 > ## FAQ
