@@ -431,6 +431,89 @@ describe('ScenarioExecutionPage', () => {
       expect(executionService.executionService.addStepComment).toHaveBeenCalled()
       expect(mockNotifyFn).toHaveBeenCalled()
     })
+
+    it('deve retornar quando currentStep não existe (linha 1234)', async () => {
+      wrapper.vm.currentStepIndex = -1
+      wrapper.vm.currentStep = null
+      wrapper.vm.newComment = 'Novo comentário'
+
+      await wrapper.vm.addComment()
+      await wrapper.vm.$nextTick()
+
+      expect(executionService.executionService.addStepComment).not.toHaveBeenCalled()
+    })
+
+    it('deve inicializar comments se não existir (linhas 1243-1244)', async () => {
+      vi.mocked(executionService.executionService.addStepComment).mockResolvedValueOnce({ id: 1, comment: 'Comentário', createdAt: '2024-01-01' } as any)
+      wrapper.vm.scenario = { ...mockScenario, status: 'CREATED' } as any
+      wrapper.vm.steps = [
+        { id: 1, action: 'Ação 1', expected: 'Resultado esperado 1', order: 1, status: 'PENDING', actualResult: '', attachments: [] },
+      ]
+      wrapper.vm.currentStepIndex = 0
+      wrapper.vm.executionStatus = 'IN_PROGRESS'
+      wrapper.vm.newComment = 'Novo comentário'
+
+      await wrapper.vm.addComment()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(wrapper.vm.steps[0].comments).toBeDefined()
+      expect(Array.isArray(wrapper.vm.steps[0].comments)).toBe(true)
+    })
+
+    it('deve mostrar notificação quando há menções (linhas 1251-1261)', async () => {
+      const mockNotifyCreate = vi.fn()
+      const quasar = await import('quasar')
+      vi.mocked(quasar.Notify.create).mockImplementation(mockNotifyCreate)
+      
+      vi.mocked(executionService.executionService.addStepComment).mockResolvedValueOnce({ id: 1, comment: 'Comentário @Test User', createdAt: '2024-01-01' } as any)
+      wrapper.vm.scenario = { ...mockScenario, status: 'CREATED' } as any
+      wrapper.vm.projectMembers = mockMembers
+      wrapper.vm.steps = [
+        { id: 1, action: 'Ação 1', expected: 'Resultado esperado 1', order: 1, status: 'PENDING', actualResult: '', comments: [], attachments: [] },
+      ]
+      wrapper.vm.currentStepIndex = 0
+      wrapper.vm.executionStatus = 'IN_PROGRESS'
+      wrapper.vm.newComment = 'Novo comentário @Test User'
+
+      await wrapper.vm.addComment()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(executionService.executionService.addStepComment).toHaveBeenCalled()
+      // Verificar se a notificação de menção foi chamada
+      const mentionNotify = mockNotifyCreate.mock.calls.find(call => call[0]?.type === 'info' && call[0]?.message?.includes('será notificado'))
+      expect(mentionNotify).toBeDefined()
+    })
+
+    it('deve tratar erro ao adicionar comentário (linhas 1268-1284)', async () => {
+      const mockNotifyCreate = vi.fn()
+      const quasar = await import('quasar')
+      vi.mocked(quasar.Notify.create).mockImplementation(mockNotifyCreate)
+      
+      const axiosError = Object.assign(new Error('Erro ao adicionar comentário'), {
+        response: {
+          data: {
+            message: 'Erro específico do servidor'
+          }
+        }
+      })
+      vi.mocked(executionService.executionService.addStepComment).mockRejectedValueOnce(axiosError)
+      wrapper.vm.scenario = { ...mockScenario, status: 'CREATED' } as any
+      wrapper.vm.steps = [
+        { id: 1, action: 'Ação 1', expected: 'Resultado esperado 1', order: 1, status: 'PENDING', actualResult: '', comments: [], attachments: [] },
+      ]
+      wrapper.vm.currentStepIndex = 0
+      wrapper.vm.executionStatus = 'IN_PROGRESS'
+      wrapper.vm.newComment = 'Novo comentário'
+
+      await wrapper.vm.addComment()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      const errorNotify = mockNotifyCreate.mock.calls.find(call => call[0]?.type === 'negative' && call[0]?.message?.includes('Erro ao adicionar comentário'))
+      expect(errorNotify).toBeDefined()
+    })
   })
 
   describe('Criação de bugs', () => {
@@ -489,7 +572,11 @@ describe('ScenarioExecutionPage', () => {
       expect(executionService.executionService.uploadBugAttachment).toHaveBeenCalledWith(1, mockFile2)
     })
 
-    it('deve tratar erro ao criar bug com erro axios (linhas 1353-1368)', async () => {
+    it('deve tratar erro ao criar bug com erro axios (linhas 1353-1368, linha 1364)', async () => {
+      const mockNotifyCreate = vi.fn()
+      const quasar = await import('quasar')
+      vi.mocked(quasar.Notify.create).mockImplementation(mockNotifyCreate)
+      
       const axiosError = Object.assign(new Error('Erro ao criar bug'), {
         response: {
           data: {
@@ -510,13 +597,16 @@ describe('ScenarioExecutionPage', () => {
       await wrapper.vm.$nextTick()
       await new Promise(resolve => setTimeout(resolve, 200))
 
-      expect(mockNotifyFn).toHaveBeenCalledWith({
-        type: 'negative',
-        message: 'Erro ao criar bug: Erro específico do servidor'
-      })
+      const errorNotify = mockNotifyCreate.mock.calls.find(call => call[0]?.type === 'negative' && call[0]?.message?.includes('Erro ao criar bug'))
+      expect(errorNotify).toBeDefined()
+      expect(errorNotify?.[0]?.message).toContain('Erro específico do servidor')
     })
 
-    it('deve tratar erro ao criar bug com erro não-axios (linhas 1353-1368)', async () => {
+    it('deve tratar erro ao criar bug com erro não-axios (linha 1364)', async () => {
+      const mockNotifyCreate = vi.fn()
+      const quasar = await import('quasar')
+      vi.mocked(quasar.Notify.create).mockImplementation(mockNotifyCreate)
+      
       const error = new Error('Erro genérico')
       vi.mocked(executionService.executionService.createBug).mockRejectedValueOnce(error)
       wrapper.vm.bugForm = {
@@ -531,10 +621,9 @@ describe('ScenarioExecutionPage', () => {
       await wrapper.vm.$nextTick()
       await new Promise(resolve => setTimeout(resolve, 200))
 
-      expect(mockNotifyFn).toHaveBeenCalledWith({
-        type: 'negative',
-        message: 'Erro ao criar bug: Erro genérico'
-      })
+      const errorNotify = mockNotifyCreate.mock.calls.find(call => call[0]?.type === 'negative' && call[0]?.message?.includes('Erro ao criar bug'))
+      expect(errorNotify).toBeDefined()
+      expect(errorNotify?.[0]?.message).toContain('Erro genérico')
     })
 
     it('deve tratar erro ao criar bug com erro desconhecido (linhas 1353-1368)', async () => {

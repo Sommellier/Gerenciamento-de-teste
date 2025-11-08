@@ -422,19 +422,99 @@
             
             <template v-slot:body-cell-role="props">
               <q-td :props="props">
-                <q-chip
-                  :color="getRoleColor(props.row && props.row.role ? props.row.role : '')"
-                  text-color="white"
+                <div class="role-cell-container" v-if="props.row">
+                  <q-chip
+                    v-if="!isEditingRole(props.row)"
+                    :color="getRoleColor(props.row && props.row.role ? props.row.role : '')"
+                    text-color="white"
+                    size="sm"
+                  >
+                    {{ props.row && props.row.role ? props.row.role : '' }}
+                  </q-chip>
+                  <q-select
+                    v-else
+                    v-model="editingRole[props.row.id]"
+                    :options="roleOptionsForChange"
+                    emit-value
+                    map-options
+                    dense
+                    outlined
+                    @update:model-value="updateMemberRole(props.row)"
+                    style="min-width: 150px"
+                  />
+                  <q-btn
+                    v-if="canChangeRole(props.row) && !isEditingRole(props.row)"
+                    flat
+                    round
+                    icon="edit"
+                    color="primary"
+                    size="xs"
+                    @click="startEditingRole(props.row)"
+                    class="q-ml-xs"
+                  >
+                    <q-tooltip>Alterar cargo</q-tooltip>
+                  </q-btn>
+                </div>
+              </q-td>
+            </template>
+            
+            <template v-slot:body-cell-actions="props">
+              <q-td :props="props">
+                <q-btn
+                  v-if="props.row && canRemoveMember(props.row)"
+                  flat
+                  round
+                  icon="delete"
+                  color="negative"
                   size="sm"
+                  @click="confirmRemoveMember(props.row)"
+                  :disable="removingMember"
                 >
-                  {{ props.row && props.row.role ? props.row.role : '' }}
-                </q-chip>
+                  <q-tooltip>Remover membro</q-tooltip>
+                </q-btn>
               </q-td>
             </template>
           </q-table>
         </q-card-section>
       </q-card>
     </div>
+
+    <!-- Remove Member Dialog -->
+    <q-dialog v-model="showRemoveMemberDialog" persistent>
+      <q-card class="remove-member-dialog" style="min-width: 400px">
+        <q-card-section class="dialog-header">
+          <div class="text-h6">Confirmar Remoção</div>
+          <q-btn
+            flat
+            round
+            icon="close"
+            @click="showRemoveMemberDialog = false"
+            class="close-btn"
+          />
+        </q-card-section>
+
+        <q-card-section class="dialog-content">
+          <p>Tem certeza que deseja remover <strong>{{ memberToRemove?.name }}</strong> do projeto?</p>
+          <p class="text-grey-6">Esta ação não pode ser desfeita.</p>
+        </q-card-section>
+
+        <q-card-actions class="dialog-actions">
+          <q-btn
+            flat
+            label="Cancelar"
+            @click="showRemoveMemberDialog = false"
+            class="cancel-btn"
+          />
+          <q-btn
+            color="negative"
+            label="Remover"
+            @click="removeMember"
+            class="remove-btn"
+            :loading="removingMember"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
 
     <!-- Add Member Dialog -->
     <q-dialog v-model="showAddMemberDialog" persistent>
@@ -530,6 +610,7 @@ const availableReleases = ref<string[]>([])
 const selectedRelease = ref<string | undefined>(undefined)
 const memberSearch = ref('')
 const loading = ref(false)
+const currentUser = ref<{ id: number; name: string; email: string } | null>(null)
 
 // Add member dialog state
 const showAddMemberDialog = ref(false)
@@ -539,8 +620,26 @@ const addMemberForm = ref({
   role: ''
 })
 
+// Remove member dialog state
+const showRemoveMemberDialog = ref(false)
+const memberToRemove = ref<ProjectMember | null>(null)
+const removingMember = ref(false)
+
+// Change role state
+const editingRole = ref<Record<number, string>>({})
+const changingRole = ref(false)
+
 // Role options
 const roleOptions = [
+  { label: 'Administrador', value: 'ADMIN' },
+  { label: 'Gerente', value: 'MANAGER' },
+  { label: 'Testador', value: 'TESTER' },
+  { label: 'Aprovador', value: 'APPROVER' }
+]
+
+// Role options for changing (only for owner)
+const roleOptionsForChange = [
+  { label: 'Dono', value: 'OWNER' },
   { label: 'Administrador', value: 'ADMIN' },
   { label: 'Gerente', value: 'MANAGER' },
   { label: 'Testador', value: 'TESTER' },
@@ -969,7 +1068,8 @@ const memberColumns = [
   { name: 'avatar', label: '', field: 'avatar', align: 'left' as const },
   { name: 'name', label: 'Nome', field: 'name', align: 'left' as const },
   { name: 'email', label: 'Email', field: 'email', align: 'left' as const },
-  { name: 'role', label: 'Função', field: 'role', align: 'left' as const }
+  { name: 'role', label: 'Função', field: 'role', align: 'left' as const },
+  { name: 'actions', label: 'Ações', field: 'actions', align: 'center' as const }
 ]
 
 // Validation rules removed - not used
@@ -1107,6 +1207,180 @@ function isValidEmail(email: string) {
   return emailRegex.test(email)
 }
 
+// Verificar se o usuário atual pode remover um membro
+function canRemoveMember(member: ProjectMember | null | undefined): boolean {
+  if (!member || !currentUser.value || !project.value) return false
+
+  const isOwner = project.value.ownerId === currentUser.value.id
+  const currentUserMember = members.value.find(m => m.id === currentUser.value!.id)
+  const isManager = currentUserMember?.role === 'MANAGER'
+
+  // Apenas dono ou gerente podem remover membros
+  if (!isOwner && !isManager) return false
+
+  // Gerente não pode remover dono ou outros gerentes
+  if (isManager && (member.role === 'OWNER' || member.role === 'MANAGER')) {
+    return false
+  }
+
+  // Não pode remover a si mesmo
+  if (member.id === currentUser.value.id) {
+    return false
+  }
+
+  return true
+}
+
+// Confirmar remoção de membro
+function confirmRemoveMember(member: ProjectMember) {
+  memberToRemove.value = member
+  showRemoveMemberDialog.value = true
+}
+
+// Remover membro
+async function removeMember() {
+  if (!memberToRemove.value) return
+  
+  try {
+    removingMember.value = true
+    await api.delete(`/projects/${projectId.value}/members/${memberToRemove.value.id}`)
+    
+    // Remover da lista local
+    members.value = members.value.filter(m => m.id !== memberToRemove.value!.id)
+    
+    // Fechar diálogo
+    showRemoveMemberDialog.value = false
+    memberToRemove.value = null
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Membro removido com sucesso!',
+      position: 'top'
+    })
+  } catch (error: unknown) {
+    console.error('Erro ao remover membro:', error)
+    interface ErrorWithMessage {
+      message?: string
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    let errorMessage = 'Erro ao remover membro'
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as ErrorWithMessage
+      errorMessage = err.response?.data?.message || err.message || errorMessage
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = (error as ErrorWithMessage).message || errorMessage
+    }
+    $q.notify({
+      type: 'negative',
+      message: errorMessage,
+      position: 'top'
+    })
+  } finally {
+    removingMember.value = false
+  }
+}
+
+// Carregar usuário atual
+async function loadCurrentUser() {
+  try {
+    const response = await api.get<{ id: number; name: string; email: string }>('/profile')
+    currentUser.value = response.data
+  } catch (err: unknown) {
+    console.error('Erro ao carregar usuário atual:', err)
+  }
+}
+
+// Verificar se o usuário atual pode alterar o cargo de um membro
+function canChangeRole(member: ProjectMember | null | undefined): boolean {
+  if (!member || !currentUser.value || !project.value) return false
+  
+  // Apenas o dono pode alterar cargos
+  const isOwner = project.value.ownerId === currentUser.value.id
+  if (!isOwner) return false
+  
+  // Não pode alterar o próprio cargo se for o único dono
+  if (member.id === currentUser.value.id && member.role === 'OWNER') {
+    const owners = members.value.filter(m => m.role === 'OWNER')
+    if (owners.length <= 1) {
+      return false
+    }
+  }
+  
+  return true
+}
+
+// Verificar se está editando o role de um membro
+function isEditingRole(member: ProjectMember | null | undefined): boolean {
+  if (!member || !member.id) return false
+  return member.id in editingRole.value
+}
+
+// Iniciar edição de role
+function startEditingRole(member: ProjectMember) {
+  editingRole.value[member.id] = member.role
+}
+
+// Atualizar role do membro
+async function updateMemberRole(member: ProjectMember) {
+  const newRole = editingRole.value[member.id]
+  if (!newRole || newRole === member.role) {
+    delete editingRole.value[member.id]
+    return
+  }
+  
+  try {
+    changingRole.value = true
+    await api.put(`/projects/${projectId.value}/members/${member.id}/role`, {
+      role: newRole
+    })
+    
+    // Atualizar na lista local
+    const memberIndex = members.value.findIndex(m => m.id === member.id)
+    if (memberIndex !== -1 && members.value[memberIndex]) {
+      members.value[memberIndex].role = newRole as ProjectMember['role']
+    }
+    
+    // Limpar edição
+    delete editingRole.value[member.id]
+    
+    $q.notify({
+      type: 'positive',
+      message: 'Cargo do membro atualizado com sucesso!',
+      position: 'top'
+    })
+  } catch (error: unknown) {
+    console.error('Erro ao atualizar cargo do membro:', error)
+    interface ErrorWithMessage {
+      message?: string
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    let errorMessage = 'Erro ao atualizar cargo do membro'
+    if (error && typeof error === 'object' && 'response' in error) {
+      const err = error as ErrorWithMessage
+      errorMessage = err.response?.data?.message || err.message || errorMessage
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = (error as ErrorWithMessage).message || errorMessage
+    }
+    $q.notify({
+      type: 'negative',
+      message: errorMessage,
+      position: 'top'
+    })
+    // Reverter para o role anterior
+    delete editingRole.value[member.id]
+  } finally {
+    changingRole.value = false
+  }
+}
+
 // Flag para evitar múltiplas chamadas simultâneas
 const isLoadingProjectDetails = ref(false)
 
@@ -1189,6 +1463,7 @@ watch(project, (newProject) => {
 
 // Lifecycle
 onMounted(() => {
+  void loadCurrentUser()
   void loadProjectDetails()
 })
 </script>
@@ -1919,6 +2194,12 @@ onMounted(() => {
 
 .members-table :deep(.q-table tbody tr:hover) {
   background: rgba(255, 255, 255, 0.05);
+}
+
+.role-cell-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Add Member Dialog Styles */

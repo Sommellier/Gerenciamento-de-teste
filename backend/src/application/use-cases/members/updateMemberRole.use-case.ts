@@ -30,16 +30,23 @@ export async function updateMemberRole({
   // 1) projeto existe?
   const project = await prisma.project.findUnique({
     where: { id: projectId },
-    select: { id: true }
+    select: { id: true, ownerId: true }
   })
   if (!project) throw new AppError('Projeto não encontrado', 404)
 
-  // 2) requester precisa ser membro
+  // 2) Verificar se requester é dono do projeto
+  const isOwner = project.ownerId === requesterId
+
+  // 3) Requester precisa ser membro OU ser o dono
   const requester = await prisma.userOnProject.findUnique({
     where: { userId_projectId: { userId: requesterId, projectId } },
     select: { role: true }
   })
-  if (!requester) throw new AppError('Acesso negado ao projeto', 403)
+  
+  // Se não é dono e não é membro, negar acesso
+  if (!isOwner && !requester) {
+    throw new AppError('Acesso negado ao projeto', 403)
+  }
 
   // 3) target precisa ser membro
   const target = await prisma.userOnProject.findUnique({
@@ -49,7 +56,11 @@ export async function updateMemberRole({
   if (!target) throw new AppError('Membro não encontrado', 404)
 
   // 4) Regras de autorização
-  if (requester.role === 'MANAGER') {
+  // O dono pode alterar qualquer role
+  if (isOwner) {
+    // Dono pode alterar qualquer role, mas não pode rebaixar o último OWNER
+    // (isso é verificado no passo 5)
+  } else if (requester && requester.role === 'MANAGER') {
     // manager não altera OWNER/MANAGER
     if (target.role === 'OWNER' || target.role === 'MANAGER') {
       throw new AppError('MANAGER não pode alterar OWNER/MANAGER', 403)
@@ -58,6 +69,9 @@ export async function updateMemberRole({
     if (newRole === 'OWNER' || newRole === 'MANAGER') {
       throw new AppError('MANAGER não pode promover para OWNER/MANAGER', 403)
     }
+  } else {
+    // Apenas dono ou gerente podem alterar roles
+    throw new AppError('Apenas o dono ou gerente podem alterar roles', 403)
   }
 
   // 5) Regra de último OWNER (vale inclusive para auto-rebaixamento)

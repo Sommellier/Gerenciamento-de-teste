@@ -1,5 +1,5 @@
 // Função para o fluxo "Criação de cenario
-Cypress.Commands.add('criarCenario', (nomeProjeto, descricaoProjeto) => {
+Cypress.Commands.add('criarProjeto', (nomeProjeto, descricaoProjeto) => {
     cy.get('.icon-wrapper.projects-icon svg').should('exist').click()
     cy.findByRole('button', { name: /novo projeto/i }).click()
     cy.findByPlaceholderText(/digite o nome do projeto/i)
@@ -28,18 +28,18 @@ Cypress.Commands.add('validarCriacaoProjeto', (nomeProjeto, descricaoProjeto) =>
 })
 
 //Editar cenário
-Cypress.Commands.add('editarCenario', (nomeProjetoEditado) => {
+Cypress.Commands.add('editarProjeto', (nomeProjetoEditado) => {
     cy.contains('.project-card .project-title', /meu projeto/i)
         .parents('.project-card')
         .within(() => {
             cy.get('button.project-menu-button[aria-label="Ações do projeto"]').click()
         })
     cy.contains('button', /editar/i).should('be.visible').click()
-    cy.findByLabelText(/nome do projeto/i)
+    cy.findByPlaceholderText(/digite o nome do projeto/i)
         .focus()
         .type('{selectAll}{backspace}')
         .type(nomeProjetoEditado)
-    cy.findByLabelText(/descrição \(opcional\)/i)
+       cy.findByPlaceholderText(/Descreva o objetivo do projeto/i)
         .focus()
         .type('{selectAll}{backspace}')
         .type('Nova descrição do projeto')

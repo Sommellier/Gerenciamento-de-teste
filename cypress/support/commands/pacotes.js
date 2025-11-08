@@ -6,7 +6,7 @@ Cypress.Commands.add('criarPacote', () => {
     const tipoPacoteEscolhido = Cypress._.sample(tipoPacote)
     const prioridadePacoteEscolhido = Cypress._.sample(prioridadePacote)
     const ambientePacoteEscolhido = Cypress._.sample(ambientePacote)
-    const hoje = new Date().getDate()+1
+    const hoje = new Date().getDate() + 1
 
     // Clicar no botão "Criar primeiro pacote"
     cy.findByRole('button', { name: /criar primeiro pacote/i })
@@ -51,7 +51,13 @@ Cypress.Commands.add('criarPacote', () => {
     cy.contains('button', /fechar/i).click()
     cy.contains('button', /criar release/i).click()
 
+    //Clica no email do responsável
     cy.get('i.q-icon.q-select__dropdown-icon').eq(4).click()
 
+    //Clicar em criar pacote
+    cy.contains('button', 'Criar Pacote')
+        .should('be.visible')
+        .and('not.be.disabled')
+        .click();
 })
 

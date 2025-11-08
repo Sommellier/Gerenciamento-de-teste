@@ -599,6 +599,46 @@ describe('getPackageDetails', () => {
       expect(result.scenarios[0].tags).toEqual(['tag1', 'tag2'])
     })
 
+    it('trata tags de cenário quando já vem como array do banco (linhas 95-96)', async () => {
+      // Criar cenário diretamente no banco
+      const scenario = await prisma.testScenario.create({
+        data: {
+          title: 'Test Scenario',
+          description: 'Test Description',
+          type: ScenarioType.FUNCTIONAL,
+          priority: Priority.HIGH,
+          status: ScenarioStatus.CREATED,
+          projectId: projectId,
+          packageId: packageId,
+          tags: JSON.stringify(['tag1', 'tag2'])
+        }
+      })
+
+      // Mock do findMany para retornar tags como array (simulando caso onde Prisma retorna array)
+      const originalFindMany = (prisma.testScenario as any).findMany
+      const mockScenarios = [{
+        ...scenario,
+        tags: ['tag1', 'tag2'] as any, // tags como array (linha 96)
+        steps: [],
+        testador: null,
+        aprovador: null
+      }]
+
+      ;(prisma.testScenario as any).findMany = jest.fn().mockResolvedValue(mockScenarios)
+
+      const result = await getPackageDetails({
+        packageId,
+        projectId
+      })
+
+      // Deve tratar tags como array diretamente (linha 96)
+      expect(Array.isArray(result.scenarios[0].tags)).toBe(true)
+      expect(result.scenarios[0].tags).toEqual(['tag1', 'tag2'])
+
+      // Restaurar função original
+      ;(prisma.testScenario as any).findMany = originalFindMany
+    })
+
     it('trata tags de pacote como array diretamente (linhas 116-117)', async () => {
       // Criar pacote com tags como string JSON
       const packageWithTags = await prisma.testPackage.create({
@@ -637,6 +677,54 @@ describe('getPackageDetails', () => {
 
       expect(Array.isArray(result.tags)).toBe(true)
       expect(result.tags).toEqual(['pkg-tag1', 'pkg-tag2'])
+
+      // Limpar
+      await prisma.testPackage.delete({ where: { id: packageWithTags.id } })
+    })
+
+    it('trata tags de pacote quando já vem como array do banco (linhas 116-117)', async () => {
+      // Criar pacote diretamente no banco
+      const packageWithTags = await prisma.testPackage.create({
+        data: {
+          title: 'Package With Tags',
+          description: 'Description',
+          type: ScenarioType.FUNCTIONAL,
+          priority: Priority.HIGH,
+          release: '2024-01',
+          projectId: projectId,
+          tags: JSON.stringify(['pkg-tag1', 'pkg-tag2'])
+        }
+      })
+
+      // Mock do findFirst para retornar tags como array (simulando caso onde Prisma retorna array)
+      const originalFindFirst = prisma.testPackage.findFirst
+      const mockPackage = {
+        ...packageWithTags,
+        tags: ['pkg-tag1', 'pkg-tag2'] as any, // tags como array (linha 117)
+        steps: [],
+        project: {
+          id: projectId,
+          name: 'Test Project',
+          description: 'Test Project Description',
+          ownerId: userId
+        },
+        approvedBy: null,
+        rejectedBy: null
+      }
+
+      prisma.testPackage.findFirst = jest.fn().mockResolvedValue(mockPackage)
+
+      const result = await getPackageDetails({
+        packageId: packageWithTags.id,
+        projectId
+      })
+
+      // Deve tratar tags como array diretamente (linha 117)
+      expect(Array.isArray(result.tags)).toBe(true)
+      expect(result.tags).toEqual(['pkg-tag1', 'pkg-tag2'])
+
+      // Restaurar função original
+      prisma.testPackage.findFirst = originalFindFirst
 
       // Limpar
       await prisma.testPackage.delete({ where: { id: packageWithTags.id } })
@@ -718,6 +806,57 @@ describe('getPackageDetails', () => {
 
       // successRate: 0 PASSED de 0 executados = 0% (divisão por zero protegida)
       expect(result.metrics.successRate).toBe(0)
+    })
+
+    it('calcula executionRate e successRate com cenários EXECUTED (linhas 171-173)', async () => {
+      // Criar cenários com diferentes status
+      await prisma.testScenario.createMany({
+        data: [
+          {
+            title: 'Scenario CREATED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.CREATED,
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario EXECUTED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.EXECUTED,
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario PASSED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.PASSED,
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario FAILED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.FAILED,
+            projectId,
+            packageId
+          }
+        ]
+      })
+
+      const result = await getPackageDetails({
+        packageId,
+        projectId
+      })
+
+      // executionRate: 3 executados (EXECUTED, PASSED, FAILED) de 4 total = 75%
+      expect(result.metrics.executionRate).toBe(75)
+
+      // successRate: 1 PASSED de 3 executados = 33.33%
+      expect(result.metrics.successRate).toBeCloseTo(33.33, 1)
     })
 
     it('calcula successRate quando todos os executados passaram (linhas 171-173)', async () => {
@@ -1288,6 +1427,32 @@ describe('getPackageDetails', () => {
         projectId
       })).rejects.toBe('String error')
 
+      // Restaurar função original
+      prisma.testPackage.findFirst = originalFindFirst
+    })
+
+    it('trata erro Error e converte para AppError (linha 204)', async () => {
+      // Mock do prisma para simular erro Error
+      const originalFindFirst = prisma.testPackage.findFirst
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      
+      prisma.testPackage.findFirst = jest.fn().mockImplementationOnce(() => {
+        // Simular erro que é instância de Error
+        throw new Error('Database connection failed')
+      })
+
+      await expect(getPackageDetails({
+        packageId,
+        projectId
+      })).rejects.toMatchObject({
+        statusCode: 500,
+        message: 'Erro ao buscar detalhes do pacote: Database connection failed'
+      })
+
+      // Verificar que o erro foi logado (linha 202)
+      expect(consoleSpy).toHaveBeenCalledWith('Error in getPackageDetails:', expect.any(Error))
+
+      consoleSpy.mockRestore()
       // Restaurar função original
       prisma.testPackage.findFirst = originalFindFirst
     })
