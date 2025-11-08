@@ -77,8 +77,10 @@ export function formatDate(date: string | Date | undefined, includeTime = false)
  * @returns Nome da cor do Quasar
  */
 export function getMemberColor(memberId: number): string {
-  const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
-  return colors[memberId % colors.length]
+  const colors: string[] = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
+  const index = memberId % colors.length
+  const color = colors[index]
+  return color || 'primary'
 }
 
 /**

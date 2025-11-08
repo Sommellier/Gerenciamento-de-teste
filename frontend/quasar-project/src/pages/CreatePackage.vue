@@ -408,7 +408,6 @@ const createNewRelease = () => {
     showCreateReleaseDialog.value = false
     newRelease.value = ''
     
-    
     $q.notify({
       type: 'positive',
       message: 'Release criada com sucesso!'
