@@ -65,10 +65,17 @@ describe('ProjectDetails', () => {
   let wrapper: VueWrapper<any>
   let mockNotifyFn: ReturnType<typeof vi.fn>
 
+  const mockCurrentUser = {
+    id: 1,
+    name: 'Usuário Atual',
+    email: 'usuario@example.com'
+  }
+
   const mockProject = {
     id: 1,
     name: 'Projeto Teste',
     description: 'Descrição do projeto',
+    ownerId: 1,
     metrics: {
       created: 5,
       executed: 3,
@@ -190,11 +197,11 @@ describe('ProjectDetails', () => {
                   </thead>
                   <tbody>
                     <template v-for="(row, index) in (rows || [])" :key="row?.id || index">
-                      <tr>
+                      <tr v-if="row">
                         <td v-for="col in (columns || [])" :key="col.name">
                           <slot 
                             :name="'body-cell-' + col.name" 
-                            :props="{ row: (row || { id: null, name: '', email: '', role: '', avatar: null }), col: (col || {}) }"
+                            :props="{ row: row, col: (col || {}) }"
                           >
                             {{ (row && row[col.field]) ? row[col.field] : '' }}
                           </slot>
@@ -239,6 +246,8 @@ describe('ProjectDetails', () => {
     const quasarInstance = quasar.useQuasar()
     mockNotifyFn = quasarInstance.notify as ReturnType<typeof vi.fn>
     mockNotifyFn.mockClear()
+    // Mock do currentUser
+    vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
   })
 
   afterEach(() => {
@@ -541,6 +550,194 @@ describe('ProjectDetails', () => {
         type: 'negative',
         position: 'top',
       })
+    })
+
+    it('deve carregar usuário atual ao montar', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      expect(api.get).toHaveBeenCalledWith('/profile')
+      expect(wrapper.vm.currentUser).toEqual(mockCurrentUser)
+    })
+
+    it('deve verificar se pode remover membro (owner pode remover)', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = mockCurrentUser
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = mockProject.members
+
+      // Owner pode remover membro que não é owner
+      const canRemove = wrapper.vm.canRemoveMember(mockProject.members[1])
+      expect(canRemove).toBe(true)
+    })
+
+    it('deve verificar se pode remover membro (manager não pode remover owner)', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { id: 2, name: 'Manager', email: 'manager@example.com' } } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = { id: 2, name: 'Manager', email: 'manager@example.com' }
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = mockProject.members
+
+      // Manager não pode remover owner
+      const canRemove = wrapper.vm.canRemoveMember(mockProject.members[0])
+      expect(canRemove).toBe(false)
+    })
+
+    it('deve remover membro com sucesso', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = mockCurrentUser
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = [...mockProject.members]
+      wrapper.vm.memberToRemove = mockProject.members[1]
+      wrapper.vm.showRemoveMemberDialog = true
+
+      vi.mocked(api.delete).mockResolvedValueOnce({ data: {} } as any)
+
+      await wrapper.vm.removeMember()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(api.delete).toHaveBeenCalledWith('/projects/1/members/2')
+      expect(wrapper.vm.members.length).toBe(1)
+      expect(wrapper.vm.showRemoveMemberDialog).toBe(false)
+      expect(mockNotifyFn).toHaveBeenCalledWith({
+        type: 'positive',
+        message: 'Membro removido com sucesso!',
+        position: 'top'
+      })
+    })
+
+    it('deve verificar se pode alterar cargo (apenas owner)', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = mockCurrentUser
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = mockProject.members
+
+      // Owner pode alterar cargo de membro
+      const canChange = wrapper.vm.canChangeRole(mockProject.members[1])
+      expect(canChange).toBe(true)
+    })
+
+    it('deve verificar se pode alterar cargo (não owner não pode)', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { id: 2, name: 'Manager', email: 'manager@example.com' } } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = { id: 2, name: 'Manager', email: 'manager@example.com' }
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = mockProject.members
+
+      // Manager não pode alterar cargo
+      const canChange = wrapper.vm.canChangeRole(mockProject.members[1])
+      expect(canChange).toBe(false)
+    })
+
+    it('deve atualizar cargo do membro com sucesso', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = mockCurrentUser
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = [...mockProject.members]
+      wrapper.vm.editingRole = { 2: 'TESTER' }
+
+      vi.mocked(api.put).mockResolvedValueOnce({ data: {} } as any)
+
+      await wrapper.vm.updateMemberRole(mockProject.members[1])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(api.put).toHaveBeenCalledWith('/projects/1/members/2/role', {
+        role: 'TESTER'
+      })
+      expect(mockNotifyFn).toHaveBeenCalledWith({
+        type: 'positive',
+        message: 'Cargo do membro atualizado com sucesso!',
+        position: 'top'
+      })
+    })
+
+    it('deve confirmar remoção de membro', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = mockCurrentUser
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      wrapper.vm.members = mockProject.members
+
+      wrapper.vm.confirmRemoveMember(mockProject.members[1])
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.showRemoveMemberDialog).toBe(true)
+      expect(wrapper.vm.memberToRemove).toEqual(mockProject.members[1])
+    })
+
+    it('deve iniciar edição de role', async () => {
+      vi.mocked(projectDetailsService.getAvailableReleases).mockResolvedValueOnce(mockReleases)
+      vi.mocked(projectDetailsService.getProjectDetails).mockResolvedValueOnce(mockProject)
+      vi.mocked(api.get).mockResolvedValueOnce({ data: mockCurrentUser } as any)
+      wrapper = createWrapper(mockProject.members || [])
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      wrapper.vm.currentUser = mockCurrentUser
+      wrapper.vm.project = { ...mockProject, ownerId: 1 } as any
+      // Limpar editingRole antes de iniciar
+      wrapper.vm.editingRole = {}
+      // Garantir que os membros tenham os roles corretos
+      wrapper.vm.members = [
+        { id: 1, name: 'Membro 1', email: 'membro1@example.com', role: 'OWNER', avatar: null },
+        { id: 2, name: 'Membro 2', email: 'membro2@example.com', role: 'MANAGER', avatar: null }
+      ]
+
+      const memberToEdit = wrapper.vm.members[1]
+      // Verificar que o role do membro é MANAGER antes de iniciar edição
+      expect(memberToEdit.role).toBe('MANAGER')
+      
+      wrapper.vm.startEditingRole(memberToEdit)
+      await wrapper.vm.$nextTick()
+
+      // Verificar que o editingRole foi definido com o role atual do membro
+      expect(wrapper.vm.editingRole[2]).toBe('MANAGER')
+      expect(wrapper.vm.isEditingRole(memberToEdit)).toBe(true)
     })
   })
 

@@ -438,4 +438,29 @@ describe('createPackage - casos de erro de integração', () => {
       message: 'Projeto não encontrado'
     })
   })
+
+  it('trata erro inesperado e loga no console (linha 99)', async () => {
+    // Mock do prisma para simular erro inesperado
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+    const createSpy = jest.spyOn(prisma.testPackage, 'create').mockRejectedValueOnce(
+      new Error('Database connection error')
+    )
+
+    const packageData = {
+      projectId,
+      title: 'Test Package',
+      type: 'FUNCTIONAL' as const,
+      priority: 'HIGH' as const,
+      tags: ['test'],
+      release: '2024-01-15'
+    }
+
+    await expect(createPackage(packageData)).rejects.toThrow('Database connection error')
+    
+    // Verificar que o erro foi logado (linha 99)
+    expect(consoleSpy).toHaveBeenCalledWith('Error in createPackage:', expect.any(Error))
+    
+    consoleSpy.mockRestore()
+    createSpy.mockRestore()
+  })
 })

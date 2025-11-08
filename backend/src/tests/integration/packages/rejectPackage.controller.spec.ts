@@ -195,7 +195,33 @@ describe('rejectPackageController', () => {
   })
 
   describe('rejectPackageController - casos de erro', () => {
-    it('rejeita quando não autenticado', async () => {
+    it('rejeita quando não autenticado (linha 20)', async () => {
+      // Testar diretamente o controller sem req.user para cobrir linha 20
+      const req = {
+        params: { projectId: projectId.toString(), packageId: packageId.toString() },
+        body: { rejectionReason: 'Motivo' },
+        user: undefined
+      } as any
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next = jest.fn()
+
+      await rejectPackageController(req, res, next)
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 401,
+          message: 'Não autenticado'
+        })
+      )
+      expect(res.status).not.toHaveBeenCalled()
+    })
+
+    it('rejeita quando não autenticado (com auth middleware)', async () => {
       const response = await request(app)
         .post(`/projects/${projectId}/packages/${packageId}/reject`)
         .send({ rejectionReason: 'Motivo' })
@@ -254,14 +280,54 @@ describe('rejectPackageController', () => {
       })
     })
 
-    it('rejeita quando projectId está ausente', async () => {
-      const response = await request(app)
-        .post(`/projects//packages/${packageId}/reject`)
-        .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
-        .send({ rejectionReason: 'Motivo' })
-        .expect(404) // Express retorna 404 quando rota não existe (projectId vazio)
+    it('rejeita quando projectId está ausente (linha 24)', async () => {
+      // Testar diretamente o controller com projectId undefined para cobrir linha 24
+      const req1 = {
+        params: { projectId: undefined, packageId: packageId.toString() },
+        body: { rejectionReason: 'Motivo' },
+        user: { id: ownerId }
+      } as any
 
-      // Quando projectId está vazio, Express não encontra a rota
+      const res1 = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next1 = jest.fn()
+
+      await rejectPackageController(req1, res1, next1)
+
+      expect(next1).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'IDs inválidos'
+        })
+      )
+    })
+
+    it('rejeita quando packageId está ausente (linha 24)', async () => {
+      // Testar diretamente o controller com packageId undefined para cobrir linha 24
+      const req = {
+        params: { projectId: projectId.toString(), packageId: undefined },
+        body: { rejectionReason: 'Motivo' },
+        user: { id: ownerId }
+      } as any
+
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      } as any
+
+      const next = jest.fn()
+
+      await rejectPackageController(req, res, next)
+
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 400,
+          message: 'IDs inválidos'
+        })
+      )
     })
 
     it('rejeita quando packageId é NaN', async () => {

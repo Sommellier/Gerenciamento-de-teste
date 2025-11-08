@@ -403,6 +403,17 @@ describe('ScenarioDetailsPage', () => {
       expect(wrapper.vm.showAddStepDialog).toBe(true)
     })
 
+    it('deve abrir diálogo de editar etapa (linha 1003)', async () => {
+      const step = mockScenario.steps[0]
+      await wrapper.vm.editStep(step)
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.vm.showAddStepDialog).toBe(true)
+      expect(wrapper.vm.editingStep).toEqual(step)
+      expect(wrapper.vm.stepForm.action).toBe(step.action)
+      expect(wrapper.vm.stepForm.expected).toBe(step.expected)
+    })
+
     it('deve adicionar etapa com sucesso', async () => {
       vi.mocked(scenarioService.scenarioService.updateScenario).mockResolvedValueOnce(undefined as any)
       vi.mocked(scenarioService.scenarioService.getScenarioById).mockResolvedValueOnce({ scenario: mockScenario } as any)
@@ -414,6 +425,60 @@ describe('ScenarioDetailsPage', () => {
 
       expect(scenarioService.scenarioService.updateScenario).toHaveBeenCalled()
       expect(mockNotify).toHaveBeenCalled()
+    })
+
+    it('deve não permitir salvar etapa se cenário está concluído (linhas 1017-1023)', async () => {
+      wrapper.vm.scenario = { ...mockScenario, status: 'PASSED' } as any
+      wrapper.vm.stepForm = { action: 'Nova ação', expected: 'Novo resultado esperado' }
+
+      await wrapper.vm.saveStep()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(scenarioService.scenarioService.updateScenario).not.toHaveBeenCalled()
+      expect(mockNotify).toHaveBeenCalledWith({
+        type: 'warning',
+        message: 'Não é possível adicionar ou editar etapas em um cenário concluído',
+        timeout: 3000
+      })
+    })
+
+    it('deve tratar erro ao salvar etapa (linhas 1070-1087)', async () => {
+      const axiosError = Object.assign(new Error('Erro ao salvar'), {
+        response: {
+          data: {
+            message: 'Erro específico do servidor'
+          }
+        }
+      })
+      vi.mocked(scenarioService.scenarioService.updateScenario).mockRejectedValueOnce(axiosError)
+      wrapper.vm.scenario = { ...mockScenario, status: 'CREATED' } as any
+      wrapper.vm.stepForm = { action: 'Nova ação', expected: 'Novo resultado esperado' }
+
+      await wrapper.vm.saveStep()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(mockNotify).toHaveBeenCalledWith({
+        type: 'negative',
+        message: 'Erro específico do servidor'
+      })
+    })
+
+    it('deve tratar erro ao salvar etapa com erro não-axios (linhas 1070-1087)', async () => {
+      const error = new Error('Erro genérico')
+      vi.mocked(scenarioService.scenarioService.updateScenario).mockRejectedValueOnce(error)
+      wrapper.vm.scenario = { ...mockScenario, status: 'CREATED' } as any
+      wrapper.vm.stepForm = { action: 'Nova ação', expected: 'Novo resultado esperado' }
+
+      await wrapper.vm.saveStep()
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(mockNotify).toHaveBeenCalledWith({
+        type: 'negative',
+        message: 'Erro genérico'
+      })
     })
 
     it('deve editar etapa com sucesso', async () => {
@@ -442,6 +507,36 @@ describe('ScenarioDetailsPage', () => {
 
       expect(scenarioService.scenarioService.updateScenario).toHaveBeenCalled()
       expect(mockNotify).toHaveBeenCalled()
+    })
+
+    it('deve não permitir excluir etapa se cenário está concluído (linhas 1096-1102)', async () => {
+      wrapper.vm.scenario = { ...mockScenario, status: 'PASSED' } as any
+
+      await wrapper.vm.deleteStep(1)
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(scenarioService.scenarioService.updateScenario).not.toHaveBeenCalled()
+      expect(mockNotify).toHaveBeenCalledWith({
+        type: 'warning',
+        message: 'Não é possível excluir etapas em um cenário concluído',
+        timeout: 3000
+      })
+    })
+
+    it('deve não permitir excluir etapa se cenário não existe (linhas 1096-1102)', async () => {
+      wrapper.vm.scenario = null
+
+      await wrapper.vm.deleteStep(1)
+      await wrapper.vm.$nextTick()
+      await new Promise(resolve => setTimeout(resolve, 200))
+
+      expect(scenarioService.scenarioService.updateScenario).not.toHaveBeenCalled()
+      expect(mockNotify).toHaveBeenCalledWith({
+        type: 'warning',
+        message: 'Não é possível excluir etapas em um cenário concluído',
+        timeout: 3000
+      })
     })
 
     it('deve cancelar exclusão de etapa quando usuário cancela confirmação (linha 1106)', async () => {

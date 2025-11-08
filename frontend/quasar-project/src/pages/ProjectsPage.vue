@@ -224,12 +224,61 @@
             </svg>
             Editar
           </button>
-          <button class="menu-action danger" @click="selectedProject && deleteProject(selectedProject)">
+          <button 
+            v-if="selectedProject && !isProjectOwner(selectedProject)"
+            class="menu-action danger" 
+            @click="selectedProject && leaveProject(selectedProject)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="16,17 21,12 16,7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Sair do Projeto
+          </button>
+          <button 
+            v-if="selectedProject && isProjectOwner(selectedProject)"
+            class="menu-action danger" 
+            @click="selectedProject && deleteProject(selectedProject)"
+          >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <polyline points="3,6 5,6 21,6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M19,6V20A2,2 0 0,1 17,22H7A2,2 0 0,1 5,20V6M8,6V4A2,2 0 0,1 10,2H14A2,2 0 0,1 16,4V6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Diálogo de confirmação de sair do projeto -->
+    <div v-if="leaveProjectDialog" class="dialog-overlay" @click="closeLeaveProjectDialog">
+      <div class="dialog-container error" @click.stop>
+        <div class="dialog-header">
+          <div class="dialog-icon error">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="16,17 21,12 16,7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <h3>Confirmar Saída</h3>
+        </div>
+        <div class="dialog-content">
+          <p>Tem certeza que deseja sair do projeto <strong>"{{ projectToLeave?.name }}"</strong>?</p>
+          <p class="text-grey-6">Você perderá acesso a este projeto e precisará ser convidado novamente para acessá-lo.</p>
+        </div>
+        <div class="dialog-actions">
+          <button class="cancel-button" @click="closeLeaveProjectDialog">
+            Cancelar
+          </button>
+          <button 
+            class="confirm-button error"
+            @click="confirmLeaveProject"
+            :disabled="leavingProject"
+          >
+            <div v-if="leavingProject" class="loading-spinner"></div>
+            {{ leavingProject ? 'Saindo...' : 'Sair do Projeto' }}
           </button>
         </div>
       </div>
@@ -286,6 +335,7 @@ interface Project {
   description?: string
   createdAt?: string
   updatedAt?: string
+  ownerId?: number
   [key: string]: unknown
 }
 
@@ -297,6 +347,7 @@ const currentPage = ref(1)
 const totalPages = ref(1)
 const totalProjects = ref(0)
 const isSearching = ref(false)
+const currentUser = ref<{ id: number; name: string; email: string } | null>(null)
 
 // Menu state
 const showMenu = ref(false)
@@ -306,6 +357,11 @@ const selectedProject = ref<Project | null>(null)
 const deleteDialog = ref(false)
 const projectToDelete = ref<Project | null>(null)
 const deleting = ref(false)
+
+// Leave project dialog state
+const leaveProjectDialog = ref(false)
+const projectToLeave = ref<Project | null>(null)
+const leavingProject = ref(false)
 
 // Navigation
 function goBack() {
@@ -367,6 +423,11 @@ function closeDeleteDialog() {
   projectToDelete.value = null
 }
 
+function closeLeaveProjectDialog() {
+  leaveProjectDialog.value = false
+  projectToLeave.value = null
+}
+
 function editProject(project: Project) {
   closeMenu()
   void router.push(`/projects/${project.id}/edit`)
@@ -376,6 +437,68 @@ function deleteProject(project: Project) {
   closeMenu()
   projectToDelete.value = project
   deleteDialog.value = true
+}
+
+function leaveProject(project: Project) {
+  closeMenu()
+  projectToLeave.value = project
+  leaveProjectDialog.value = true
+}
+
+// Verificar se o usuário atual é dono do projeto
+function isProjectOwner(project: Project): boolean {
+  if (!currentUser.value || !project.ownerId) return false
+  return project.ownerId === currentUser.value.id
+}
+
+async function confirmLeaveProject() {
+  if (!projectToLeave.value) return
+  
+  leavingProject.value = true
+  try {
+    await api.post(`/projects/${projectToLeave.value.id}/members/leave`)
+    $q.notify({
+      type: 'positive',
+      message: 'Você saiu do projeto com sucesso!',
+      position: 'top'
+    })
+    await loadProjects()
+  } catch (err: unknown) {
+    console.error('Erro ao sair do projeto:', err)
+    interface ErrorWithMessage {
+      message?: string
+      response?: {
+        data?: {
+          message?: string
+        }
+      }
+    }
+    let errorMessage = 'Erro ao sair do projeto'
+    if (err && typeof err === 'object' && 'response' in err) {
+      const error = err as ErrorWithMessage
+      errorMessage = error.response?.data?.message || error.message || errorMessage
+    } else if (err && typeof err === 'object' && 'message' in err) {
+      errorMessage = (err as ErrorWithMessage).message || errorMessage
+    }
+    $q.notify({
+      type: 'negative',
+      message: errorMessage,
+      position: 'top'
+    })
+  } finally {
+    leavingProject.value = false
+    closeLeaveProjectDialog()
+  }
+}
+
+// Carregar usuário atual
+async function loadCurrentUser() {
+  try {
+    const response = await api.get<{ id: number; name: string; email: string }>('/profile')
+    currentUser.value = response.data
+  } catch (err: unknown) {
+    console.error('Erro ao carregar usuário atual:', err)
+  }
 }
 
 async function confirmDelete() {
@@ -551,6 +674,7 @@ async function loadAllProjects() {
 
 // Lifecycle
 onMounted(async () => {
+  await loadCurrentUser()
   await loadAllProjects()
   await loadProjects()
 })

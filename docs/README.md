@@ -26,7 +26,8 @@ Desenvolver uma aplicação web completa para planejamento, execução e acompan
 Objetivos Específicos
 
 * Implementar cadastro/login, recuperação de senha e sessões com JWT, criptografia de senhas e proteção de rotas via middlewares.
-* Criar cenários com título, pré-condições, passos e resultados esperados; 
+
+* Criar cenários com título, pré-condições, passos e resultados esperados;
 * Permitir upload e associação de imagens/PDF (até 5 MB por arquivo) e armazenar com integridade.
 * Atribuir responsáveis e registrar resultados (aprovado, reprovado, pendente).
 * Gerar relatórios filtráveis por status, responsável e projeto; preparar exportação (PDF) e dashboard com indicadores.
