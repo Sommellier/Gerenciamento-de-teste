@@ -77,17 +77,7 @@
                 <q-icon name="person" />
               </template>
               <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section avatar>
-                    <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
-                      {{ getInitials(scope.opt.label) }}
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.label }}</q-item-label>
-                    <q-item-label caption>{{ scope.opt.email }}</q-item-label>
-                  </q-item-section>
-                </q-item>
+                <MemberOptionItem :scope="scope" />
               </template>
             </q-select>
           </div>
@@ -156,17 +146,7 @@
                 <q-icon name="verified_user" />
               </template>
               <template v-slot:option="scope">
-                <q-item v-bind="scope.itemProps">
-                  <q-item-section avatar>
-                    <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
-                      {{ getInitials(scope.opt.label) }}
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>{{ scope.opt.label }}</q-item-label>
-                    <q-item-label caption>{{ scope.opt.email }}</q-item-label>
-                  </q-item-section>
-                </q-item>
+                <MemberOptionItem :scope="scope" />
               </template>
             </q-select>
           </div>
@@ -200,6 +180,7 @@ import { scenarioService, type TestScenario } from '../../services/scenario.serv
 import { getProjectMembers, type ProjectMember } from '../../services/project.service'
 import { packageService } from '../../services/package.service'
 import { useRoute } from 'vue-router'
+import MemberOptionItem from './MemberOptionItem.vue'
 
 interface Props {
   modelValue: boolean
@@ -239,39 +220,25 @@ const show = computed({
 
 const isEditing = computed(() => !!props.scenario)
 
-// Membros que podem ser testadores (OWNER, ADMIN, MANAGER, TESTER)
-const testerOptions = computed(() => {
+// Helper para criar opções de membros baseado nos roles permitidos
+const createMemberOptions = (allowedRoles: string[]) => {
   if (!Array.isArray(members.value)) {
     return []
   }
   return members.value
-    .filter(member => {
-      const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'TESTER'
-    })
+    .filter(member => allowedRoles.includes(member.role))
     .map(member => ({
       label: member.name || member.email,
       value: member.id,
       email: member.email
     }))
-})
+}
+
+// Membros que podem ser testadores (OWNER, ADMIN, MANAGER, TESTER)
+const testerOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'TESTER']))
 
 // Membros que podem ser aprovadores (OWNER, ADMIN, MANAGER, APPROVER)
-const approverOptions = computed(() => {
-  if (!Array.isArray(members.value)) {
-    return []
-  }
-  return members.value
-    .filter(member => {
-      const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'APPROVER'
-    })
-    .map(member => ({
-      label: member.name || member.email,
-      value: member.id,
-      email: member.email
-    }))
-})
+const approverOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'APPROVER']))
 
 const typeOptions = [
   { label: 'Funcional', value: 'FUNCTIONAL' },
@@ -287,6 +254,11 @@ const priorityOptions = [
   { label: 'Crítica', value: 'CRITICAL' }
 ]
 
+// Helper para criar regras de validação obrigatória
+const createRequiredRule = (fieldName: string) => [
+  (val: number | string | null) => !!val || `${fieldName} é obrigatório`
+]
+
 // Validation rules
 const nameRules = [
   (val: string) => !!val || 'Nome do cenário é obrigatório',
@@ -294,50 +266,17 @@ const nameRules = [
   (val: string) => val.length <= 100 || 'Nome deve ter no máximo 100 caracteres'
 ]
 
-const testerRules = [
-  (val: number) => !!val || 'Testador responsável é obrigatório'
-]
-
-const approverRules = [
-  (val: number) => !!val || 'Aprovador responsável é obrigatório'
-]
-
-const typeRules = [
-  (val: string) => !!val || 'Tipo do cenário é obrigatório'
-]
-
-const priorityRules = [
-  (val: string) => !!val || 'Prioridade do cenário é obrigatória'
-]
+const testerRules = createRequiredRule('Testador responsável')
+const approverRules = createRequiredRule('Aprovador responsável')
+const typeRules = createRequiredRule('Tipo do cenário')
+const priorityRules = createRequiredRule('Prioridade do cenário')
 
 // Métodos
 function closeDialog() {
   show.value = false
 }
 
-function getInitials(name: string) {
-  if (!name) return '?'
-  const parts = name.split(' ').filter(p => p.length > 0)
-  if (parts.length >= 2) {
-    const first = parts[0]
-    const second = parts[1]
-    if (first && second && first[0] && second[0]) {
-      return (first[0] + second[0]).toUpperCase()
-    }
-  }
-  if (parts.length > 0 && parts[0]) {
-    const firstPart = parts[0]
-    if (firstPart && firstPart.length > 0 && firstPart[0]) {
-      return firstPart[0].toUpperCase()
-    }
-  }
-  return '?'
-}
-
-function getMemberColor(memberId: number) {
-  const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']
-  return colors[memberId % colors.length]
-}
+// getInitials e getMemberColor agora são importados de utils/helpers
 
 const resetForm = () => {
   formData.value = {
