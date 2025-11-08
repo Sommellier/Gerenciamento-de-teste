@@ -4,6 +4,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import PackageScenarios from 'src/pages/PackageScenarios.vue'
 import * as scenarioService from 'src/services/scenario.service'
 import * as projectDetailsService from 'src/services/project-details.service'
+import { getInitials, getMemberColor } from 'src/utils/helpers'
 
 // Mock dos serviços
 vi.mock('src/services/scenario.service', () => ({
@@ -535,13 +536,15 @@ describe('PackageScenarios', () => {
     })
 
     it('deve gerar iniciais corretamente', () => {
-      expect(wrapper.vm.getInitials('João Silva')).toBe('JS')
-      expect(wrapper.vm.getInitials('Maria')).toBe('M')
-      expect(wrapper.vm.getInitials('')).toBe('?')
+      // getInitials agora é importado de utils/helpers
+      expect(getInitials('João Silva')).toBe('JS')
+      expect(getInitials('Maria')).toBe('MA')
+      expect(getInitials('')).toBe('?')
     })
 
     it('deve retornar cor para membro', () => {
-      const color = wrapper.vm.getMemberColor(1)
+      // getMemberColor agora é importado de utils/helpers
+      const color = getMemberColor(1)
       expect(['primary', 'secondary', 'accent', 'positive', 'info', 'warning', 'negative']).toContain(color)
     })
   })
