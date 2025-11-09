@@ -20,10 +20,18 @@ import ectRoutes from './routes/ect.routes'
 const app = express()
 
 // Produção: defina ALLOWED_ORIGINS="https://seu-front1,https://seu-front2"
-const parseAllowed = (raw?: string | null): string[] =>
-  (raw ? raw.split(',') : [])
+const parseAllowed = (raw?: string | null): string[] => {
+  if (!raw) return []
+  
+  // Dividir por vírgula, remover espaços e filtrar valores vazios
+  const origins = raw
+    .split(',')
     .map(s => s.trim())
     .filter(Boolean)
+    .filter(s => s.length > 0)
+  
+  return origins
+}
 
 const allowedOrigins =
   process.env.NODE_ENV === 'production'
@@ -35,8 +43,30 @@ const allowedOrigins =
         'http://localhost:3000'
       ]
 
+// Log de debug para verificar o parsing (apenas em produção para debug)
+if (process.env.NODE_ENV === 'production') {
+  const rawValue = process.env.ALLOWED_ORIGINS ?? process.env.ALLOWED_ORIGIN ?? ''
+  console.log('[CORS Debug] Raw ALLOWED_ORIGINS:', rawValue ? `${rawValue.substring(0, 50)}...` : '(vazio)')
+  console.log('[CORS Debug] Parsed allowedOrigins:', allowedOrigins)
+  console.log('[CORS Debug] Total de origens permitidas:', allowedOrigins.length)
+}
+
 const isLocalhost = (origin: string) =>
   origin.includes('localhost') || origin.includes('127.0.0.1')
+
+// Normalizar origem para comparação (remover trailing slash, normalizar protocolo)
+const normalizeOrigin = (origin: string): string => {
+  return origin
+    .trim()
+    .toLowerCase()
+    .replace(/\/$/, '') // Remove trailing slash
+}
+
+// Verificar se a origem está na lista permitida (comparação normalizada)
+const isOriginAllowed = (origin: string, allowedList: string[]): boolean => {
+  const normalizedOrigin = normalizeOrigin(origin)
+  return allowedList.some(allowed => normalizeOrigin(allowed) === normalizedOrigin)
+}
 
 const corsOptions: cors.CorsOptions = {
   origin(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
@@ -46,15 +76,27 @@ const corsOptions: cors.CorsOptions = {
     if (!origin) return callback(null, true)
 
     if (!isProd) {
-      if (isLocalhost(origin) || allowedOrigins.includes(origin)) return callback(null, true)
+      if (isLocalhost(origin) || isOriginAllowed(origin, allowedOrigins)) return callback(null, true)
       return callback(new Error('Not allowed by CORS (dev)'))
     }
 
     // Produção
-    if (allowedOrigins.length === 0)
-      return callback(new Error('ALLOWED_ORIGINS não configurado'))
+    if (allowedOrigins.length === 0) {
+      // Se não configurado, permitir temporariamente com aviso (consistente com o middleware OPTIONS)
+      console.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
+      return callback(null, true)
+    }
 
-    if (allowedOrigins.includes(origin)) return callback(null, true)
+    // Verificar se a origem está na lista (com comparação normalizada)
+    if (isOriginAllowed(origin, allowedOrigins)) {
+      return callback(null, true)
+    }
+    
+    // Log quando a origem não está permitida
+    console.warn(`[CORS] Origin não permitida: ${origin}`)
+    console.warn(`[CORS] Origin normalizada: ${normalizeOrigin(origin)}`)
+    console.warn(`[CORS] Origens permitidas: ${allowedOrigins.join(', ')}`)
+    console.warn(`[CORS] Origens normalizadas: ${allowedOrigins.map(normalizeOrigin).join(', ')}`)
     return callback(new Error('Not allowed by CORS (prod)'))
   },
   credentials: true,
@@ -71,9 +113,73 @@ const corsOptions: cors.CorsOptions = {
   ]
 }
 
-// CORS PRIMEIRO + preflight explícito
+// Middleware manual para tratar requisições OPTIONS (preflight) ANTES do CORS
+// Isso garante que sempre retornemos uma resposta adequada mesmo quando a origem não está permitida
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.method === 'OPTIONS') {
+    const origin = req.headers.origin
+    const isProd = process.env.NODE_ENV === 'production'
+    
+    // Verificar se a origem é permitida
+    let isAllowed = false
+    if (!origin) {
+      isAllowed = true // Permitir requisições sem Origin
+    } else if (!isProd) {
+      isAllowed = isLocalhost(origin) || isOriginAllowed(origin, allowedOrigins)
+    } else {
+      // Em produção, verificar se está na lista ou se ALLOWED_ORIGINS não está configurado
+      if (allowedOrigins.length === 0) {
+        // Se não configurado, permitir temporariamente com aviso
+        console.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
+        isAllowed = true
+      } else {
+        isAllowed = isOriginAllowed(origin, allowedOrigins)
+      }
+    }
+    
+    // Adicionar headers CORS
+    if (isAllowed && origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin)
+      res.setHeader('Access-Control-Allow-Credentials', 'true')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+      res.setHeader('Access-Control-Max-Age', '86400') // 24 horas
+      res.status(200).end()
+      return
+    } else if (!isProd && origin) {
+      // Em desenvolvimento, permitir mesmo se não estiver na lista
+      res.setHeader('Access-Control-Allow-Origin', origin)
+      res.setHeader('Access-Control-Allow-Credentials', 'true')
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+      res.setHeader('Access-Control-Max-Age', '86400')
+      res.status(200).end()
+      return
+    } else if (isProd && origin && !isAllowed) {
+      // Em produção, se não permitido E ALLOWED_ORIGINS está configurado, retornar 403
+      // Mas ainda adicionar headers CORS para que o navegador receba uma resposta adequada
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+      res.status(403).json({
+        error: 'CORS: Origin não permitida',
+        message: 'A origem da requisição não está na lista de origens permitidas'
+      })
+      return
+    }
+    
+    // Requisições sem origin (Postman, etc.)
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+    res.status(200).end()
+    return
+  }
+  next()
+})
+
+// CORS para requisições normais (não OPTIONS)
 app.use(cors(corsOptions))
-app.options('/*splat', cors(corsOptions))
+app.options('*', cors(corsOptions))
 
 // Segurança
 app.use(
