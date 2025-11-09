@@ -43,13 +43,15 @@ const allowedOrigins =
         'http://localhost:3000'
       ]
 
-// Log de debug para verificar o parsing (apenas em produção para debug)
-if (process.env.NODE_ENV === 'production') {
-  const rawValue = process.env.ALLOWED_ORIGINS ?? process.env.ALLOWED_ORIGIN ?? ''
-  console.log('[CORS Debug] Raw ALLOWED_ORIGINS:', rawValue ? `${rawValue.substring(0, 50)}...` : '(vazio)')
-  console.log('[CORS Debug] Parsed allowedOrigins:', allowedOrigins)
-  console.log('[CORS Debug] Total de origens permitidas:', allowedOrigins.length)
-}
+// Log de debug para verificar o parsing (sempre logar para debug)
+const rawValue = process.env.ALLOWED_ORIGINS ?? process.env.ALLOWED_ORIGIN ?? ''
+console.log('[CORS Debug] ==========================================')
+console.log('[CORS Debug] NODE_ENV:', process.env.NODE_ENV)
+console.log('[CORS Debug] Raw ALLOWED_ORIGINS:', rawValue || '(vazio ou não configurado)')
+console.log('[CORS Debug] Raw ALLOWED_ORIGIN:', process.env.ALLOWED_ORIGIN || '(não configurado)')
+console.log('[CORS Debug] Parsed allowedOrigins:', JSON.stringify(allowedOrigins, null, 2))
+console.log('[CORS Debug] Total de origens permitidas:', allowedOrigins.length)
+console.log('[CORS Debug] ==========================================')
 
 const isLocalhost = (origin: string) =>
   origin.includes('localhost') || origin.includes('127.0.0.1')
@@ -120,30 +122,46 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin
     const isProd = process.env.NODE_ENV === 'production'
     
+    // Log da requisição OPTIONS recebida
+    console.log('[CORS OPTIONS] ==========================================')
+    console.log('[CORS OPTIONS] Requisição OPTIONS recebida')
+    console.log('[CORS OPTIONS] Path:', req.path)
+    console.log('[CORS OPTIONS] Origin:', origin || '(sem origin)')
+    console.log('[CORS OPTIONS] isProd:', isProd)
+    console.log('[CORS OPTIONS] allowedOrigins:', JSON.stringify(allowedOrigins, null, 2))
+    
     // Verificar se a origem é permitida
     let isAllowed = false
     if (!origin) {
       isAllowed = true // Permitir requisições sem Origin
+      console.log('[CORS OPTIONS] Sem origin - permitindo')
     } else if (!isProd) {
       isAllowed = isLocalhost(origin) || isOriginAllowed(origin, allowedOrigins)
+      console.log('[CORS OPTIONS] Dev mode - isAllowed:', isAllowed)
     } else {
       // Em produção, verificar se está na lista ou se ALLOWED_ORIGINS não está configurado
       if (allowedOrigins.length === 0) {
         // Se não configurado, permitir temporariamente com aviso
-        console.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
+        console.warn(`[CORS OPTIONS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
         isAllowed = true
       } else {
         isAllowed = isOriginAllowed(origin, allowedOrigins)
+        console.log('[CORS OPTIONS] Produção - isAllowed:', isAllowed)
+        console.log('[CORS OPTIONS] Origin normalizada:', normalizeOrigin(origin))
+        console.log('[CORS OPTIONS] Origens normalizadas permitidas:', allowedOrigins.map(normalizeOrigin))
       }
     }
     
     // Adicionar headers CORS
     if (isAllowed && origin) {
+      console.log('[CORS OPTIONS] Adicionando headers CORS - Origin permitida')
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
       res.setHeader('Access-Control-Max-Age', '86400') // 24 horas
+      console.log('[CORS OPTIONS] Headers CORS adicionados - Status 200')
+      console.log('[CORS OPTIONS] ==========================================')
       res.status(200).end()
       return
     } else if (!isProd && origin) {
@@ -158,6 +176,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     } else if (isProd && origin && !isAllowed) {
       // Em produção, se não permitido E ALLOWED_ORIGINS está configurado, retornar 403
       // Mas ainda adicionar headers CORS para que o navegador receba uma resposta adequada
+      console.warn('[CORS OPTIONS] Origin não permitida em produção - Status 403')
+      console.log('[CORS OPTIONS] ==========================================')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
       res.status(403).json({
@@ -168,6 +188,8 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     }
     
     // Requisições sem origin (Postman, etc.)
+    console.log('[CORS OPTIONS] Requisição sem origin - permitindo com *')
+    console.log('[CORS OPTIONS] ==========================================')
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')

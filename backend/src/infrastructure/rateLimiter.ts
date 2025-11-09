@@ -18,6 +18,7 @@ export const generalLimiter = rateLimit({
   message: 'Muitas requisições deste IP, tente novamente mais tarde.',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // Pular requisições OPTIONS (preflight CORS)
 })
 
 // Rate limiter mais rigoroso para login
