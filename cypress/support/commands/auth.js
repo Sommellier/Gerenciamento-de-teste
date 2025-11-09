@@ -33,5 +33,11 @@ Cypress.Commands.add('deleçãoDeConta', () => {
         .click()
         .should('have.attr', 'aria-checked', 'true')
     cy.findByRole('button', { name: /SIM, DELETAR MINHA CONTA/i }).click()
-    cy.get('[role="checkbox"]').click();
+    
+    // Aguardar confirmação da deleção e validar redirecionamento
+    cy.url({ timeout: 10000 }).should((url) => {
+        expect(url).to.satisfy((currentUrl) => {
+            return currentUrl.includes('/login') || currentUrl.endsWith('/');
+        });
+    });
 })
