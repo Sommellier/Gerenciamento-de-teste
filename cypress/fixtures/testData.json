@@ -1,0 +1,20 @@
+{
+  "credentials": {
+    "email": "Luizteste@gmail.com",
+    "senha": "Segredo123"
+  },
+  "testUser": {
+    "nome": "Luiz Quase Lucas Teste",
+    "emailBase": "Luizteste@gmail.com",
+    "senha": "Segredo123"
+  },
+  "project": {
+    "baseName": "Meu projeto",
+    "baseDescription": "Descrição de projeto para teste automatizado"
+  },
+  "invalidCredentials": {
+    "email": "email_invalido@teste.com",
+    "senha": "senha_errada"
+  }
+}
+

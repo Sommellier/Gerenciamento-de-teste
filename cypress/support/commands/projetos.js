@@ -18,18 +18,18 @@ Cypress.Commands.add('validarCriacaoProjeto', (nomeProjeto, descricaoProjeto) =>
         .should('be.visible')
         .parents('.project-card')
         .within(() => {
-            cy.findByRole('heading', { name: /meu projeto/i })
-                .parents('.project-card')
-                .find('.project-description')
-                .should('contain.text', descricaoProjeto)   // variável simples
+            cy.findByRole('heading', { name: nomeProjeto })
+                .should('be.visible')
+            cy.get('.project-description')
+                .should('contain.text', descricaoProjeto)
             cy.findByText(/ativo/i).should('be.visible')
             cy.findByText(/criado em/i).should('be.visible')
         })
 })
 
-//Editar cenário
-Cypress.Commands.add('editarProjeto', (nomeProjetoEditado) => {
-    cy.contains('.project-card .project-title', /meu projeto/i)
+//Editar projeto
+Cypress.Commands.add('editarProjeto', (nomeProjetoEditado, nomeProjetoOriginal) => {
+    cy.contains('.project-card .project-title', nomeProjetoOriginal || /meu projeto/i)
         .parents('.project-card')
         .within(() => {
             cy.get('button.project-menu-button[aria-label="Ações do projeto"]').click()
@@ -45,11 +45,14 @@ Cypress.Commands.add('editarProjeto', (nomeProjetoEditado) => {
         .type('Nova descrição do projeto')
     cy.findByRole('button', { name: /salvar alterações/i }).click()
     cy.findByRole('button', { name: /ok/i }).click()
+    // Validação após edição
+    cy.findByRole('heading', { name: nomeProjetoEditado })
+        .should('be.visible')
 })
 
 
-// Função para o fluxo "Deletar cenario"
-Cypress.Commands.add('deletarCenario', (nomeProjetoEditado) => {
+// Função para o fluxo "Deletar projeto"
+Cypress.Commands.add('deletarProjeto', (nomeProjetoEditado) => {
     cy.contains('h3.project-title', nomeProjetoEditado)
         .parents('.project-card')
         .findByRole('button', { name: /Ações do projeto/i })
