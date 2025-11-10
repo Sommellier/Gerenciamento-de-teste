@@ -86,9 +86,10 @@ describe('server.ts (Express app)', () => {
 
     it('registra middlewares helmet/cors/morgan na inicialização', () => {
         // como o app já foi importado, apenas verificamos as chamadas
-        // cors é chamado 3 vezes: app.use(cors), app.options, e app.use('/uploads', cors)
+        // cors é chamado 2 vezes: app.use(cors) e app.use('/uploads', cors)
+        // (removido app.options('*', cors) que causava erro do path-to-regexp)
         expect(helmetMock).toHaveBeenCalledTimes(1)
-        expect(corsMock).toHaveBeenCalledTimes(3)
+        expect(corsMock).toHaveBeenCalledTimes(2)
         expect(morganMock).toHaveBeenCalledWith('dev')
     })
 
@@ -195,11 +196,15 @@ describe('server.ts (Express app)', () => {
                 .set('Origin', 'http://localhost:3000')
                 .set('Access-Control-Request-Method', 'GET')
             
-            expect(res.status).toBe(404) // Express static não suporta OPTIONS por padrão
+            // O middleware manual de OPTIONS trata todas as requisições OPTIONS e retorna 200
+            expect(res.status).toBe(200)
             // Quando há origin, o CORS retorna a origin específica, não '*'
             expect(res.headers['access-control-allow-origin']).toBe('http://localhost:3000')
-            expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, DELETE, OPTIONS')
-            expect(res.headers['access-control-allow-headers']).toBe('Origin, X-Requested-With, Content-Type, Accept, Authorization')
+            expect(res.headers['access-control-allow-credentials']).toBe('true')
+            expect(res.headers['access-control-allow-methods']).toBe('GET, POST, PUT, DELETE, PATCH, OPTIONS')
+            expect(res.headers['access-control-allow-headers']).toContain('Content-Type')
+            expect(res.headers['access-control-allow-headers']).toContain('Authorization')
+            expect(res.headers['access-control-max-age']).toBe('86400')
         })
     })
 })
