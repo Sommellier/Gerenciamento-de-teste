@@ -5,21 +5,12 @@ const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // Ajustar limites baseado no ambiente
 // Em desenvolvimento, limites mais altos para evitar bloqueios durante testes
-const generalMax = isDevelopment ? 1000 : 500 // 1000 em dev, 500 em produção (aumentado para evitar 429 em operações normais)
-const loginMax = isDevelopment ? 20 : 5 // 20 em dev, 5 em produção
-const uploadMax = isDevelopment ? 100 : 20 // 100 em dev, 20 em produção
-const inviteMax = isDevelopment ? 50 : 10 // 50 em dev, 10 em produção
-const publicMax = isDevelopment ? 500 : 50 // 500 em dev, 50 em produção
-
-// Rate limiter geral para todas as rotas
-export const generalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: generalMax,
-  message: 'Muitas requisições deste IP, tente novamente mais tarde.',
-  standardHeaders: true,
-  legacyHeaders: false,
-  skip: (req) => req.method === 'OPTIONS', // Pular requisições OPTIONS (preflight CORS)
-})
+// Em produção, limites aumentados para suportar uso em faculdade (múltiplos usuários no mesmo IP)
+const loginMax = isDevelopment ? 20 : 15 // 20 em dev, 15 em produção (proteção contra brute force, mas permite uso legítimo)
+const registerMax = isDevelopment ? 20 : 50 // 20 em dev, 50 em produção (permite turma inteira se registrar)
+const uploadMax = isDevelopment ? 100 : 100 // 100 em dev, 100 em produção (alunos fazendo upload de evidências)
+const inviteMax = isDevelopment ? 50 : 30 // 50 em dev, 30 em produção (professor convidando turma)
+const publicMax = isDevelopment ? 500 : 200 // 500 em dev, 200 em produção (rotas públicas)
 
 // Rate limiter mais rigoroso para login
 export const loginLimiter = rateLimit({
@@ -29,6 +20,15 @@ export const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // não conta requisições bem-sucedidas
+})
+
+// Rate limiter para registro de novos usuários (prevenção de spam)
+export const registerLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: registerMax,
+  message: 'Muitas tentativas de registro. Tente novamente em 15 minutos.',
+  standardHeaders: true,
+  legacyHeaders: false,
 })
 
 // Rate limiter para upload de arquivos

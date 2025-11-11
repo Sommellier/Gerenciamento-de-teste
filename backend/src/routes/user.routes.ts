@@ -5,11 +5,11 @@ import { deleteUserController } from '../controllers/user/deleteUser.controller'
 import { updateUserController } from '../controllers/user/updateUser.controller'
 import { forgotPasswordController } from '../controllers/user/requestPasswordReset.controller'
 import { resetPasswordController } from '../controllers/user/resetPassword.controller'
-import { loginLimiter } from '../infrastructure/rateLimiter'
+import { loginLimiter, registerLimiter } from '../infrastructure/rateLimiter'
 
 const router = Router()
 
-router.post('/register', (req, res, next) => {
+router.post('/register', registerLimiter, (req, res, next) => {
   Promise.resolve(registerUserController(req, res)).catch(next)
 })
 
