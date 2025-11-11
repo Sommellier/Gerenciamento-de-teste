@@ -1,6 +1,8 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { deleteBug } from '../../../application/use-cases/execution/deleteBug.use-case'
 import { AppError } from '../../../utils/AppError'
+import fs from 'fs'
+import path from 'path'
 
 describe('deleteBug', () => {
   let projectId: number
@@ -430,6 +432,219 @@ describe('deleteBug', () => {
       })
       expect(project).toBeTruthy()
       expect(project?.name).toBe('Test Project')
+    })
+  })
+
+  describe('deleteBug - deleção de arquivos físicos', () => {
+    it('deleta arquivos físicos dos anexos quando bug é deletado', async () => {
+      // Criar diretório de uploads se não existir
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'bug-attachments')
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true })
+      }
+
+      // Criar arquivo físico de teste
+      const testFilename = `bug-attachment-${Date.now()}-${Math.random()}.pdf`
+      const testFilePath = path.join(uploadsDir, testFilename)
+      fs.writeFileSync(testFilePath, Buffer.from('fake pdf content'))
+
+      // Criar anexo no banco
+      const bugWithAttachment = await prisma.bug.create({
+        data: {
+          title: 'Bug com anexo',
+          severity: 'HIGH',
+          scenarioId,
+          projectId,
+          createdBy: userId,
+          attachments: {
+            create: {
+              filename: testFilename,
+              originalName: 'test.pdf',
+              mimeType: 'application/pdf',
+              size: 100,
+              url: `/uploads/bug-attachments/${testFilename}`,
+              uploadedBy: userId
+            }
+          }
+        },
+        include: {
+          attachments: true
+        }
+      })
+
+      // Verificar que arquivo existe antes
+      expect(fs.existsSync(testFilePath)).toBe(true)
+
+      // Deletar bug
+      await deleteBug({ bugId: bugWithAttachment.id, userId })
+
+      // Verificar que arquivo foi deletado
+      expect(fs.existsSync(testFilePath)).toBe(false)
+
+      // Verificar que bug foi deletado
+      const deletedBug = await prisma.bug.findUnique({
+        where: { id: bugWithAttachment.id }
+      })
+      expect(deletedBug).toBeNull()
+    })
+
+    it('continua mesmo se arquivo físico não existir', async () => {
+      // Criar anexo no banco sem arquivo físico
+      const bugWithAttachment = await prisma.bug.create({
+        data: {
+          title: 'Bug com anexo sem arquivo',
+          severity: 'MEDIUM',
+          scenarioId,
+          projectId,
+          createdBy: userId,
+          attachments: {
+            create: {
+              filename: 'non-existent-file.pdf',
+              originalName: 'test.pdf',
+              mimeType: 'application/pdf',
+              size: 100,
+              url: '/uploads/bug-attachments/non-existent-file.pdf',
+              uploadedBy: userId
+            }
+          }
+        }
+      })
+
+      // Deletar bug (não deve lançar erro mesmo sem arquivo físico)
+      const result = await deleteBug({ bugId: bugWithAttachment.id, userId })
+
+      expect(result.message).toBe('Bug excluído com sucesso')
+
+      // Verificar que bug foi deletado
+      const deletedBug = await prisma.bug.findUnique({
+        where: { id: bugWithAttachment.id }
+      })
+      expect(deletedBug).toBeNull()
+    })
+
+    it('continua mesmo se houver erro ao deletar arquivo físico', async () => {
+      // Criar diretório de uploads se não existir
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'bug-attachments')
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true })
+      }
+
+      // Criar arquivo físico de teste
+      const testFilename = `bug-attachment-${Date.now()}-${Math.random()}.pdf`
+      const testFilePath = path.join(uploadsDir, testFilename)
+      fs.writeFileSync(testFilePath, Buffer.from('fake pdf content'))
+
+      // Criar anexo no banco
+      const bugWithAttachment = await prisma.bug.create({
+        data: {
+          title: 'Bug com anexo',
+          severity: 'HIGH',
+          scenarioId,
+          projectId,
+          createdBy: userId,
+          attachments: {
+            create: {
+              filename: testFilename,
+              originalName: 'test.pdf',
+              mimeType: 'application/pdf',
+              size: 100,
+              url: `/uploads/bug-attachments/${testFilename}`,
+              uploadedBy: userId
+            }
+          }
+        },
+        include: {
+          attachments: true
+        }
+      })
+
+      // Mock fs.unlinkSync para lançar erro
+      const originalUnlinkSync = fs.unlinkSync
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
+      
+      fs.unlinkSync = jest.fn(() => {
+        throw new Error('Erro ao deletar arquivo')
+      }) as any
+
+      // Deletar bug (deve continuar mesmo com erro ao deletar arquivo)
+      const result = await deleteBug({ bugId: bugWithAttachment.id, userId })
+
+      expect(result.message).toBe('Bug excluído com sucesso')
+
+      // Verificar que console.error foi chamado
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Erro ao deletar arquivo de anexo de bug'),
+        expect.any(Error)
+      )
+
+      // Verificar que bug foi deletado mesmo com erro no arquivo
+      const deletedBug = await prisma.bug.findUnique({
+        where: { id: bugWithAttachment.id }
+      })
+      expect(deletedBug).toBeNull()
+
+      // Restaurar função original
+      fs.unlinkSync = originalUnlinkSync
+      consoleSpy.mockRestore()
+
+      // Limpar arquivo se ainda existir
+      if (fs.existsSync(testFilePath)) {
+        fs.unlinkSync(testFilePath)
+      }
+    })
+
+    it('deleta múltiplos arquivos físicos quando bug tem múltiplos anexos', async () => {
+      // Criar diretório de uploads se não existir
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'bug-attachments')
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true })
+      }
+
+      // Criar múltiplos arquivos físicos
+      const filenames = [
+        `bug-attachment-${Date.now()}-1.pdf`,
+        `bug-attachment-${Date.now()}-2.pdf`,
+        `bug-attachment-${Date.now()}-3.pdf`
+      ]
+      const filePaths = filenames.map(f => path.join(uploadsDir, f))
+      
+      filePaths.forEach(filePath => {
+        fs.writeFileSync(filePath, Buffer.from('fake pdf content'))
+      })
+
+      // Criar bug com múltiplos anexos
+      const bugWithAttachments = await prisma.bug.create({
+        data: {
+          title: 'Bug com múltiplos anexos',
+          severity: 'HIGH',
+          scenarioId,
+          projectId,
+          createdBy: userId,
+          attachments: {
+            create: filenames.map(filename => ({
+              filename,
+              originalName: 'test.pdf',
+              mimeType: 'application/pdf',
+              size: 100,
+              url: `/uploads/bug-attachments/${filename}`,
+              uploadedBy: userId
+            }))
+          }
+        }
+      })
+
+      // Verificar que todos os arquivos existem
+      filePaths.forEach(filePath => {
+        expect(fs.existsSync(filePath)).toBe(true)
+      })
+
+      // Deletar bug
+      await deleteBug({ bugId: bugWithAttachments.id, userId })
+
+      // Verificar que todos os arquivos foram deletados
+      filePaths.forEach(filePath => {
+        expect(fs.existsSync(filePath)).toBe(false)
+      })
     })
   })
 })

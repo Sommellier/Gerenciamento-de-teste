@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import multer from 'multer'
 import path from 'path'
+import fs from 'fs'
 import { ScenarioController } from '../controllers/scenarios/scenario.controller'
 import auth from '../infrastructure/auth'
 import { uploadLimiter } from '../infrastructure/rateLimiter'
@@ -16,7 +17,10 @@ const scenarioController = new ScenarioController()
 // Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/evidences/')
+    // Criar diretório se não existir
+    const uploadPath = 'uploads/evidences/'
+    fs.mkdirSync(uploadPath, { recursive: true })
+    cb(null, uploadPath)
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)

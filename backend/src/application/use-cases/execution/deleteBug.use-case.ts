@@ -1,5 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import fs from 'fs'
+import path from 'path'
 
 interface DeleteBugInput {
   bugId: number
@@ -8,16 +10,36 @@ interface DeleteBugInput {
 
 export async function deleteBug({ bugId, userId }: DeleteBugInput) {
   try {
-    // Verificar se o bug existe
+    // Verificar se o bug existe e buscar seus anexos
     const bug = await prisma.bug.findUnique({
-      where: { id: bugId }
+      where: { id: bugId },
+      include: {
+        attachments: {
+          select: {
+            filename: true
+          }
+        }
+      }
     })
 
     if (!bug) {
       throw new AppError('Bug não encontrado', 404)
     }
 
-    // Deletar o bug
+    // Deletar arquivos físicos dos anexos
+    for (const attachment of bug.attachments) {
+      try {
+        const filePath = path.join(process.cwd(), 'uploads', 'bug-attachments', attachment.filename)
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath)
+        }
+      } catch (fileError) {
+        console.error(`Erro ao deletar arquivo de anexo de bug ${attachment.filename}:`, fileError)
+        // Continuar mesmo se não conseguir deletar o arquivo
+      }
+    }
+
+    // Deletar o bug (os anexos serão deletados em cascade pelo Prisma)
     await prisma.bug.delete({
       where: { id: bugId }
     })
