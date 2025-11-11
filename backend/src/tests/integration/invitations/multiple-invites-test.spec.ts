@@ -19,9 +19,9 @@ jest.mock('../../../utils/email.util', () => ({
 
 // Mock do rate limiter
 jest.mock('../../../infrastructure/rateLimiter', () => ({
-  generalLimiter: (_req: any, _res: any, next: any) => next(),
   publicLimiter: (_req: any, _res: any, next: any) => next(),
   loginLimiter: (_req: any, _res: any, next: any) => next(),
+  registerLimiter: (_req: any, _res: any, next: any) => next(),
   uploadLimiter: (_req: any, _res: any, next: any) => next(),
   inviteLimiter: (_req: any, _res: any, next: any) => next(),
 }))

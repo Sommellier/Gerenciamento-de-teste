@@ -3,7 +3,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import path from 'path'
-import { generalLimiter, publicLimiter } from './infrastructure/rateLimiter'
+import { publicLimiter } from './infrastructure/rateLimiter'
 
 import userRoutes from './routes/user.routes'
 import authRoutes from './routes/auth.routes'
@@ -197,8 +197,8 @@ app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
-// Rate limiters
-app.use(generalLimiter)
+// Rate limiters (aplicados apenas em rotas específicas)
+// Removido generalLimiter para permitir uso em faculdade (múltiplos usuários no mesmo IP)
 app.use('/api/public', publicLimiter) // se tiver rotas públicas, aplica aqui
 
 // Static uploads com CORS aplicado
