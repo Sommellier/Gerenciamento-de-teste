@@ -5,7 +5,7 @@ const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // Ajustar limites baseado no ambiente
 // Em desenvolvimento, limites mais altos para evitar bloqueios durante testes
-const generalMax = isDevelopment ? 1000 : 100 // 1000 em dev, 100 em produção
+const generalMax = isDevelopment ? 1000 : 500 // 1000 em dev, 500 em produção (aumentado para evitar 429 em operações normais)
 const loginMax = isDevelopment ? 20 : 5 // 20 em dev, 5 em produção
 const uploadMax = isDevelopment ? 100 : 20 // 100 em dev, 20 em produção
 const inviteMax = isDevelopment ? 50 : 10 // 50 em dev, 10 em produção
