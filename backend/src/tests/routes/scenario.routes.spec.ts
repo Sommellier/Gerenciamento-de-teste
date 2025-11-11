@@ -43,11 +43,13 @@ jest.mock('../../controllers/scenarios/scenario.controller', () => ({
 
 // Mock do multer
 jest.mock('multer', () => {
+  const path = require('path')
   const mockDiskStorage = jest.fn((config: any) => {
     // Simular a execução das funções de callback para cobrir as linhas 18-22
     if (config.destination) {
       config.destination(null, null, (err: any, dest: string) => {
-        expect(dest).toBe('uploads/evidences/')
+        // Agora usa caminho absoluto
+        expect(dest).toBe(path.join(process.cwd(), 'uploads', 'evidences'))
       })
     }
     if (config.filename) {
