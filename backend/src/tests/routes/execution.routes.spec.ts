@@ -55,12 +55,17 @@ jest.mock('../../controllers/execution/execution.controller', () => ({
 
 // Mock do multer
 jest.mock('multer', () => {
+  const path = require('path')
   const mockDiskStorage = jest.fn((config: any) => {
     // Simular a execução das funções de callback para cobrir as linhas 18-24 e 45-56
     if (config.destination) {
       config.destination(null, null, (err: any, dest: string) => {
-        // Aceita tanto 'uploads/evidences/' quanto 'uploads/bug-attachments/'
-        expect(['uploads/evidences/', 'uploads/bug-attachments/']).toContain(dest)
+        // Aceita tanto caminho absoluto de 'uploads/evidences' quanto 'uploads/bug-attachments'
+        const expectedPaths = [
+          path.join(process.cwd(), 'uploads', 'evidences'),
+          path.join(process.cwd(), 'uploads', 'bug-attachments')
+        ]
+        expect(expectedPaths).toContain(dest)
       })
     }
     if (config.filename) {

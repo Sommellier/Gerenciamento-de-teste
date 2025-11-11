@@ -17,10 +17,19 @@ const scenarioController = new ScenarioController()
 // Configuração do multer para upload de arquivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Criar diretório se não existir
-    const uploadPath = 'uploads/evidences/'
-    fs.mkdirSync(uploadPath, { recursive: true })
-    cb(null, uploadPath)
+    try {
+      // Usar caminho absoluto para garantir que funcione em produção
+      const uploadPath = path.join(process.cwd(), 'uploads', 'evidences')
+      // Criar diretório se não existir
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true })
+      }
+      cb(null, uploadPath)
+    } catch (error) {
+      // Se houver erro ao criar diretório, passar para o callback
+      console.error('Erro ao criar diretório de uploads:', error)
+      cb(error as Error, '')
+    }
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
