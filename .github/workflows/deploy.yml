@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - master
+      - teste
     paths:
       - 'backend/**'
       - '.github/workflows/deploy.yml'
