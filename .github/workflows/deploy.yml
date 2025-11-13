@@ -30,13 +30,16 @@ jobs:
         working-directory: ./backend
         run: npm ci
 
-      - name: Run tests
-        working-directory: ./backend
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          NODE_ENV: test
-        run: npm test
+      # Testes já são executados no workflow SonarCloud
+      # Removido para evitar duplicação e acelerar deploy
+      # Se quiser validar antes de deployar, descomente abaixo:
+      # - name: Run tests
+      #   working-directory: ./backend
+      #   env:
+      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      #     NODE_ENV: test
+      #   run: npm test
 
       - name: Build application
         working-directory: ./backend
