@@ -69,7 +69,13 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
           script: |
-            # Criar diretórios (mkdir -p não faz nada se já existir)
+            # Verificar se existe arquivo com nome 'app' e remover se necessário
+            if [ -f "/home/${{ secrets.EC2_USER }}/app" ]; then
+              echo "⚠️ Arquivo 'app' encontrado, removendo..."
+              rm -f /home/${{ secrets.EC2_USER }}/app
+            fi
+            
+            # Criar diretórios (mkdir -p não faz nada se já existir como diretório)
             mkdir -p /home/${{ secrets.EC2_USER }}/app
             mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
             mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
