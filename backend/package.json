@@ -47,6 +47,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+    "newrelic": "^13.6.3",
     "nodemailer": "^7.0.3",
     "pdfkit": "^0.17.2",
     "pg": "^8.11.3",
@@ -56,6 +57,7 @@
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",
+    "@types/newrelic": "^9.14.8",
     "@types/supertest": "^6.0.3",
     "cross-env": "^7.0.3",
     "dotenv-cli": "^8.0.0",
