@@ -1,0 +1,167 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: ./backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          NODE_ENV: test
+        run: npm test
+
+      - name: Build application
+        working-directory: ./backend
+        run: npm run build
+
+      - name: Generate Prisma Client
+        working-directory: ./backend
+        run: npx prisma generate
+
+      - name: Create deployment package
+        run: |
+          cd backend
+          tar -czf ../deploy.tar.gz \
+            dist/ \
+            package.json \
+            package-lock.json \
+            prisma/ \
+            newrelic.js \
+            .env.example || true
+          cd ..
+
+      - name: Copy files to EC2
+        uses: easingthemes/ssh-deploy@main
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          ARGS: "-rltgoDzvO --delete"
+          SOURCE: "deploy.tar.gz"
+          REMOTE_HOST: ${{ secrets.EC2_HOST }}
+          REMOTE_USER: ${{ secrets.EC2_USER }}
+          REMOTE_PORT: ${{ secrets.EC2_PORT || 22 }}
+          TARGET: "/home/${{ secrets.EC2_USER }}/app"
+
+      - name: Execute deployment script on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script: |
+            cd /home/${{ secrets.EC2_USER }}/app
+            
+            # Extrair arquivo de deploy
+            if [ -f deploy.tar.gz ]; then
+              echo "📦 Extraindo arquivo de deploy..."
+              mkdir -p backend
+              cd backend
+              tar -xzf ../deploy.tar.gz || exit 1
+              rm -f ../deploy.tar.gz
+            else
+              echo "❌ Arquivo deploy.tar.gz não encontrado"
+              exit 1
+            fi
+            
+            # Verificar se Node.js está instalado
+            if ! command -v node &> /dev/null; then
+              echo "📥 Instalando Node.js 20..."
+              curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+              sudo apt-get install -y nodejs
+            fi
+            
+            # Instalar PM2 se não estiver instalado
+            if ! command -v pm2 &> /dev/null; then
+              echo "📥 Instalando PM2..."
+              sudo npm install -g pm2
+            fi
+            
+            # Instalar dependências de produção
+            echo "📦 Instalando dependências..."
+            npm ci --production || exit 1
+            
+            # Gerar Prisma Client
+            echo "🔧 Gerando Prisma Client..."
+            npx prisma generate || exit 1
+            
+            # Executar migrações (se necessário)
+            if [ -d "prisma/migrations" ]; then
+              echo "🔄 Executando migrações..."
+              npx prisma migrate deploy || echo "⚠️ Migrações já aplicadas ou sem mudanças"
+            fi
+            
+            # Verificar/criar arquivo .env
+            if [ ! -f ".env" ]; then
+              echo "⚠️ Arquivo .env não encontrado"
+              if [ -f ".env.example" ]; then
+                cp .env.example .env
+                echo "📝 Copiado .env.example para .env - CONFIGURE AS VARIÁVEIS!"
+              fi
+            fi
+            
+            # Criar diretório de uploads
+            mkdir -p uploads/evidences
+            chmod 755 uploads/evidences
+            
+            # Parar aplicação anterior
+            echo "🛑 Parando aplicação anterior..."
+            pm2 stop qa-test-manager-backend || echo "Aplicação não estava rodando"
+            pm2 delete qa-test-manager-backend || echo "Aplicação não existia"
+            
+            # Iniciar aplicação com PM2
+            echo "🚀 Iniciando aplicação..."
+            pm2 start dist/main.js \
+              --name qa-test-manager-backend \
+              --instances 1 \
+              --max-memory-restart 500M \
+              --log-date-format "YYYY-MM-DD HH:mm:ss Z" \
+              --error-log "/home/${{ secrets.EC2_USER }}/app/logs/error.log" \
+              --out-log "/home/${{ secrets.EC2_USER }}/app/logs/out.log" \
+              --merge-logs \
+              --time || exit 1
+            
+            # Salvar configuração do PM2
+            pm2 save || echo "⚠️ Falha ao salvar configuração PM2"
+            
+            # Verificar status
+            sleep 3
+            if pm2 list | grep -q "qa-test-manager-backend.*online"; then
+              echo "✅ Deploy concluído com sucesso!"
+              pm2 list
+            else
+              echo "❌ Falha ao iniciar aplicação"
+              pm2 logs qa-test-manager-backend --lines 20
+              exit 1
+            fi
+
+      - name: Cleanup
+        if: always()
+        run: rm -f deploy.tar.gz
