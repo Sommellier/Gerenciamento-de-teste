@@ -61,7 +61,7 @@ jobs:
             .env.example || true
           cd ..
 
-      - name: Create directories on EC2
+      - name: Create directories and copy file to EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -69,10 +69,19 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
           script: |
+            # Criar diretórios (mkdir -p não faz nada se já existir)
             mkdir -p /home/${{ secrets.EC2_USER }}/app
             mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
             mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
-            echo "✅ Diretórios criados"
+            echo "✅ Diretórios verificados/criados"
+            
+            # Verificar se diretório existe
+            if [ -d "/home/${{ secrets.EC2_USER }}/app" ]; then
+              echo "✅ Diretório /home/${{ secrets.EC2_USER }}/app existe"
+            else
+              echo "❌ Diretório não existe"
+              exit 1
+            fi
 
       - name: Copy files to EC2
         uses: easingthemes/ssh-deploy@main
