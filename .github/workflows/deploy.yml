@@ -61,7 +61,7 @@ jobs:
             .env.example || true
           cd ..
 
-      - name: Create directories and copy file to EC2
+      - name: Prepare directories on EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -75,17 +75,15 @@ jobs:
               rm -f /home/${{ secrets.EC2_USER }}/app
             fi
             
-            # Criar diretórios (mkdir -p não faz nada se já existir como diretório)
-            mkdir -p /home/${{ secrets.EC2_USER }}/app
+            # Criar diretórios se não existirem (mkdir -p é idempotente)
             mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
             mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
-            echo "✅ Diretórios verificados/criados"
             
             # Verificar se diretório existe
             if [ -d "/home/${{ secrets.EC2_USER }}/app" ]; then
-              echo "✅ Diretório /home/${{ secrets.EC2_USER }}/app existe"
+              echo "✅ Diretório /home/${{ secrets.EC2_USER }}/app pronto"
             else
-              echo "❌ Diretório não existe"
+              echo "❌ Falha ao criar diretório"
               exit 1
             fi
 
@@ -108,11 +106,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
           script: |
-            # Criar diretórios necessários
-            echo "📁 Criando diretórios..."
-            mkdir -p /home/${{ secrets.EC2_USER }}/app
-            mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
-            mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
+            # Navegar para diretório de deploy
             cd /home/${{ secrets.EC2_USER }}/app
             
             # Verificar se arquivo foi copiado
@@ -145,6 +139,33 @@ jobs:
               sudo npm install -g pm2
             fi
             
+            # Verificar/criar arquivo .env ANTES de instalar dependências
+            if [ ! -f ".env" ]; then
+              echo "⚠️ Arquivo .env não encontrado"
+              if [ -f ".env.example" ]; then
+                cp .env.example .env
+                echo "📝 Copiado .env.example para .env"
+              else
+                echo "📝 Criando arquivo .env básico..."
+                cat > .env << 'EOF'
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgresql://usuario:senha@host:5432/qa_test_manager
+JWT_SECRET=CHANGE_THIS_SECRET_KEY
+FRONTEND_URL=https://seu-frontend.com
+EOF
+                echo "⚠️ IMPORTANTE: Configure as variáveis de ambiente no arquivo .env!"
+              fi
+            else
+              echo "✅ Arquivo .env já existe"
+            fi
+            
+            # Verificar se DATABASE_URL está configurado
+            if ! grep -q "DATABASE_URL=" .env || grep -q "DATABASE_URL=postgresql://usuario:senha" .env; then
+              echo "⚠️ ATENÇÃO: DATABASE_URL não está configurado corretamente no .env"
+              echo "⚠️ Configure a variável DATABASE_URL antes de continuar"
+            fi
+            
             # Instalar dependências de produção
             echo "📦 Instalando dependências..."
             npm ci --production || exit 1
@@ -157,15 +178,6 @@ jobs:
             if [ -d "prisma/migrations" ]; then
               echo "🔄 Executando migrações..."
               npx prisma migrate deploy || echo "⚠️ Migrações já aplicadas ou sem mudanças"
-            fi
-            
-            # Verificar/criar arquivo .env
-            if [ ! -f ".env" ]; then
-              echo "⚠️ Arquivo .env não encontrado"
-              if [ -f ".env.example" ]; then
-                cp .env.example .env
-                echo "📝 Copiado .env.example para .env - CONFIGURE AS VARIÁVEIS!"
-              fi
             fi
             
             # Criar diretório de uploads
@@ -184,8 +196,9 @@ jobs:
               --instances 1 \
               --max-memory-restart 500M \
               --log-date-format "YYYY-MM-DD HH:mm:ss Z" \
-              --error-log "/home/${{ secrets.EC2_USER }}/app/logs/error.log" \
-              --out-log "/home/${{ secrets.EC2_USER }}/app/logs/out.log" \
+              --log "/home/${{ secrets.EC2_USER }}/app/logs/app.log" \
+              --error "/home/${{ secrets.EC2_USER }}/app/logs/error.log" \
+              --output "/home/${{ secrets.EC2_USER }}/app/logs/out.log" \
               --merge-logs \
               --time || exit 1
             
