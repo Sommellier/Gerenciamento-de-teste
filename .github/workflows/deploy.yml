@@ -65,11 +65,11 @@ jobs:
         uses: easingthemes/ssh-deploy@main
         env:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          ARGS: "-rltgoDzvO --delete"
-          SOURCE: "deploy.tar.gz"
           REMOTE_HOST: ${{ secrets.EC2_HOST }}
           REMOTE_USER: ${{ secrets.EC2_USER }}
           REMOTE_PORT: ${{ secrets.EC2_PORT || 22 }}
+          ARGS: "-rltgoDzvO"
+          SOURCE: "deploy.tar.gz"
           TARGET: "/home/${{ secrets.EC2_USER }}/app"
 
       - name: Execute deployment script on EC2
