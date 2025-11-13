@@ -38,3 +38,5 @@ Objetivos Específicos
 > [!Note]
 > ## FAQ
 > [Documentação do projeto](https://github.com/Sommellier/Gerenciamento-de-teste/wiki)
+
+> [Poster do banner](https://docs.google.com/presentation/d/1KFhSYdf8oViXkf09DNb5-uNSVP0LDv8j/edit?usp=drive_link&ouid=103022152162777964160&rtpof=true&sd=true)

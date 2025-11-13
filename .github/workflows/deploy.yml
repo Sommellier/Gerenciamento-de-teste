@@ -115,7 +115,38 @@ jobs:
               echo "✅ Arquivo deploy.tar.gz encontrado"
               echo "📦 Extraindo arquivo de deploy..."
               cd backend
+              
+              # Preservar arquivos importantes antes da extração
+              if [ -f ".env" ]; then
+                echo "💾 Fazendo backup do .env..."
+                cp .env .env.backup
+              fi
+              
+              if [ -d "uploads" ]; then
+                echo "💾 Fazendo backup do diretório uploads..."
+                cp -r uploads uploads.backup || true
+              fi
+              
+              # Extrair arquivos (pode sobrescrever alguns arquivos, mas não deleta diretórios)
               tar -xzf ../deploy.tar.gz || exit 1
+              
+              # Restaurar arquivos preservados
+              if [ -f ".env.backup" ]; then
+                echo "✅ Restaurando .env preservado..."
+                mv .env.backup .env
+              fi
+              
+              if [ -d "uploads.backup" ]; then
+                echo "✅ Restaurando diretório uploads preservado..."
+                # Mesclar conteúdo: manter arquivos existentes e adicionar novos se necessário
+                if [ ! -d "uploads" ]; then
+                  mkdir -p uploads
+                fi
+                # Copiar apenas arquivos que não existem no destino
+                find uploads.backup -type f -exec sh -c 'if [ ! -f "uploads/$(basename "$1")" ]; then cp "$1" "uploads/"; fi' _ {} \; || true
+                rm -rf uploads.backup
+              fi
+              
               rm -f ../deploy.tar.gz
               echo "✅ Arquivo extraído com sucesso"
             else
@@ -141,6 +172,7 @@ jobs:
             fi
             
             # Verificar/criar arquivo .env ANTES de instalar dependências
+            # (O .env foi preservado durante a extração, então só cria se realmente não existir)
             if [ ! -f ".env" ]; then
               echo "⚠️ Arquivo .env não encontrado"
               if [ -f ".env.example" ]; then
@@ -152,7 +184,7 @@ jobs:
                 echo "⚠️ IMPORTANTE: Configure as variáveis de ambiente no arquivo .env!"
               fi
             else
-              echo "✅ Arquivo .env já existe"
+              echo "✅ Arquivo .env preservado (não será sobrescrito)"
             fi
             
             # Verificar se DATABASE_URL está configurado
