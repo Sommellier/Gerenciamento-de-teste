@@ -148,13 +148,7 @@ jobs:
                 echo "📝 Copiado .env.example para .env"
               else
                 echo "📝 Criando arquivo .env básico..."
-                cat > .env << 'EOF'
-NODE_ENV=production
-PORT=3000
-DATABASE_URL=postgresql://usuario:senha@host:5432/qa_test_manager
-JWT_SECRET=CHANGE_THIS_SECRET_KEY
-FRONTEND_URL=https://seu-frontend.com
-EOF
+                printf 'NODE_ENV=production\nPORT=3000\nDATABASE_URL=postgresql://usuario:senha@host:5432/qa_test_manager\nJWT_SECRET=CHANGE_THIS_SECRET_KEY\nFRONTEND_URL=https://seu-frontend.com\n' > .env
                 echo "⚠️ IMPORTANTE: Configure as variáveis de ambiente no arquivo .env!"
               fi
             else
