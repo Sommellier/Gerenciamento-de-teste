@@ -61,6 +61,19 @@ jobs:
             .env.example || true
           cd ..
 
+      - name: Create directories on EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT || 22 }}
+          script: |
+            mkdir -p /home/${{ secrets.EC2_USER }}/app
+            mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
+            mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
+            echo "✅ Diretórios criados"
+
       - name: Copy files to EC2
         uses: easingthemes/ssh-deploy@main
         env:
@@ -70,7 +83,7 @@ jobs:
           REMOTE_PORT: ${{ secrets.EC2_PORT || 22 }}
           ARGS: "-rltgoDzvO"
           SOURCE: "deploy.tar.gz"
-          TARGET: "/home/${{ secrets.EC2_USER }}/app"
+          TARGET: "/home/${{ secrets.EC2_USER }}/app/"
 
       - name: Execute deployment script on EC2
         uses: appleboy/ssh-action@master
@@ -80,17 +93,27 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
           script: |
+            # Criar diretórios necessários
+            echo "📁 Criando diretórios..."
+            mkdir -p /home/${{ secrets.EC2_USER }}/app
+            mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
+            mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
             cd /home/${{ secrets.EC2_USER }}/app
             
-            # Extrair arquivo de deploy
+            # Verificar se arquivo foi copiado
             if [ -f deploy.tar.gz ]; then
+              echo "✅ Arquivo deploy.tar.gz encontrado"
               echo "📦 Extraindo arquivo de deploy..."
-              mkdir -p backend
               cd backend
               tar -xzf ../deploy.tar.gz || exit 1
               rm -f ../deploy.tar.gz
+              echo "✅ Arquivo extraído com sucesso"
             else
-              echo "❌ Arquivo deploy.tar.gz não encontrado"
+              echo "❌ Arquivo deploy.tar.gz não encontrado em /home/${{ secrets.EC2_USER }}/app"
+              echo "📂 Listando arquivos no diretório:"
+              ls -la /home/${{ secrets.EC2_USER }}/app || true
+              echo "📂 Listando arquivos no diretório home:"
+              ls -la /home/${{ secrets.EC2_USER }}/ || true
               exit 1
             fi
             
