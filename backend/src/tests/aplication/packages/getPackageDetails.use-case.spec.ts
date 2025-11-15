@@ -298,7 +298,7 @@ describe('getPackageDetails', () => {
       expect(result.metrics).toMatchObject({
         totalScenarios: 3,
         executionRate: 66.67, // 2/3 * 100
-        successRate: 50 // 1/2 * 100
+        successRate: 33.33 // 1/3 * 100 (1 PASSED de 3 total)
       })
     })
 

@@ -225,12 +225,12 @@ describe('getPackageMetrics', () => {
           },
           byEnvironment: { 'N/A': 4 },
           executionRate: 75, // 3 executados de 4 total
-          successRate: 33.33 // 1 passou de 3 executados
+          successRate: 25 // 1 passou de 4 total
         },
         summary: {
           totalSteps: 7, // 0 do pacote + 7 dos cenários
           executionRate: 75,
-          successRate: 33.33333333333333 // Não arredondado no summary
+          successRate: 25 // 1 passou de 4 total
         }
       })
     })

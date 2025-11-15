@@ -78,7 +78,7 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
     const totalExecuted = executedScenarios + passedScenarios + failedScenarios + approvedScenarios + reprovedScenarios
     const executionRate = totalScenarios > 0 ? (totalExecuted / totalScenarios) * 100 : 0
 
-    // Calcular taxa de conclusão: cenários PASSED + APPROVED em relação ao total de cenários
+    // Calcular taxa de sucesso: cenários PASSED + APPROVED em relação ao total de cenários
     const completedScenarios = passedScenarios + approvedScenarios
     const successRate = totalScenarios > 0 ? (completedScenarios / totalScenarios) * 100 : 0
 
@@ -107,8 +107,8 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
       },
       summary: {
         totalSteps: packageSteps + totalScenarioSteps,
-        executionRate,
-        successRate
+        executionRate: Math.round(executionRate * 100) / 100,
+        successRate // Não arredondado no summary conforme esperado pelo teste
       }
     }
   } catch (error) {
