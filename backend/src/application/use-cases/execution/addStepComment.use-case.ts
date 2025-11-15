@@ -49,7 +49,6 @@ export async function addStepComment({
         }
       }
     })
-
     // TODO: Enviar notificações para usuários mencionados
 
     return comment
