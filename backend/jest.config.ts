@@ -17,7 +17,9 @@ const config: Config = {
   coverageReporters: ["lcov", "text-summary"],
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
-  testTimeout: 30000
+  testTimeout: 30000,
+  silent: true,
+  verbose: false
 };
 
 export default config;

@@ -63,7 +63,7 @@ jobs:
 
       - name: Run backend tests with coverage
         working-directory: backend
-        run: npm run test:coverage -- --runInBand
+        run: npm run test:coverage -- --runInBand --silent
 
       - name: Install frontend deps
         working-directory: frontend/quasar-project
@@ -111,6 +111,7 @@ jobs:
 
   deploy-legacy:
     name: Deploy to EC2 (Legacy)
+    if: false # Desabilitado - usar apenas o job 'deploy' com PM2
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
