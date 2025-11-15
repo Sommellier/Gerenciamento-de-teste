@@ -19,7 +19,7 @@ module.exports = {
       path: "/var/www/api-backend",
       ssh_options: ["StrictHostKeyChecking=accept-new"],
       "pre-deploy-local": "echo 'Starting deployment...'",
-      "pre-deploy": "sudo mkdir -p /var/www/api-backend /var/www/shared && sudo chown -R ubuntu:ubuntu /var/www/api-backend /var/www/shared || true",
+      "pre-deploy": "sudo mkdir -p /var/www/api-backend/{source,shared,current,releases} /var/www/shared && sudo chown -R ubuntu:ubuntu /var/www/api-backend /var/www/shared || true",
       "post-deploy": [
         "cp -n /var/www/shared/.env backend/.env || true",
         "cd backend",

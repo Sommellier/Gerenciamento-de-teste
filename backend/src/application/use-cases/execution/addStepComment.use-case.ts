@@ -30,7 +30,6 @@ export async function addStepComment({
     if (!step) {
       throw new AppError('Etapa não encontrada', 404)
     }
-
     // Criar comentário
     const comment = await prisma.stepComment.create({
       data: {
