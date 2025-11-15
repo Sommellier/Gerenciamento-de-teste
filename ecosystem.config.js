@@ -13,7 +13,7 @@ module.exports = {
   deploy: {
     production: {
       user: "ubuntu",
-      host: "18.228.241.117",
+      host: "3.140.242.76",
       ref: "origin/main",
       repo: "git@github.com:Sommellier/Gerenciamento-de-teste.git",
       path: "/var/www/api-backend",
