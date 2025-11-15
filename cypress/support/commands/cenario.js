@@ -74,6 +74,7 @@ Cypress.Commands.add('editarCenario', (nomeCenarioEditado, nomeCenarioOriginal, 
     };
 
     // 1. Editar TÍTULO
+    
     cy.findByPlaceholderText(/título/i)
         .should('be.visible')
         .invoke('val')
