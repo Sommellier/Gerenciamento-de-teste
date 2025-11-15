@@ -94,7 +94,7 @@ export async function createBug({
         userId
       }
     })
-
+//teste
     return bug
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
