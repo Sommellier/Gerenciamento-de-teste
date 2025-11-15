@@ -298,7 +298,7 @@ describe('getPackageDetails', () => {
       expect(result.metrics).toMatchObject({
         totalScenarios: 3,
         executionRate: 66.67, // 2/3 * 100
-        successRate: 50 // 1/2 * 100
+        successRate: 33.33 // 1/3 * 100 (1 PASSED de 3 total)
       })
     })
 
@@ -778,9 +778,9 @@ describe('getPackageDetails', () => {
       // 3 executados de 4 total = 75%
       expect(result.metrics.executionRate).toBe(75)
 
-      // successRate: cenários PASSED / cenários executados
-      // 1 PASSED de 3 executados = 33.33%
-      expect(result.metrics.successRate).toBeCloseTo(33.33, 1)
+      // successRate: cenários PASSED + APPROVED / total de cenários
+      // 1 PASSED de 4 total = 25%
+      expect(result.metrics.successRate).toBe(25)
     })
 
     it('calcula executionRate e successRate quando não há cenários executados (linhas 171-173)', async () => {
@@ -804,7 +804,7 @@ describe('getPackageDetails', () => {
       // executionRate: 0 executados de 1 total = 0%
       expect(result.metrics.executionRate).toBe(0)
 
-      // successRate: 0 PASSED de 0 executados = 0% (divisão por zero protegida)
+      // successRate: 0 concluídos (PASSED + APPROVED) de 1 total = 0%
       expect(result.metrics.successRate).toBe(0)
     })
 
@@ -855,8 +855,8 @@ describe('getPackageDetails', () => {
       // executionRate: 3 executados (EXECUTED, PASSED, FAILED) de 4 total = 75%
       expect(result.metrics.executionRate).toBe(75)
 
-      // successRate: 1 PASSED de 3 executados = 33.33%
-      expect(result.metrics.successRate).toBeCloseTo(33.33, 1)
+      // successRate: 1 concluído (PASSED) de 4 total = 25%
+      expect(result.metrics.successRate).toBe(25)
     })
 
     it('calcula successRate quando todos os executados passaram (linhas 171-173)', async () => {
@@ -890,8 +890,56 @@ describe('getPackageDetails', () => {
       // executionRate: 2 executados de 2 total = 100%
       expect(result.metrics.executionRate).toBe(100)
 
-      // successRate: 2 PASSED de 2 executados = 100%
+      // successRate: 2 concluídos (PASSED) de 2 total = 100%
       expect(result.metrics.successRate).toBe(100)
+    })
+
+    it('calcula successRate incluindo cenários APPROVED', async () => {
+      // Criar cenários com diferentes status incluindo APPROVED
+      await prisma.testScenario.createMany({
+        data: [
+          {
+            title: 'Scenario CREATED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.CREATED,
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario PASSED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.PASSED,
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario APPROVED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.APPROVED,
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario FAILED',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.FAILED,
+            projectId,
+            packageId
+          }
+        ]
+      })
+
+      const result = await getPackageDetails({
+        packageId,
+        projectId
+      })
+
+      // successRate: 2 concluídos (1 PASSED + 1 APPROVED) de 4 total = 50%
+      expect(result.metrics.successRate).toBe(50)
     })
 
     it('retorna detalhes do pacote com métricas zeradas quando não há cenários', async () => {

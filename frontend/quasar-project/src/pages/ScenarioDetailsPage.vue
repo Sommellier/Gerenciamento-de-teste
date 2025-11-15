@@ -22,8 +22,13 @@
           icon="play_arrow"
           label="Executar"
           @click="executeScenario"
+          :disable="!scenario || !scenario.steps || scenario.steps.length === 0"
           class="action-btn"
-        />
+        >
+          <q-tooltip v-if="!scenario || !scenario.steps || scenario.steps.length === 0">
+            Adicione pelo menos uma etapa ao cenário antes de executar
+          </q-tooltip>
+        </q-btn>
         <q-btn
           color="white"
           text-color="primary"

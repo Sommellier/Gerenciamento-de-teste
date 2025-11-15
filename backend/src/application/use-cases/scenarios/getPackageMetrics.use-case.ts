@@ -73,11 +73,14 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
     const executedScenarios = scenariosByStatus.EXECUTED || 0
     const passedScenarios = scenariosByStatus.PASSED || 0
     const failedScenarios = scenariosByStatus.FAILED || 0
-    const totalExecuted = executedScenarios + passedScenarios + failedScenarios
+    const approvedScenarios = scenariosByStatus.APPROVED || 0
+    const reprovedScenarios = scenariosByStatus.REPROVED || 0
+    const totalExecuted = executedScenarios + passedScenarios + failedScenarios + approvedScenarios + reprovedScenarios
     const executionRate = totalScenarios > 0 ? (totalExecuted / totalScenarios) * 100 : 0
 
-    // Calcular taxa de sucesso dos cenários executados
-    const successRate = totalExecuted > 0 ? (passedScenarios / totalExecuted) * 100 : 0
+    // Calcular taxa de sucesso: cenários PASSED + APPROVED em relação ao total de cenários
+    const completedScenarios = passedScenarios + approvedScenarios
+    const successRate = totalScenarios > 0 ? (completedScenarios / totalScenarios) * 100 : 0
 
     return {
       package: {
@@ -104,8 +107,8 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
       },
       summary: {
         totalSteps: packageSteps + totalScenarioSteps,
-        executionRate,
-        successRate
+        executionRate: Math.round(executionRate * 100) / 100,
+        successRate // Não arredondado no summary conforme esperado pelo teste
       }
     }
   } catch (error) {

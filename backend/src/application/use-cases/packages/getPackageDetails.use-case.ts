@@ -177,9 +177,11 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
     const executedScenarios = scenarios.filter((s: any) => s.status !== 'CREATED').length
     const executionRate = totalScenarios > 0 ? (executedScenarios / totalScenarios) * 100 : 0
     
-    // Taxa de sucesso: cenários PASSED / cenários executados (EXECUTED, PASSED, FAILED)
+    // Taxa de sucesso: cenários PASSED + APPROVED em relação ao total de cenários
     const passedScenarios = scenarios.filter((s: any) => s.status === 'PASSED').length
-    const successRate = executedScenarios > 0 ? (passedScenarios / executedScenarios) * 100 : 0
+    const approvedScenarios = scenarios.filter((s: any) => s.status === 'APPROVED').length
+    const completedScenarios = passedScenarios + approvedScenarios
+    const successRate = totalScenarios > 0 ? (completedScenarios / totalScenarios) * 100 : 0
 
     return {
       ...packageWithParsedTags,
