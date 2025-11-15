@@ -18,12 +18,17 @@ module.exports = {
       repo: "git@github.com:Sommellier/Gerenciamento-de-teste.git",
       path: "/var/www/api-backend",
       ssh_options: ["StrictHostKeyChecking=accept-new"],
-      "pre-deploy": "mkdir -p /var/www/shared",
+      "pre-deploy-local": "echo 'Starting deployment...'",
+      "pre-deploy": "sudo mkdir -p /var/www/api-backend /var/www/shared && sudo chown -R ubuntu:ubuntu /var/www/api-backend /var/www/shared || true",
       "post-deploy": [
         "cp -n /var/www/shared/.env backend/.env || true",
-        "npm ci --prefix backend",
-        "npm run build --prefix backend",
-        "npm prune --omit=dev --prefix backend",
+        "cd backend",
+        "npm ci",
+        "npm run build",
+        "npx prisma generate",
+        "npx prisma migrate deploy || true",
+        "npm prune --omit=dev",
+        "cd ..",
         "pm2 startOrReload ecosystem.config.js --env production"
       ].join(" && ")
     }
