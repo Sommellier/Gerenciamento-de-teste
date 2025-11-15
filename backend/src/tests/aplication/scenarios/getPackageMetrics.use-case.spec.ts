@@ -383,7 +383,7 @@ describe('getPackageMetrics', () => {
       expect(result.scenarios.byStatus.passed).toBe(1)
       expect(result.scenarios.byStatus.failed).toBe(1)
       expect(result.scenarios.executionRate).toBe(66.67) // 2 executados de 3
-      expect(result.scenarios.successRate).toBe(50) // 1 passou de 2 executados
+      expect(result.scenarios.successRate).toBeCloseTo(33.33, 1) // 1 concluído (PASSED) de 3 total = 33.33%
     })
 
     it('retorna métricas com valores arredondados corretamente', async () => {
@@ -427,8 +427,62 @@ describe('getPackageMetrics', () => {
 
       // 2 executados de 3 = 66.666...% -> arredondado para 66.67%
       expect(result.scenarios.executionRate).toBe(66.67)
-      // 1 passou de 2 executados = 50%
+      // 1 concluído (PASSED) de 3 total = 33.33%
+      expect(result.scenarios.successRate).toBeCloseTo(33.33, 1)
+    })
+
+    it('calcula successRate incluindo cenários APPROVED', async () => {
+      // Criar cenários com diferentes status incluindo APPROVED
+      await prisma.testScenario.createMany({
+        data: [
+          {
+            title: 'Scenario CREATED',
+            description: 'Description 1',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.CREATED,
+            tags: JSON.stringify(['test']),
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario PASSED',
+            description: 'Description 2',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.PASSED,
+            tags: JSON.stringify(['test']),
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario APPROVED',
+            description: 'Description 3',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.APPROVED,
+            tags: JSON.stringify(['test']),
+            projectId,
+            packageId
+          },
+          {
+            title: 'Scenario FAILED',
+            description: 'Description 4',
+            type: ScenarioType.FUNCTIONAL,
+            priority: Priority.HIGH,
+            status: ScenarioStatus.FAILED,
+            tags: JSON.stringify(['test']),
+            projectId,
+            packageId
+          }
+        ]
+      })
+
+      const result = await getPackageMetrics({ packageId, projectId })
+
+      // successRate: 2 concluídos (1 PASSED + 1 APPROVED) de 4 total = 50%
       expect(result.scenarios.successRate).toBe(50)
+      expect(result.summary.successRate).toBe(50)
     })
   })
 

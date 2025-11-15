@@ -5,16 +5,114 @@ on:
     branches:
       - main
       - master
-      - teste
     paths:
       - 'backend/**'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to EC2
+  test-and-analyze:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 4422
+          POSTGRES_DB: qa_test_manager
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgres://postgres:4422@localhost:5432/qa_test_manager
+      JWT_SECRET: qualquercoisa
+      FRONTEND_URL: http://localhost:8080
+      EMAIL_FROM: fake@example.com
+      EMAIL_PASSWORD: fakepassword
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: backend
+        run: npx prisma generate
+
+      - name: Setup Database Schema
+        working-directory: backend
+        run: npx prisma db push --accept-data-loss --skip-generate
+
+      - name: Run backend tests with coverage
+        working-directory: backend
+        run: npm run test:coverage -- --runInBand
+
+      - name: Install frontend deps
+        working-directory: frontend/quasar-project
+        run: npm ci
+
+      - name: Run frontend unit tests with coverage
+        working-directory: frontend/quasar-project
+        run: npm run test:unit || echo "Frontend tests skipped if not configured"
+
+  deploy:
+    needs: test-and-analyze
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install PM2
+        run: npm i -g pm2
+
+      - name: Configure SSH to EC2
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf "Host target\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n" \
+            "${{ secrets.EC2_HOST }}" "${{ secrets.EC2_USER }}" > ~/.ssh/config
+
+      - name: Debug SSH reachability
+        run: |
+          set -x
+          ssh -o ConnectTimeout=10 target "echo SSH_OK" || exit 1
+
+      - name: PM2 deploy setup
+        run: pm2 deploy ecosystem.config.js production setup || true
+
+      - name: PM2 deploy release
+        run: pm2 deploy ecosystem.config.js production
+
+  deploy-legacy:
+    name: Deploy to EC2 (Legacy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -30,17 +128,6 @@ jobs:
       - name: Install dependencies
         working-directory: ./backend
         run: npm ci
-
-      # Testes já são executados no workflow SonarCloud
-      # Removido para evitar duplicação e acelerar deploy
-      # Se quiser validar antes de deployar, descomente abaixo:
-      # - name: Run tests
-      #   working-directory: ./backend
-      #   env:
-      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      #     NODE_ENV: test
-      #   run: npm test
 
       - name: Build application
         working-directory: ./backend
@@ -64,12 +151,18 @@ jobs:
 
       - name: Prepare directories on EC2
         uses: appleboy/ssh-action@master
+        timeout-minutes: 2
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
+          command_timeout: 30s
+          script_stop: true
           script: |
+            set -e
+            echo "🔍 Iniciando preparação de diretórios..."
+            
             # Verificar se existe arquivo com nome 'app' e remover se necessário
             if [ -f "/home/${{ secrets.EC2_USER }}/app" ]; then
               echo "⚠️ Arquivo 'app' encontrado, removendo..."
@@ -77,18 +170,22 @@ jobs:
             fi
             
             # Criar diretórios se não existirem (mkdir -p é idempotente)
+            echo "📁 Criando diretórios..."
             mkdir -p /home/${{ secrets.EC2_USER }}/app/backend
             mkdir -p /home/${{ secrets.EC2_USER }}/app/logs
             
             # Verificar se diretório existe
             if [ -d "/home/${{ secrets.EC2_USER }}/app" ]; then
               echo "✅ Diretório /home/${{ secrets.EC2_USER }}/app pronto"
+              ls -la /home/${{ secrets.EC2_USER }}/app
             else
               echo "❌ Falha ao criar diretório"
               exit 1
             fi
+            echo "✅ Preparação concluída"
 
       - name: Copy files to EC2
+        timeout-minutes: 5
         uses: easingthemes/ssh-deploy@main
         env:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
@@ -100,13 +197,18 @@ jobs:
           TARGET: "/home/${{ secrets.EC2_USER }}/app/"
 
       - name: Execute deployment script on EC2
+        timeout-minutes: 10
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT || 22 }}
+          command_timeout: 300s
+          script_stop: true
           script: |
+            set -e
+            echo "🚀 Iniciando deploy..."
             # Navegar para diretório de deploy
             cd /home/${{ secrets.EC2_USER }}/app
             

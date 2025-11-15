@@ -34,10 +34,15 @@
             label="Iniciar Execução"
             @click="startExecution"
             :loading="loading"
+            :disable="totalSteps === 0"
             unelevated
             class="action-button"
             :key="'start-' + executionStatus"
-          />
+          >
+            <q-tooltip v-if="totalSteps === 0">
+              Adicione pelo menos uma etapa ao cenário antes de executar
+            </q-tooltip>
+          </q-btn>
           <q-btn
             v-else-if="executionStatus === 'IN_PROGRESS'"
             color="primary"
@@ -110,12 +115,12 @@
               </div>
             </div>
             <div class="progress-percentage-badge">
-              {{ Math.round((completedSteps / totalSteps) * 100) }}%
+              {{ totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0 }}%
             </div>
           </div>
           <q-linear-progress
-            :value="completedSteps / totalSteps"
-            :color="completedSteps === totalSteps ? 'positive' : 'primary'"
+            :value="totalSteps > 0 ? completedSteps / totalSteps : 0"
+            :color="totalSteps > 0 && completedSteps === totalSteps ? 'positive' : 'primary'"
             size="6px"
             class="progress-bar-inline"
             rounded
