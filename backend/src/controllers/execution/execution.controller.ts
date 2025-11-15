@@ -20,7 +20,6 @@ type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
 }
 
-
 // Helper function to get valid userId
 async function getValidUserId(req: AuthenticatedRequest): Promise<number> {
   if (req.user?.id) {
