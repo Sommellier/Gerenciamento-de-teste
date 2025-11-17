@@ -17,7 +17,7 @@ interface UpdateScenarioInPackageInput {
   assigneeId?: number
   assigneeEmail?: string
   environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
-  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED'
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED'
 }
 
 export async function updateScenarioInPackage({
@@ -74,6 +74,17 @@ export async function updateScenarioInPackage({
       }
     }
 
+    // Verificar se o cenário está bloqueado (todas as etapas bloqueadas)
+    const scenarioWithSteps = await prisma.testScenario.findUnique({
+      where: { id: scenarioId },
+      include: {
+        steps: true
+      }
+    })
+
+    const isBlocked = scenarioWithSteps && scenarioWithSteps.steps.length > 0 && 
+                      scenarioWithSteps.steps.every(step => step.status === 'BLOCKED')
+
     // Preparar dados para atualização
     const updateData: any = {}
     
@@ -84,7 +95,18 @@ export async function updateScenarioInPackage({
     if (tags !== undefined) updateData.tags = JSON.stringify(tags) // Converter array para JSON string
     if (finalAssigneeEmail !== undefined) updateData.assigneeEmail = finalAssigneeEmail
     if (environment !== undefined) updateData.environment = environment
-    if (status !== undefined) updateData.status = status
+    
+    // Se o cenário está bloqueado, não permitir mudar o status para PASSED ou FAILED
+    // Apenas permitir mudanças se estiver desbloqueando (mudando de BLOQUEADO para outro status)
+    if (status !== undefined) {
+      const currentStatus = scenarioWithSteps?.status
+      if (isBlocked && String(currentStatus) === 'BLOQUEADO' && status !== 'BLOQUEADO') {
+        // Se está bloqueado e tentando mudar para outro status, não permitir
+        // O status só pode mudar quando as etapas não estiverem mais bloqueadas
+        throw new AppError('Não é possível alterar o status de um cenário bloqueado. Desbloqueie as etapas primeiro.', 400)
+      }
+      updateData.status = status
+    }
 
     // Atualizar o cenário
     const updatedScenario = await prisma.testScenario.update({

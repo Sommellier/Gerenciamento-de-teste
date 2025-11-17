@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78.4% </span>
+                <span class="strong">78.43% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>1630/2079</span>
+                <span class='fraction'>1633/2082</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.72% </span>
+                <span class="strong">77.82% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>171/220</span>
+                <span class='fraction'>172/221</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">78.4% </span>
+                <span class="strong">78.43% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>1630/2079</span>
+                <span class='fraction'>1633/2082</span>
             </div>
         
             
@@ -3906,7 +3906,11 @@
 <a name='L3841'></a><a href='#L3841'>3841</a>
 <a name='L3842'></a><a href='#L3842'>3842</a>
 <a name='L3843'></a><a href='#L3843'>3843</a>
-<a name='L3844'></a><a href='#L3844'>3844</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L3844'></a><a href='#L3844'>3844</a>
+<a name='L3845'></a><a href='#L3845'>3845</a>
+<a name='L3846'></a><a href='#L3846'>3846</a>
+<a name='L3847'></a><a href='#L3847'>3847</a>
+<a name='L3848'></a><a href='#L3848'>3848</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -5496,6 +5500,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
 <span class="cline-any cline-yes">37x</span>
@@ -6227,6 +6232,7 @@
 <span class="cline-any cline-yes">167x</span>
 <span class="cline-any cline-yes">167x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">167x</span>
 <span class="cline-any cline-yes">167x</span>
 <span class="cline-any cline-yes">167x</span>
 <span class="cline-any cline-yes">167x</span>
@@ -6305,6 +6311,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">157x</span>
+<span class="cline-any cline-yes">121x</span>
 <span class="cline-any cline-yes">121x</span>
 <span class="cline-any cline-yes">121x</span>
 <span class="cline-any cline-yes">121x</span>
@@ -6382,6 +6389,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -9337,17 +9345,18 @@ const successRateChartSeries = computed(() =&gt; {
   
   const scenarios = packageData.value.scenarios
   
-  // Calcular estatísticas dos cenários - mostrar os 5 principais status
-  // CREATED, EXECUTED, PASSED, FAILED, APPROVED, REPROVED (mas agrupar APPROVED e REPROVED se necessário)
+  // Calcular estatísticas dos cenários - mostrar os principais status
+  // CREATED, EXECUTED, PASSED, FAILED, APPROVED, REPROVED, BLOQUEADO
   const createdScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'CREATED' || !s.status).length
   const executedScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'EXECUTED').length
   const passedScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'PASSED').length
   const failedScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'FAILED').length
   const approvedScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'APPROVED').length
   const reprovedScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'REPROVED').length
+  const blockedScenarios = scenarios.filter((s: TestScenario) =&gt; (s.status as string) === 'BLOQUEADO').length
   
-  // Retornar todos os status separadamente (incluindo Aprovado e Reprovado separados)
-  return [createdScenarios, executedScenarios, passedScenarios, failedScenarios, approvedScenarios, reprovedScenarios]
+  // Retornar todos os status separadamente (incluindo Aprovado, Reprovado e Bloqueado separados)
+  return [createdScenarios, executedScenarios, passedScenarios, failedScenarios, approvedScenarios, reprovedScenarios, blockedScenarios]
 })
 &nbsp;
 const successRateChartOptions = computed(() =&gt; {
@@ -9358,8 +9367,8 @@ const successRateChartOptions = computed(() =&gt; {
       background: 'transparent',
       toolbar: { show: false }
     },
-    labels: ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado'],
-    colors: ['#9E9E9E', '#2196F3', '#4CAF50', '#F44336', '#10B981', '#EF4444'],
+    labels: ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado', 'Bloqueado'],
+    colors: ['#9E9E9E', '#2196F3', '#4CAF50', '#F44336', '#10B981', '#EF4444', '#FFC107'],
     dataLabels: {
       enabled: true,
       formatter: <span class="fstat-no" title="function not covered" >function (val: number, opts: { w: { config: { series: number[] } }; seriesIndex: number }) {</span>
@@ -9368,7 +9377,7 @@ const successRateChartOptions = computed(() =&gt; {
       style: {
         fontSize: '12px',
         fontWeight: 'bold',
-        colors: ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff']
+        colors: ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#000']
       }
     },
     legend: {
@@ -9387,7 +9396,7 @@ const successRateChartOptions = computed(() =&gt; {
     tooltip: {
       y: {
         formatter: <span class="fstat-no" title="function not covered" >function (val: number, opts: { seriesIndex: number }) {</span>
-<span class="cstat-no" title="statement not covered" >          const labels = ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado']</span>
+<span class="cstat-no" title="statement not covered" >          const labels = ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado', 'Bloqueado']</span>
 <span class="cstat-no" title="statement not covered" >          return labels[opts.seriesIndex] + ': ' + val + ' cenários'</span>
 <span class="cstat-no" title="statement not covered" >        }</span>
       }
@@ -10079,6 +10088,7 @@ const getStatusLabel = (status: string | undefined) =&gt; {
     'FAILED': 'Falhou',
     'APPROVED': 'Aprovado',
     'REPROVED': 'Reprovado',
+    'BLOQUEADO': 'Bloqueado',
     // New package approval status
     'EM_TESTE': 'Em Teste',
     'CONCLUIDO': 'Concluído',
@@ -10162,6 +10172,7 @@ const getStatusColor = (status: string | undefined) =&gt; {
     'EM_TESTE': 'blue',
     'CONCLUIDO': 'positive',
     'REPROVADO': 'negative',
+    'BLOQUEADO': 'warning',
   }
   return colors[status] || 'grey'
 }
@@ -10223,10 +10234,11 @@ onMounted(() =&gt; {
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 &nbsp;
-// Recarregar dados quando a página é ativada apenas se os dados ainda não foram carregados
+// Recarregar dados quando a página é ativada (sempre recarregar para pegar atualizações)
 onActivated(() =&gt; {
+  // Sempre recarregar quando a página é ativada para pegar atualizações de status
+<span class="cstat-no" title="statement not covered" >  void loadPackageDetails()</span>
 <span class="cstat-no" title="statement not covered" >  if (!hasInitiallyLoaded.value) {</span>
-<span class="cstat-no" title="statement not covered" >    void loadPackageDetails()</span>
 <span class="cstat-no" title="statement not covered" >    void loadMembers().then(() =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >      hasInitiallyLoaded.value = true</span>
 <span class="cstat-no" title="statement not covered" >    })</span>
@@ -11599,7 +11611,7 @@ onBeforeUnmount(() =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-08T15:45:24.202Z
+                at 2025-11-17T23:14:48.999Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

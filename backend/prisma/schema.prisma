@@ -49,6 +49,7 @@ enum ScenarioStatus {
   FAILED
   APPROVED
   REPROVED
+  BLOQUEADO
 }
 
 enum PackageStatus {
@@ -60,6 +61,7 @@ enum PackageStatus {
   CONCLUIDO
   REPROVADO
   APROVADO
+  BLOQUEADO
 }
 
 model User {

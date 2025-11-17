@@ -24,7 +24,7 @@ export interface TestScenario {
   assigneeEmail?: string
   environment?: 'DEV' | 'QA' | 'STAGING' | 'PROD'
   release: string
-  status?: 'CREATED' | 'IN_PROGRESS' | 'COMPLETED' | 'BLOCKED'
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED' | 'IN_PROGRESS' | 'COMPLETED'
   createdAt: string
   updatedAt: string
   steps: ScenarioStep[]

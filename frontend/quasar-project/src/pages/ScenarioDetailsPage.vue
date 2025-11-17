@@ -1323,7 +1323,8 @@ function getStatusColor(status: string) {
     PASSED: 'green',
     FAILED: 'red',
     APPROVED: 'positive',
-    REPROVED: 'negative'
+    REPROVED: 'negative',
+    BLOQUEADO: 'warning'
   }
   return colors[status] || 'grey'
 }
@@ -1335,7 +1336,8 @@ function getStatusLabel(status: string) {
     PASSED: 'Concluído',
     FAILED: 'Falhou',
     APPROVED: 'Aprovado',
-    REPROVED: 'Reprovado'
+    REPROVED: 'Reprovado',
+    BLOQUEADO: 'Bloqueado'
   }
   return labels[status] || status
 }

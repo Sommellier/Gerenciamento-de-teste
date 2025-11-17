@@ -1586,17 +1586,18 @@ const successRateChartSeries = computed(() => {
   
   const scenarios = packageData.value.scenarios
   
-  // Calcular estatísticas dos cenários - mostrar os 5 principais status
-  // CREATED, EXECUTED, PASSED, FAILED, APPROVED, REPROVED (mas agrupar APPROVED e REPROVED se necessário)
+  // Calcular estatísticas dos cenários - mostrar os principais status
+  // CREATED, EXECUTED, PASSED, FAILED, APPROVED, REPROVED, BLOQUEADO
   const createdScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'CREATED' || !s.status).length
   const executedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'EXECUTED').length
   const passedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'PASSED').length
   const failedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'FAILED').length
   const approvedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'APPROVED').length
   const reprovedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'REPROVED').length
+  const blockedScenarios = scenarios.filter((s: TestScenario) => (s.status as string) === 'BLOQUEADO').length
   
-  // Retornar todos os status separadamente (incluindo Aprovado e Reprovado separados)
-  return [createdScenarios, executedScenarios, passedScenarios, failedScenarios, approvedScenarios, reprovedScenarios]
+  // Retornar todos os status separadamente (incluindo Aprovado, Reprovado e Bloqueado separados)
+  return [createdScenarios, executedScenarios, passedScenarios, failedScenarios, approvedScenarios, reprovedScenarios, blockedScenarios]
 })
 
 const successRateChartOptions = computed(() => {
@@ -1607,8 +1608,8 @@ const successRateChartOptions = computed(() => {
       background: 'transparent',
       toolbar: { show: false }
     },
-    labels: ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado'],
-    colors: ['#9E9E9E', '#2196F3', '#4CAF50', '#F44336', '#10B981', '#EF4444'],
+    labels: ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado', 'Bloqueado'],
+    colors: ['#9E9E9E', '#2196F3', '#4CAF50', '#F44336', '#10B981', '#EF4444', '#FFC107'],
     dataLabels: {
       enabled: true,
       formatter: function (val: number, opts: { w: { config: { series: number[] } }; seriesIndex: number }) {
@@ -1617,7 +1618,7 @@ const successRateChartOptions = computed(() => {
       style: {
         fontSize: '12px',
         fontWeight: 'bold',
-        colors: ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff']
+        colors: ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#000']
       }
     },
     legend: {
@@ -1636,7 +1637,7 @@ const successRateChartOptions = computed(() => {
     tooltip: {
       y: {
         formatter: function (val: number, opts: { seriesIndex: number }) {
-          const labels = ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado']
+          const labels = ['Criado', 'Executado', 'Passou', 'Falhou', 'Aprovado', 'Reprovado', 'Bloqueado']
           return labels[opts.seriesIndex] + ': ' + val + ' cenários'
         }
       }
@@ -2328,6 +2329,7 @@ const getStatusLabel = (status: string | undefined) => {
     'FAILED': 'Falhou',
     'APPROVED': 'Aprovado',
     'REPROVED': 'Reprovado',
+    'BLOQUEADO': 'Bloqueado',
     // New package approval status
     'EM_TESTE': 'Em Teste',
     'CONCLUIDO': 'Concluído',
@@ -2411,6 +2413,7 @@ const getStatusColor = (status: string | undefined) => {
     'EM_TESTE': 'blue',
     'CONCLUIDO': 'positive',
     'REPROVADO': 'negative',
+    'BLOQUEADO': 'warning',
   }
   return colors[status] || 'grey'
 }
@@ -2472,10 +2475,11 @@ onMounted(() => {
   document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
-// Recarregar dados quando a página é ativada apenas se os dados ainda não foram carregados
+// Recarregar dados quando a página é ativada (sempre recarregar para pegar atualizações)
 onActivated(() => {
+  // Sempre recarregar quando a página é ativada para pegar atualizações de status
+  void loadPackageDetails()
   if (!hasInitiallyLoaded.value) {
-    void loadPackageDetails()
     void loadMembers().then(() => {
       hasInitiallyLoaded.value = true
     })

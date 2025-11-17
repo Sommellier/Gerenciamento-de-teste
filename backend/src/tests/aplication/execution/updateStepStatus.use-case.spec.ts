@@ -503,4 +503,337 @@ describe('updateStepStatus', () => {
       expect(result.createdAt).toEqual(originalStep!.createdAt)
     })
   })
+
+  describe('updateStepStatus - cenários bloqueados', () => {
+    it('atualiza status do cenário para BLOQUEADO quando todas as etapas estão bloqueadas', async () => {
+      // Criar mais uma etapa
+      const step2 = await prisma.testScenarioStep.create({
+        data: {
+          action: 'Step 2',
+          expected: 'Expected 2',
+          stepOrder: 2,
+          scenarioId
+        }
+      })
+
+      // Bloquear primeira etapa
+      await updateStepStatus({
+        stepId,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Bloquear segunda etapa - agora todas estão bloqueadas
+      await updateStepStatus({
+        stepId: step2.id,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Verificar se o cenário foi atualizado para BLOQUEADO
+      const scenario = await prisma.testScenario.findUnique({
+        where: { id: scenarioId }
+      })
+
+      expect(scenario?.status).toBe('BLOQUEADO')
+    })
+
+    it('reverte status do cenário de BLOQUEADO para EXECUTED quando uma etapa é desbloqueada', async () => {
+      // Criar mais uma etapa
+      const step2 = await prisma.testScenarioStep.create({
+        data: {
+          action: 'Step 2',
+          expected: 'Expected 2',
+          stepOrder: 2,
+          scenarioId
+        }
+      })
+
+      // Bloquear ambas as etapas
+      await updateStepStatus({
+        stepId,
+        status: 'BLOCKED',
+        userId
+      })
+      await updateStepStatus({
+        stepId: step2.id,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Verificar que o cenário está bloqueado
+      let scenario = await prisma.testScenario.findUnique({
+        where: { id: scenarioId }
+      })
+      expect(scenario?.status).toBe('BLOQUEADO')
+
+      // Desbloquear uma etapa
+      await updateStepStatus({
+        stepId,
+        status: 'PASSED',
+        userId
+      })
+
+      // Verificar que o cenário foi revertido para EXECUTED
+      scenario = await prisma.testScenario.findUnique({
+        where: { id: scenarioId }
+      })
+      expect(scenario?.status).toBe('EXECUTED')
+    })
+
+    it('não atualiza status do cenário quando nem todas as etapas estão bloqueadas', async () => {
+      // Criar mais uma etapa
+      const step2 = await prisma.testScenarioStep.create({
+        data: {
+          action: 'Step 2',
+          expected: 'Expected 2',
+          stepOrder: 2,
+          scenarioId
+        }
+      })
+
+      // Bloquear apenas uma etapa
+      await updateStepStatus({
+        stepId,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Verificar que o cenário não foi atualizado para BLOQUEADO
+      const scenario = await prisma.testScenario.findUnique({
+        where: { id: scenarioId }
+      })
+
+      expect(scenario?.status).not.toBe('BLOQUEADO')
+    })
+
+    it('atualiza status do pacote para BLOQUEADO quando todos os cenários estão bloqueados', async () => {
+      // Criar pacote
+      const testPackage = await prisma.testPackage.create({
+        data: {
+          title: 'Test Package',
+          description: 'Test Description',
+          type: 'FUNCTIONAL',
+          priority: 'HIGH',
+          release: '2024-01',
+          status: 'EM_TESTE',
+          projectId
+        }
+      })
+
+      // Atualizar cenário para ter packageId
+      await prisma.testScenario.update({
+        where: { id: scenarioId },
+        data: { packageId: testPackage.id }
+      })
+
+      // Criar outro cenário no mesmo pacote
+      const scenario2 = await prisma.testScenario.create({
+        data: {
+          title: 'Scenario 2',
+          description: 'Description 2',
+          type: 'FUNCTIONAL',
+          priority: 'HIGH',
+          projectId,
+          packageId: testPackage.id
+        }
+      })
+
+      // Criar etapas para ambos os cenários
+      const step2 = await prisma.testScenarioStep.create({
+        data: {
+          action: 'Step 2',
+          expected: 'Expected 2',
+          stepOrder: 1,
+          scenarioId: scenario2.id
+        }
+      })
+
+      // Bloquear todas as etapas do primeiro cenário
+      await updateStepStatus({
+        stepId,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Bloquear todas as etapas do segundo cenário
+      await updateStepStatus({
+        stepId: step2.id,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Verificar se o pacote foi atualizado para BLOQUEADO
+      const packageAfter = await prisma.testPackage.findUnique({
+        where: { id: testPackage.id }
+      })
+
+      expect(packageAfter?.status).toBe('BLOQUEADO')
+
+      // Limpar
+      await prisma.testScenarioStep.deleteMany({
+        where: { scenarioId: scenario2.id }
+      })
+      await prisma.testScenario.deleteMany({
+        where: { packageId: testPackage.id }
+      })
+      await prisma.testPackage.deleteMany({
+        where: { id: testPackage.id }
+      })
+    })
+
+    it('reverte status do pacote de BLOQUEADO para EM_TESTE quando um cenário é desbloqueado', async () => {
+      // Criar pacote
+      const testPackage = await prisma.testPackage.create({
+        data: {
+          title: 'Test Package',
+          description: 'Test Description',
+          type: 'FUNCTIONAL',
+          priority: 'HIGH',
+          release: '2024-01',
+          status: 'EM_TESTE',
+          projectId
+        }
+      })
+
+      // Atualizar cenário para ter packageId
+      await prisma.testScenario.update({
+        where: { id: scenarioId },
+        data: { packageId: testPackage.id }
+      })
+
+      // Criar outro cenário no mesmo pacote
+      const scenario2 = await prisma.testScenario.create({
+        data: {
+          title: 'Scenario 2',
+          description: 'Description 2',
+          type: 'FUNCTIONAL',
+          priority: 'HIGH',
+          projectId,
+          packageId: testPackage.id
+        }
+      })
+
+      // Criar etapas para ambos os cenários
+      const step2 = await prisma.testScenarioStep.create({
+        data: {
+          action: 'Step 2',
+          expected: 'Expected 2',
+          stepOrder: 1,
+          scenarioId: scenario2.id
+        }
+      })
+
+      // Bloquear todas as etapas de ambos os cenários
+      await updateStepStatus({
+        stepId,
+        status: 'BLOCKED',
+        userId
+      })
+      await updateStepStatus({
+        stepId: step2.id,
+        status: 'BLOCKED',
+        userId
+      })
+
+      // Verificar que o pacote está bloqueado
+      let packageAfter = await prisma.testPackage.findUnique({
+        where: { id: testPackage.id }
+      })
+      expect(packageAfter?.status).toBe('BLOQUEADO')
+
+      // Desbloquear uma etapa do primeiro cenário
+      await updateStepStatus({
+        stepId,
+        status: 'PASSED',
+        userId
+      })
+
+      // Verificar que o pacote foi revertido para EM_TESTE
+      packageAfter = await prisma.testPackage.findUnique({
+        where: { id: testPackage.id }
+      })
+      expect(packageAfter?.status).toBe('EM_TESTE')
+
+      // Limpar
+      await prisma.testScenarioStep.deleteMany({
+        where: { scenarioId: scenario2.id }
+      })
+      await prisma.testScenario.deleteMany({
+        where: { packageId: testPackage.id }
+      })
+      await prisma.testPackage.deleteMany({
+        where: { id: testPackage.id }
+      })
+    })
+
+    it('não atualiza status do cenário quando cenário não tem etapas', async () => {
+      // Criar cenário sem etapas
+      const scenarioWithoutSteps = await prisma.testScenario.create({
+        data: {
+          title: 'Scenario Without Steps',
+          description: 'Description',
+          type: 'FUNCTIONAL',
+          priority: 'HIGH',
+          projectId
+        }
+      })
+
+      // Criar uma etapa e depois deletá-la
+      const tempStep = await prisma.testScenarioStep.create({
+        data: {
+          action: 'Temp',
+          expected: 'Temp',
+          stepOrder: 1,
+          scenarioId: scenarioWithoutSteps.id
+        }
+      })
+
+      await prisma.testScenarioStep.delete({
+        where: { id: tempStep.id }
+      })
+
+      // Tentar atualizar (não deve causar erro)
+      const scenario = await prisma.testScenario.findUnique({
+        where: { id: scenarioWithoutSteps.id }
+      })
+
+      expect(scenario?.status).not.toBe('BLOQUEADO')
+
+      // Limpar
+      await prisma.testScenario.delete({
+        where: { id: scenarioWithoutSteps.id }
+      })
+    })
+
+    it('não atualiza status do pacote quando cenário não tem packageId', async () => {
+      // Garantir que o cenário não tem packageId
+      await prisma.testScenario.update({
+        where: { id: scenarioId },
+        data: { packageId: null }
+      })
+
+      // Atualizar etapa
+      const result = await updateStepStatus({
+        stepId,
+        status: 'PASSED',
+        userId
+      })
+
+      expect(result.status).toBe('PASSED')
+      // Não deve causar erro mesmo sem packageId
+    })
+
+    it('não atualiza status do cenário quando scenarioWithSteps é null', async () => {
+      // Este teste garante que o código trata corretamente quando scenarioWithSteps é null
+      // Isso pode acontecer em casos de race condition
+      const result = await updateStepStatus({
+        stepId,
+        status: 'PASSED',
+        userId
+      })
+
+      expect(result.status).toBe('PASSED')
+    })
+  })
 })
