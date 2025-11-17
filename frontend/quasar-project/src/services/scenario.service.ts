@@ -29,7 +29,7 @@ export interface TestScenario {
   }
   dueDate?: string
   preconditions?: string[]
-  status: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED'
+  status: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED'
   packageId?: number
   projectId: number
   steps: ScenarioStep[]

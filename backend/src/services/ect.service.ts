@@ -1,6 +1,7 @@
 ﻿import PDFDocument from 'pdfkit'
 import { prisma } from '../infrastructure/prisma'
 import { AppError } from '../utils/AppError'
+import { PackageStatus } from '@prisma/client'
 import crypto from 'crypto'
 import sharp from 'sharp'
 import fs from 'fs'
@@ -38,6 +39,12 @@ export class ECTService {
             }
           },
           project: true,
+          package: {
+            select: {
+              id: true,
+              status: true
+            }
+          },
           testador: {
             select: { id: true, name: true, email: true }
           },
@@ -55,6 +62,11 @@ export class ECTService {
       const hasAccess = await this.checkScenarioAccess(scenarioId, userId)
       if (!hasAccess) {
         throw new AppError('Acesso negado ao cenário', 403)
+      }
+
+      // Verificar se o pacote está bloqueado
+      if (scenario.package && String(scenario.package.status) === 'BLOQUEADO') {
+        throw new AppError('Não é possível gerar ECT quando o pacote está bloqueado', 400)
       }
 
       // Coletar todas as evidências dos steps

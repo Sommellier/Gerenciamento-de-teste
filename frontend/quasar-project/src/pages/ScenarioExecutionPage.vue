@@ -538,7 +538,7 @@ interface ExtendedScenario extends Omit<TestScenario, 'status' | 'steps'> {
     email: string
   }
   steps: ExtendedStep[]
-  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'APPROVED' | 'REPROVED'
+  status?: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED'
 }
 
 // Tipo para atualização de cenário que inclui status
@@ -550,7 +550,7 @@ interface UpdateScenarioData {
 const loading = ref(false)
 const scenario = ref<ExtendedScenario | null>(null)
 const currentStepIndex = ref(0)
-const executionStatus = ref<'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'>('NOT_STARTED')
+const executionStatus = ref<'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'BLOCKED'>('NOT_STARTED')
 const steps = ref<ExtendedStep[]>([])
 const newComment = ref('')
 const showBugDialog = ref(false)
@@ -667,7 +667,11 @@ async function loadScenario() {
           ? 'FAILED' 
           : 'COMPLETED'
       } 
-      // Segundo: verificar se está em execução (prioridade ao status EXECUTED do cenário)
+      // Segundo: verificar se está bloqueado
+      else if (scenarioStatus === 'BLOQUEADO') {
+        executionStatus.value = 'IN_PROGRESS' // Mantém como IN_PROGRESS para indicar que está em execução mas bloqueado
+      }
+      // Terceiro: verificar se está em execução (prioridade ao status EXECUTED do cenário)
       else if (scenarioStatus === 'EXECUTED') {
         // Se o cenário tem status EXECUTED, está em progresso, independente das etapas
         executionStatus.value = 'IN_PROGRESS'
@@ -795,6 +799,12 @@ async function startExecution() {
   }
 }
 
+// Type guard para validar status do cenário
+function isValidScenarioStatus(status: string | undefined): status is 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED' {
+  const validStatuses = ['CREATED', 'EXECUTED', 'PASSED', 'FAILED', 'BLOCKED', 'BLOQUEADO', 'APPROVED', 'REPROVED']
+  return status !== undefined && validStatuses.includes(status)
+}
+
 async function finishExecution() {
   try {
     loading.value = true
@@ -802,6 +812,7 @@ async function finishExecution() {
     // Determinar status final baseado nas etapas
     const hasFailedSteps = steps.value.some(s => s.status === 'FAILED')
     const hasPendingSteps = steps.value.some(s => !s.status || s.status === 'PENDING')
+    const allStepsBlocked = steps.value.length > 0 && steps.value.every(s => s.status === 'BLOCKED')
     
     if (hasPendingSteps) {
       Notify.create({
@@ -812,24 +823,49 @@ async function finishExecution() {
     }
     
     const scenarioId = Number(route.params.scenarioId)
-    const finalStatus = hasFailedSteps ? 'FAILED' : 'PASSED'
     
-    // Atualizar status do cenário no backend
-    await scenarioService.updateScenario(scenarioId, {
-      status: finalStatus
-    } as UpdateScenarioData & Partial<CreateScenarioData>)
+    // Se todas as etapas estão bloqueadas, não atualizar o status (já está BLOQUEADO)
+    // O backend já atualiza automaticamente quando todas as etapas são bloqueadas
+    type ScenarioStatusType = 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED'
+    let finalStatus: ScenarioStatusType
+    if (allStepsBlocked) {
+      // Não atualizar o status - o backend já deve ter definido como BLOQUEADO
+      // Apenas recarregar o cenário para pegar o status atualizado
+      await loadScenario()
+      const loadedStatus = scenario.value?.status
+      if (isValidScenarioStatus(loadedStatus)) {
+        finalStatus = loadedStatus
+      } else {
+        finalStatus = 'BLOQUEADO'
+      }
+    } else {
+      finalStatus = hasFailedSteps ? 'FAILED' : 'PASSED'
+      // Atualizar status do cenário no backend apenas se não estiver bloqueado
+      await scenarioService.updateScenario(scenarioId, {
+        status: finalStatus
+      } as UpdateScenarioData & Partial<CreateScenarioData>)
+    }
     
     // Atualizar status local
-    executionStatus.value = hasFailedSteps ? 'FAILED' : 'COMPLETED'
+    if (allStepsBlocked) {
+      executionStatus.value = 'BLOCKED'
+    } else {
+      executionStatus.value = hasFailedSteps ? 'FAILED' : 'COMPLETED'
+    }
     if (scenario.value) {
       scenario.value.status = finalStatus
     }
     
     // Registrar no histórico
+    const historyAction = allStepsBlocked ? 'BLOCKED' : (hasFailedSteps ? 'FAILED' : 'COMPLETED')
+    const historyMessage = allStepsBlocked 
+      ? 'Cenário bloqueado - todas as etapas estão bloqueadas'
+      : (hasFailedSteps ? 'Execução concluída com falhas' : 'Execução concluída com sucesso')
+    
     await executionService.registerHistory(
       scenarioId,
-      hasFailedSteps ? 'FAILED' : 'COMPLETED',
-      hasFailedSteps ? 'Execução concluída com falhas' : 'Execução concluída com sucesso',
+      historyAction,
+      historyMessage,
       {
         totalSteps: steps.value.length,
         passedSteps: steps.value.filter(s => s.status === 'PASSED').length,
@@ -841,9 +877,21 @@ async function finishExecution() {
     // Recarregar histórico
     executionHistory.value = await executionService.getHistory(scenarioId)
     
+    // Mensagem de notificação apropriada
+    let notifyType: 'positive' | 'negative' | 'warning' = 'positive'
+    let notifyMessage = 'Execução concluída com sucesso!'
+    
+    if (allStepsBlocked) {
+      notifyType = 'warning'
+      notifyMessage = 'Cenário bloqueado - todas as etapas estão bloqueadas'
+    } else if (hasFailedSteps) {
+      notifyType = 'negative'
+      notifyMessage = 'Execução concluída com falhas'
+    }
+    
     Notify.create({
-      type: hasFailedSteps ? 'negative' : 'positive',
-      message: hasFailedSteps ? 'Execução concluída com falhas' : 'Execução concluída com sucesso!',
+      type: notifyType,
+      message: notifyMessage,
       actions: [
         {
           label: 'Voltar',
@@ -1019,6 +1067,9 @@ async function setStepStatus(status: string) {
       
       // Recarregar histórico
       executionHistory.value = await executionService.getHistory(scenarioId)
+      
+      // Recarregar o cenário para atualizar o status (pode ter mudado para BLOQUEADO)
+      await loadScenario()
       
       Notify.create({
         type: 'positive',

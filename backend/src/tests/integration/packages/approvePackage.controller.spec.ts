@@ -295,6 +295,109 @@ describe('approvePackageController', () => {
       await prisma.testPackage.delete({ where: { id: otherPackage.id } })
       await prisma.project.delete({ where: { id: otherProject.id } })
     })
+
+    it('rejeita quando userId não está presente no request', async () => {
+      // Criar um middleware que não adiciona user ao request
+      const appWithoutUser = express()
+      appWithoutUser.use(express.json())
+      appWithoutUser.post('/projects/:projectId/packages/:packageId/approve', (req, res, next) => {
+        // Não adicionar req.user
+        approvePackageController(req as any, res, next)
+      })
+      appWithoutUser.use(errorHandler)
+
+      const response = await request(appWithoutUser)
+        .post(`/projects/${projectId}/packages/${packageId}/approve`)
+        .expect(401)
+
+      expect(response.body).toMatchObject({
+        message: 'Não autenticado'
+      })
+    })
+
+    it('rejeita quando projectId é undefined', async () => {
+      const appWithUndefined = express()
+      appWithUndefined.use(express.json())
+      appWithUndefined.post('/projects/:projectId/packages/:packageId/approve', auth, (req, res, next) => {
+        req.params.projectId = undefined as any
+        approvePackageController(req as any, res, next)
+      })
+      appWithUndefined.use(errorHandler)
+
+      const response = await request(appWithUndefined)
+        .post(`/projects/undefined/packages/${packageId}/approve`)
+        .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+        .expect(400)
+
+      expect(response.body).toMatchObject({
+        message: 'IDs inválidos'
+      })
+    })
+
+    it('rejeita quando packageId é undefined', async () => {
+      const appWithUndefined = express()
+      appWithUndefined.use(express.json())
+      appWithUndefined.post('/projects/:projectId/packages/:packageId/approve', auth, (req, res, next) => {
+        req.params.packageId = undefined as any
+        approvePackageController(req as any, res, next)
+      })
+      appWithUndefined.use(errorHandler)
+
+      const response = await request(appWithUndefined)
+        .post(`/projects/${projectId}/packages/undefined/approve`)
+        .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+        .expect(400)
+
+      expect(response.body).toMatchObject({
+        message: 'IDs inválidos'
+      })
+    })
+
+    it('rejeita quando projectId é string vazia', async () => {
+      const appWithEmpty = express()
+      appWithEmpty.use(express.json())
+      appWithEmpty.post('/projects/:projectId/packages/:packageId/approve', auth, (req, res, next) => {
+        req.params.projectId = ''
+        approvePackageController(req as any, res, next)
+      })
+      appWithEmpty.use(errorHandler)
+
+      // Quando projectId é string vazia, o Express pode retornar 404 ou o controller retorna 400
+      const response = await request(appWithEmpty)
+        .post(`/projects//packages/${packageId}/approve`)
+        .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+
+      // Aceitar tanto 400 quanto 404 (dependendo de como o Express trata)
+      expect([400, 404]).toContain(response.status)
+      if (response.status === 400) {
+        expect(response.body).toMatchObject({
+          message: 'IDs inválidos'
+        })
+      }
+    })
+
+    it('rejeita quando packageId é string vazia', async () => {
+      const appWithEmpty = express()
+      appWithEmpty.use(express.json())
+      appWithEmpty.post('/projects/:projectId/packages/:packageId/approve', auth, (req, res, next) => {
+        req.params.packageId = ''
+        approvePackageController(req as any, res, next)
+      })
+      appWithEmpty.use(errorHandler)
+
+      // Quando packageId é string vazia, o Express pode retornar 404 ou o controller retorna 400
+      const response = await request(appWithEmpty)
+        .post(`/projects/${projectId}/packages//approve`)
+        .set('Authorization', `Bearer ${tokenFor(ownerId)}`)
+
+      // Aceitar tanto 400 quanto 404 (dependendo de como o Express trata)
+      expect([400, 404]).toContain(response.status)
+      if (response.status === 400) {
+        expect(response.body).toMatchObject({
+          message: 'IDs inválidos'
+        })
+      }
+    })
   })
 })
 

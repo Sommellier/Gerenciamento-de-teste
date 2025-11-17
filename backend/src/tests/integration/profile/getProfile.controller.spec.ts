@@ -218,5 +218,44 @@ describe('getProfile.controller', () => {
       })
       expect(getProfileUC.getProfile).toHaveBeenCalledWith(user.id)
     })
+
+    it('retorna 401 quando req.user.id não existe', async () => {
+      const appWithoutUser = express()
+      appWithoutUser.use(express.json())
+      appWithoutUser.get('/profile', (req: any, res, next) => {
+        // Não adicionar req.user.id
+        req.user = {} as any
+        getProfileController(req, res, next)
+      })
+      appWithoutUser.use(errorHandler)
+
+      const response = await request(appWithoutUser)
+        .get('/profile')
+        .expect(401)
+
+      expect(response.body).toEqual({
+        message: 'Não autenticado'
+      })
+      expect(getProfileUC.getProfile).not.toHaveBeenCalled()
+    })
+
+    it('retorna 401 quando req.user é undefined', async () => {
+      const appWithoutUser = express()
+      appWithoutUser.use(express.json())
+      appWithoutUser.get('/profile', (req: any, res, next) => {
+        // Não adicionar req.user
+        getProfileController(req, res, next)
+      })
+      appWithoutUser.use(errorHandler)
+
+      const response = await request(appWithoutUser)
+        .get('/profile')
+        .expect(401)
+
+      expect(response.body).toEqual({
+        message: 'Não autenticado'
+      })
+      expect(getProfileUC.getProfile).not.toHaveBeenCalled()
+    })
   })
 })

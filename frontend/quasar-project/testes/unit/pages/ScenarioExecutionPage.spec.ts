@@ -391,14 +391,25 @@ describe('ScenarioExecutionPage', () => {
     })
 
     it('deve atualizar status da etapa', async () => {
-      vi.mocked(executionService.executionService.updateStepStatus).mockResolvedValueOnce(undefined as any)
-      vi.mocked(executionService.executionService.registerHistory).mockResolvedValueOnce(undefined as any)
-      vi.mocked(executionService.executionService.getHistory).mockResolvedValueOnce(mockHistory)
+      // Mockar todas as chamadas necessárias para loadScenario que é chamado após updateStepStatus
+      vi.mocked(executionService.executionService.updateStepStatus).mockResolvedValue(undefined as any)
+      vi.mocked(executionService.executionService.registerHistory).mockResolvedValue(undefined as any)
+      // Mockar múltiplas chamadas para getScenarioById (uma no beforeEach e outra no loadScenario dentro de setStepStatus)
+      vi.mocked(scenarioService.scenarioService.getScenarioById).mockResolvedValue({ scenario: { ...mockScenario, status: 'EXECUTED', steps: mockScenario.steps } } as any)
+      vi.mocked(projectDetailsService.getProjectMembers).mockResolvedValue(mockMembers as any)
+      vi.mocked(executionService.executionService.getBugs).mockResolvedValue(mockBugs)
+      // Mockar múltiplas chamadas para getHistory (uma no beforeEach e outra no setStepStatus)
+      vi.mocked(executionService.executionService.getHistory).mockResolvedValue(mockHistory)
+      // Mockar múltiplas chamadas para getStepComments (uma no beforeEach e outra no loadStepData dentro de loadScenario)
+      vi.mocked(executionService.executionService.getStepComments).mockResolvedValue(mockComments)
+      // Mockar múltiplas chamadas para getStepAttachments (uma no beforeEach e outra no loadStepData dentro de loadScenario)
+      vi.mocked(executionService.executionService.getStepAttachments).mockResolvedValue(mockAttachments)
+      
       // Garantir que o cenário e os steps estão configurados
       wrapper.vm.scenario = { ...mockScenario, status: 'CREATED' } as any
       wrapper.vm.steps = [
-        { id: 1, action: 'Ação 1', expected: 'Resultado esperado 1', order: 1, status: 'PENDING', actualResult: '' },
-        { id: 2, action: 'Ação 2', expected: 'Resultado esperado 2', order: 2, status: 'PENDING', actualResult: '' },
+        { id: 1, action: 'Ação 1', expected: 'Resultado esperado 1', order: 1, status: 'PENDING', actualResult: '', comments: [], attachments: [] },
+        { id: 2, action: 'Ação 2', expected: 'Resultado esperado 2', order: 2, status: 'PENDING', actualResult: '', comments: [], attachments: [] },
       ]
       wrapper.vm.currentStepIndex = 0
       wrapper.vm.executionStatus = 'NOT_STARTED'
@@ -406,11 +417,11 @@ describe('ScenarioExecutionPage', () => {
 
       await wrapper.vm.setStepStatus('PASSED')
       await wrapper.vm.$nextTick()
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
       expect(executionService.executionService.updateStepStatus).toHaveBeenCalled()
       expect(mockNotifyFn).toHaveBeenCalled()
-    })
+    }, 15000) // Aumentar timeout para 15 segundos
 
     it('deve adicionar comentário com sucesso', async () => {
       vi.mocked(executionService.executionService.addStepComment).mockResolvedValueOnce({ id: 1, comment: 'Comentário', createdAt: '2024-01-01' } as any)

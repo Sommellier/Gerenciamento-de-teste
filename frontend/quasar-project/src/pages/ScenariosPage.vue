@@ -416,7 +416,8 @@ function getScenarioStatus(status: string) {
     'PASSED': 'Concluído',
     'FAILED': 'Falhou',
     'APPROVED': 'Aprovado',
-    'REPROVED': 'Reprovado'
+    'REPROVED': 'Reprovado',
+    'BLOQUEADO': 'Bloqueado'
   }
   return statusMap[status] || status
 }
@@ -428,7 +429,8 @@ function getScenarioStatusColor(status: string) {
     'PASSED': 'green',
     'FAILED': 'red',
     'APPROVED': 'positive',
-    'REPROVED': 'negative'
+    'REPROVED': 'negative',
+    'BLOQUEADO': 'warning'
   }
   return colors[status] || 'grey'
 }
