@@ -1,9 +1,5 @@
 node_modules
 .env.*
-uploads/
-backend/uploads/avatar/*
-backend/uploads/bug-attachments/*
-backend/uploads/evidences/*
 backend/temp/
 backend/prisma/*.db
 *.db
