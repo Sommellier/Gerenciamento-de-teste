@@ -10,3 +10,7 @@ backend/coverage/
 .DS_Store
 node_modules/
 cypress/videos/
+package.json
+package-lock.json
+ecosystem.config.js
+ cypress.config.js 
