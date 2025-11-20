@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { getProjectById } from '../../../application/use-cases/projetos/getProjectById.use-case'
+import { getProjectById } from '../../../application/use-cases/projects/getProjectById.use-case'
 
 jest.mock('../../../infrastructure/prisma', () => {
   return {

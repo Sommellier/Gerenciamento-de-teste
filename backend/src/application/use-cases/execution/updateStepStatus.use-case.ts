@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { PackageStatus, ScenarioStatus } from '@prisma/client'
+import { logger } from '../../../utils/logger'
 
 interface UpdateStepStatusInput {
   stepId: number
@@ -154,14 +155,14 @@ export async function updateStepStatus({
           where: { id: step.scenario.id },
           data: { status: 'BLOQUEADO' as ScenarioStatus }
         })
-        console.log(`[updateStepStatus] Cenário ${step.scenario.id} atualizado para BLOQUEADO`)
+        logger.log(`[updateStepStatus] Cenário ${step.scenario.id} atualizado para BLOQUEADO`)
       } else if (!scenarioBlocked && String(currentScenarioStatus) === 'BLOQUEADO') {
         // Se não está mais bloqueado, reverter para EXECUTED
         await prisma.testScenario.update({
           where: { id: step.scenario.id },
           data: { status: ScenarioStatus.EXECUTED }
         })
-        console.log(`[updateStepStatus] Cenário ${step.scenario.id} atualizado de BLOQUEADO para EXECUTED`)
+        logger.log(`[updateStepStatus] Cenário ${step.scenario.id} atualizado de BLOQUEADO para EXECUTED`)
       }
     }
 
@@ -174,7 +175,7 @@ export async function updateStepStatus({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in updateStepStatus:', error)
+      logger.error('Error in updateStepStatus:', error)
     }
     throw error
   }

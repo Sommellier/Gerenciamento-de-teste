@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import fs from 'fs'
 import path from 'path'
+import { logger } from '../../../utils/logger'
 
 interface DeleteStepAttachmentInput {
   attachmentId: number
@@ -62,7 +63,7 @@ export async function deleteStepAttachment({
         fs.unlinkSync(filePath)
       }
     } catch (fileError) {
-      console.error('Erro ao deletar arquivo físico:', fileError)
+      logger.error('Erro ao deletar arquivo físico:', fileError)
       // Continuar mesmo se não conseguir deletar o arquivo
     }
 
@@ -75,7 +76,7 @@ export async function deleteStepAttachment({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in deleteStepAttachment:', error)
+      logger.error('Error in deleteStepAttachment:', error)
     }
     throw error
   }

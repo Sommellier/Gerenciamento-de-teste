@@ -1,6 +1,6 @@
 import 'dotenv/config'
 import { describe, it, expect, beforeEach, jest } from '@jest/globals'
-import { updateProject } from '../../../application/use-cases/projetos/updateProject.use-case'
+import { updateProject } from '../../../application/use-cases/projects/updateProject.use-case'
 
 // Mock de prisma usado no use-case
 jest.mock('../../../infrastructure/prisma', () => {

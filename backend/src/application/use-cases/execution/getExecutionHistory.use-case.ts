@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface GetExecutionHistoryInput {
   scenarioId: number
@@ -44,7 +45,7 @@ export async function getExecutionHistory({ scenarioId, userId }: GetExecutionHi
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in getExecutionHistory:', error)
+      logger.error('Error in getExecutionHistory:', error)
     }
     throw error
   }

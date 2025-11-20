@@ -1,4 +1,5 @@
 import api from './api'
+import logger from '../utils/logger'
 
 // Interfaces
 export interface ProjectMember {
@@ -32,25 +33,25 @@ export interface Project {
 export const projectService = {
   // Criar novo projeto
   async createProject(payload: CreateProjectPayload): Promise<Project> {
-    console.log('Creating project:', payload)
+    logger.log('Creating project:', payload)
     const response = await api.post<Project>('/projects', payload)
-    console.log('Project created:', response.data)
+    logger.log('Project created:', response.data)
     return response.data
   },
 
   // Buscar releases de um projeto
   async getProjectReleases(projectId: number): Promise<string[]> {
-    console.log('Fetching releases for project:', projectId)
+    logger.log('Fetching releases for project:', projectId)
     const response = await api.get<string[]>(`/projects/${projectId}/releases`)
-    console.log('Releases response:', response.data)
+    logger.log('Releases response:', response.data)
     return response.data
   },
 
   // Buscar membros de um projeto
   async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
-    console.log('Fetching members for project:', projectId)
+    logger.log('Fetching members for project:', projectId)
     const response = await api.get<{ items?: ProjectMember[] } | ProjectMember[]>(`/projects/${projectId}/members`)
-    console.log('Members response:', response.data)
+    logger.log('Members response:', response.data)
     const data = response.data
     return Array.isArray(data) ? data : (data.items || [])
   },

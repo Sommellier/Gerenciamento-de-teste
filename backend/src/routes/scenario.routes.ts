@@ -5,6 +5,7 @@ import fs from 'fs'
 import { ScenarioController } from '../controllers/scenarios/scenario.controller'
 import auth from '../infrastructure/auth'
 import { uploadLimiter } from '../infrastructure/rateLimiter'
+import { logger } from '../utils/logger'
 
 const asyncH =
   (fn: any) =>
@@ -27,7 +28,7 @@ const storage = multer.diskStorage({
       cb(null, uploadPath)
     } catch (error) {
       // Se houver erro ao criar diretório, passar para o callback
-      console.error('Erro ao criar diretório de uploads:', error)
+      logger.error('Erro ao criar diretório de uploads:', error)
       cb(error as Error, '')
     }
   },

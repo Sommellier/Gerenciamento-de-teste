@@ -597,6 +597,7 @@ import {
   type ProjectMember
 } from '../services/project-details.service'
 import api from '../services/api'
+import logger from '../utils/logger'
 
 // Composables
 const route = useRoute()
@@ -656,7 +657,7 @@ const metrics = computed(() => {
     passed: 0,
     failed: 0
   }
-  console.log('Metrics computed:', result)
+  logger.debug('Metrics computed:', result)
   return result
 })
 
@@ -701,7 +702,7 @@ const chartSeries = computed(() => {
     metrics.value.passed,
     metrics.value.failed
   ]
-  console.log('Chart series:', series)
+  logger.debug('Chart series:', series)
   return series
 })
 
@@ -765,7 +766,7 @@ const chartOptions = computed(() => {
       }
     }
   }
-  console.log('Chart options:', options)
+  logger.debug('Chart options:', options)
   return options
 })
 
@@ -978,7 +979,7 @@ const successRateChartSeries = computed(() => {
     return status !== 'APROVADO' && status !== 'REPROVADO'
   }).length
   
-  console.log('Status dos pacotes:', {
+  logger.debug('Status dos pacotes:', {
     total: packages.length,
     approved: approvedPackages,
     reproved: reprovedPackages,
@@ -1166,7 +1167,7 @@ async function addMember() {
       timeout: 5000
     })
   } catch (error: unknown) {
-    console.error('Erro ao enviar convite:', error)
+    logger.error('Erro ao enviar convite:', error)
     interface ErrorWithMessage {
       message?: string
       response?: {
@@ -1258,7 +1259,7 @@ async function removeMember() {
       position: 'top'
     })
   } catch (error: unknown) {
-    console.error('Erro ao remover membro:', error)
+    logger.error('Erro ao remover membro:', error)
     interface ErrorWithMessage {
       message?: string
       response?: {
@@ -1290,7 +1291,7 @@ async function loadCurrentUser() {
     const response = await api.get<{ id: number; name: string; email: string }>('/profile')
     currentUser.value = response.data
   } catch (err: unknown) {
-    console.error('Erro ao carregar usuário atual:', err)
+    logger.error('Erro ao carregar usuário atual:', err)
   }
 }
 
@@ -1353,7 +1354,7 @@ async function updateMemberRole(member: ProjectMember) {
       position: 'top'
     })
   } catch (error: unknown) {
-    console.error('Erro ao atualizar cargo do membro:', error)
+    logger.error('Erro ao atualizar cargo do membro:', error)
     interface ErrorWithMessage {
       message?: string
       response?: {
@@ -1393,16 +1394,16 @@ async function loadProjectDetails() {
   isLoadingProjectDetails.value = true
   loading.value = true
   try {
-    console.log('Iniciando carregamento de dados...')
+    logger.debug('Iniciando carregamento de dados...')
     
     // Primeiro, obter as releases disponíveis
     const releasesData = await getAvailableReleases(projectId.value)
-    console.log('Releases disponíveis:', releasesData)
+    logger.debug('Releases disponíveis:', releasesData)
     availableReleases.value = releasesData
     
     // Se não há releases disponíveis, carregar dados básicos do projeto sem métricas
     if (releasesData.length === 0) {
-      console.log('Nenhuma release disponível - carregando dados básicos do projeto')
+      logger.debug('Nenhuma release disponível - carregando dados básicos do projeto')
       const projectData = await getProjectDetails(projectId.value, undefined)
       project.value = projectData
       members.value = projectData.members || []
@@ -1411,32 +1412,32 @@ async function loadProjectDetails() {
     }
     
     // Definir a release selecionada como a primeira disponível se não estiver definida
-    console.log('selectedRelease.value antes:', selectedRelease.value)
-    console.log('releasesData.length:', releasesData.length)
+    logger.debug('selectedRelease.value antes:', selectedRelease.value)
+    logger.debug('releasesData.length:', releasesData.length)
     if (!selectedRelease.value && releasesData.length > 0) {
       selectedRelease.value = releasesData[0]
-      console.log('Release selecionada:', selectedRelease.value)
+      logger.debug('Release selecionada:', selectedRelease.value)
     }
-    console.log('selectedRelease.value depois:', selectedRelease.value)
+    logger.debug('selectedRelease.value depois:', selectedRelease.value)
     
     // Agora carregar os dados do projeto com a release correta
-    console.log('Carregando dados do projeto...')
+    logger.debug('Carregando dados do projeto...')
     const projectData = await getProjectDetails(projectId.value, selectedRelease.value)
     
-    console.log('Dados recebidos da API:', projectData)
+    logger.debug('Dados recebidos da API:', projectData)
     
     // Atualizar os dados de forma atômica
     project.value = projectData
     members.value = projectData.members || []
     
-    console.log('Dados atualizados no componente:', {
+    logger.debug('Dados atualizados no componente:', {
       projectId: projectId.value,
       release: selectedRelease.value,
       metrics: projectData.metrics,
       scenarioMetrics: projectData.scenarioMetrics
     })
   } catch (error) {
-    console.error('Error loading project details:', error)
+    logger.error('Error loading project details:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar detalhes do projeto',
@@ -1454,10 +1455,10 @@ async function onReleaseChange() {
 
 // Watch para monitorar mudanças no project
 watch(project, (newProject) => {
-  console.log('Project changed:', newProject)
+  logger.debug('Project changed:', newProject)
   if (newProject) {
-    console.log('New project metrics:', newProject.metrics)
-    console.log('New project scenarioMetrics:', newProject.scenarioMetrics)
+    logger.debug('New project metrics:', newProject.metrics)
+    logger.debug('New project scenarioMetrics:', newProject.scenarioMetrics)
   }
 }, { deep: true })
 

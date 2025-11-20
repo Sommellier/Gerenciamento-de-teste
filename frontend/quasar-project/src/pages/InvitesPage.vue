@@ -389,6 +389,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { inviteService, type Invite, type ListInvitesParams } from '../services/invite.service'
+import logger from '../utils/logger'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -445,7 +446,7 @@ const loadInvites = async () => {
     invites.value = response.items
     totalPages.value = response.totalPages
   } catch (error) {
-    console.error('Erro ao carregar convites:', error)
+    logger.error('Erro ao carregar convites:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar convites',

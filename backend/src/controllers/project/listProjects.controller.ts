@@ -1,5 +1,6 @@
 import { RequestHandler } from 'express'
 import { prisma } from '../../infrastructure/prisma'
+import { logger } from '../../utils/logger'
 
 type Input = {
   requesterId: number
@@ -68,7 +69,7 @@ export const listProjects: RequestHandler = async (req, res, next) => {
     
     res.status(200).json(result)
   } catch (err) {
-    console.error('Error in listProjects:', err)
+    logger.error('Error in listProjects:', err)
     next(err as any)
   }
 }

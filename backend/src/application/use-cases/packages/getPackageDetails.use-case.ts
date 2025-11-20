@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface GetPackageDetailsInput {
   packageId: number
@@ -97,7 +98,7 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
           }
         }
       } catch (error) {
-        console.warn('Erro ao fazer parse das tags do cenário:', error)
+        logger.warn('Erro ao fazer parse das tags do cenário:', error)
         parsedTags = []
       }
       
@@ -118,7 +119,7 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
         }
       }
     } catch (error) {
-      console.warn('Erro ao fazer parse das tags do pacote:', error)
+        logger.warn('Erro ao fazer parse das tags do pacote:', error)
       parsedPackageTags = []
     }
 
@@ -201,7 +202,7 @@ export async function getPackageDetails({ packageId, projectId }: GetPackageDeta
   } catch (error) {
     // Apenas logar e converter erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in getPackageDetails:', error)
+      logger.error('Error in getPackageDetails:', error)
       if (error instanceof Error) {
         throw new AppError(`Erro ao buscar detalhes do pacote: ${error.message}`, 500)
       }

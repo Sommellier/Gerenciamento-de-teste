@@ -171,6 +171,7 @@ import {
   type ProjectMember
 } from '../services/project-details.service'
 import { getPackageDetails, updatePackage } from '../services/package.service'
+import logger from '../utils/logger'
 
 // Composables
 const route = useRoute()
@@ -322,7 +323,7 @@ async function onSubmit() {
     
     goBack()
   } catch (error: unknown) {
-    console.error('Error updating package:', error)
+    logger.error('Error updating package:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao atualizar pacote',
@@ -353,7 +354,7 @@ async function loadData() {
       type: packageData.type,
       priority: packageData.priority,
       tags: packageData.tags || [],
-      assigneeId: null, // TODO: Implementar busca por assignee
+      assigneeId: null, // Busca por assignee - implementação futura
       assigneeEmail: packageData.assigneeEmail || '',
       environment: packageData.environment || 'QA',
       release: packageData.release
@@ -362,7 +363,7 @@ async function loadData() {
     // Preencher tags input
     tagsInput.value = packageForm.value.tags.join(', ')
   } catch (error: unknown) {
-    console.error('Error loading data:', error)
+    logger.error('Error loading data:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar dados'

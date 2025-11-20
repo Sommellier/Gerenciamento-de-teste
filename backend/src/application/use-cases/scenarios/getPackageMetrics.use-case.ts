@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface GetPackageMetricsInput {
   packageId: number
@@ -63,8 +64,7 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
 
     // Calcular métricas por ambiente dos cenários
     const scenariosByEnvironment = scenarios.reduce((acc, scenario) => {
-      // TODO: environment não existe no schema atual
-      const env = 'N/A' // scenario.environment || 'N/A'
+      const env = 'N/A'
       acc[env] = (acc[env] || 0) + 1
       return acc
     }, {} as Record<string, number>)
@@ -114,7 +114,7 @@ export async function getPackageMetrics({ packageId, projectId }: GetPackageMetr
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in getPackageMetrics:', error)
+      logger.error('Error in getPackageMetrics:', error)
     }
     throw error
   }

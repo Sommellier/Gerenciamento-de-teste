@@ -181,6 +181,7 @@ import { getProjectMembers, type ProjectMember } from '../../services/project.se
 import { packageService } from '../../services/package.service'
 import { useRoute } from 'vue-router'
 import MemberOptionItem from './MemberOptionItem.vue'
+import logger from '../../utils/logger'
 
 interface Props {
   modelValue: boolean
@@ -320,7 +321,7 @@ const loadMembers = async () => {
       }
     }
   } catch (error) {
-    console.error('Erro ao carregar membros:', error)
+    logger.error('Erro ao carregar membros:', error)
     Notify.create({
       type: 'negative',
       message: 'Erro ao carregar membros do projeto'
@@ -342,7 +343,7 @@ const loadPackageType = async () => {
       }
     }
   } catch (error) {
-    console.error('Erro ao carregar tipo do pacote:', error)
+    logger.error('Erro ao carregar tipo do pacote:', error)
   }
 }
 
@@ -431,7 +432,7 @@ const onSubmit = async () => {
     emit('saved')
     show.value = false
   } catch (error) {
-    console.error('Erro ao salvar cenário:', error)
+    logger.error('Erro ao salvar cenário:', error)
     Notify.create({
       type: 'negative',
       message: 'Erro ao salvar cenário'

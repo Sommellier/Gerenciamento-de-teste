@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface GetPackageBugsInput {
   packageId: number
@@ -79,7 +80,7 @@ export async function getPackageBugs({ packageId, projectId, userId }: GetPackag
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in getPackageBugs:', error)
+      logger.error('Error in getPackageBugs:', error)
     }
     throw error
   }

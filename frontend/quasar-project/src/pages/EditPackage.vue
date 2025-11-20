@@ -247,6 +247,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { getPackageDetails, updatePackage } from '../services/package.service'
 import { getProjectReleases, getProjectMembers, addRelease } from '../services/project.service'
+import logger from '../utils/logger'
 
 const router = useRouter()
 const route = useRoute()
@@ -350,7 +351,7 @@ const loadProjectData = async () => {
     const pid = projectId.value
     
     if (!pid || isNaN(pid)) {
-      console.warn('ID do projeto não fornecido ou inválido')
+      logger.warn('ID do projeto não fornecido ou inválido')
       return
     }
     
@@ -366,7 +367,7 @@ const loadProjectData = async () => {
       value: member.email
     }))
   } catch (error: unknown) {
-    console.error('Erro ao carregar dados do projeto:', error)
+    logger.error('Erro ao carregar dados do projeto:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar dados do projeto'
@@ -381,7 +382,7 @@ const loadPackage = async () => {
     loading.value = true
     const pid = projectId.value
     if (!pid || isNaN(pid)) {
-      console.warn('ID do projeto não fornecido ou inválido')
+      logger.warn('ID do projeto não fornecido ou inválido')
       return
     }
     const packageData = await getPackageDetails(pid, packageId.value)
@@ -400,7 +401,7 @@ const loadPackage = async () => {
     
     tagsInput.value = form.value.tags.join(', ')
   } catch (error: unknown) {
-    console.error('Erro ao carregar pacote:', error)
+    logger.error('Erro ao carregar pacote:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar pacote'
@@ -461,7 +462,7 @@ const createNewRelease = () => {
       message: 'Release criada com sucesso!'
     })
   } catch (error: unknown) {
-    console.error('Erro ao criar release:', error)
+    logger.error('Erro ao criar release:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao criar release'
@@ -541,7 +542,7 @@ const onSubmit = async () => {
 
     goBack()
   } catch (error: unknown) {
-    console.error('Erro ao atualizar pacote:', error)
+    logger.error('Erro ao atualizar pacote:', error)
     const errorMessage = error && typeof error === 'object' && 'response' in error
       ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Erro ao atualizar pacote'
       : 'Erro ao atualizar pacote'

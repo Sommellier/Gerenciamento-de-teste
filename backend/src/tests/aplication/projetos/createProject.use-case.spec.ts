@@ -2,7 +2,7 @@
 import 'dotenv/config'
 import { beforeEach, afterAll, describe, expect, it, jest } from '@jest/globals'
 import { prisma } from '../../../infrastructure/prisma'
-import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
+import { createProject } from '../../../application/use-cases/projects/createProject.use-case'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
 import { AppError } from '../../../utils/AppError'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'

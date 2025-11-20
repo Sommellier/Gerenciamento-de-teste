@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface GetStepCommentsInput {
   stepId: number
@@ -48,7 +49,7 @@ export async function getStepComments({ stepId, userId }: GetStepCommentsInput) 
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in getStepComments:', error)
+      logger.error('Error in getStepComments:', error)
     }
     throw error
   }

@@ -6,6 +6,7 @@ import { ExecutionController } from '../controllers/execution/execution.controll
 import auth from '../infrastructure/auth'
 import { requirePermission, requireAnyPermission } from '../infrastructure/permissions'
 import { uploadLimiter } from '../infrastructure/rateLimiter'
+import { logger } from '../utils/logger'
 
 const asyncH =
   (fn: any) =>
@@ -28,7 +29,7 @@ const storage = multer.diskStorage({
       cb(null, uploadPath)
     } catch (error) {
       // Se houver erro ao criar diretório, passar para o callback
-      console.error('Erro ao criar diretório de uploads:', error)
+      logger.error('Erro ao criar diretório de uploads:', error)
       cb(error as Error, '')
     }
   },
@@ -66,7 +67,7 @@ const bugAttachmentStorage = multer.diskStorage({
       cb(null, uploadPath)
     } catch (error) {
       // Se houver erro ao criar diretório, passar para o callback
-      console.error('Erro ao criar diretório de uploads de bugs:', error)
+      logger.error('Erro ao criar diretório de uploads de bugs:', error)
       cb(error as Error, '')
     }
   },

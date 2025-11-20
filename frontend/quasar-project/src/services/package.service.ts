@@ -138,10 +138,12 @@ class PackageService {
   /**
    * Executa um pacote (marca como executado)
    */
-  executePackage(packageId: number): void {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  executePackage(_packageId: number): void {
     // Por enquanto, apenas simula a execução
     // Em uma implementação real, isso marcaria o pacote como executado
-    console.log('Executing package:', packageId)
+    // Execução de pacote - implementação futura
+    // O parâmetro _packageId será usado na implementação futura
   }
 
   /**

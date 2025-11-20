@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import { getProjectDetails } from '../../application/use-cases/projetos/getProjectDetails.use-case'
+import { getProjectDetails } from '../../application/use-cases/projects/getProjectDetails.use-case'
 import { AppError } from '../../utils/AppError'
 
 type AuthenticatedRequest = Request & {

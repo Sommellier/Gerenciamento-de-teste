@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import fs from 'fs'
 import path from 'path'
+import { logger } from '../../../utils/logger'
 
 interface UploadBugAttachmentInput {
   bugId: number
@@ -81,7 +82,7 @@ export async function uploadBugAttachment({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in uploadBugAttachment:', error)
+      logger.error('Error in uploadBugAttachment:', error)
     }
     throw error
   }

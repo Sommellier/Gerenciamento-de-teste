@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { updateProject } from '../../application/use-cases/projetos/updateProject.use-case'
+import { updateProject } from '../../application/use-cases/projects/updateProject.use-case'
 
 type AuthenticatedRequest = Request & { user?: { id: number } }
 

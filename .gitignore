@@ -1,7 +1,5 @@
 node_modules
 .env.*
-uploads/
-backend/uploads/
 backend/temp/
 backend/prisma/*.db
 *.db
@@ -10,3 +8,7 @@ backend/coverage/
 .DS_Store
 node_modules/
 cypress/videos/
+package.json
+package-lock.json
+ecosystem.config.js
+cypress.config.js 

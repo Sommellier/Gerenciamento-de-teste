@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface DeletePackageInput {
   packageId: number
@@ -29,7 +30,7 @@ export async function deletePackage({ packageId, projectId }: DeletePackageInput
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in deletePackage:', error)
+      logger.error('Error in deletePackage:', error)
     }
     throw error
   }

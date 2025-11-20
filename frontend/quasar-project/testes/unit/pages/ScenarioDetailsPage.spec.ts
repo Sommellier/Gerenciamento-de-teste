@@ -519,7 +519,7 @@ describe('ScenarioDetailsPage', () => {
       expect(scenarioService.scenarioService.updateScenario).not.toHaveBeenCalled()
       expect(mockNotify).toHaveBeenCalledWith({
         type: 'warning',
-        message: 'Não é possível excluir etapas em um cenário concluído',
+        message: 'Não é possível excluir etapas em um cenário concluído ou aprovado',
         timeout: 3000
       })
     })
@@ -534,7 +534,7 @@ describe('ScenarioDetailsPage', () => {
       expect(scenarioService.scenarioService.updateScenario).not.toHaveBeenCalled()
       expect(mockNotify).toHaveBeenCalledWith({
         type: 'warning',
-        message: 'Não é possível excluir etapas em um cenário concluído',
+        message: 'Não é possível excluir etapas em um cenário concluído ou aprovado',
         timeout: 3000
       })
     })

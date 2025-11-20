@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { PackageStatus } from '@prisma/client'
 import { sendEmail } from '../../../utils/email.util'
+import { logger } from '../../../utils/logger'
 
 interface RejectPackageInput {
   packageId: number
@@ -108,7 +109,7 @@ export class RejectPackageUseCase {
         </div>
       `
       return sendEmail(email, subject, html).catch(error => {
-        console.error(`Erro ao enviar e-mail para ${email}:`, error)
+        logger.error(`Erro ao enviar e-mail para ${email}:`, error)
         // Não falha a operação se o e-mail falhar
       })
     })

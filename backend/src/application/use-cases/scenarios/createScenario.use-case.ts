@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface CreateScenarioInput {
   projectId: number
@@ -92,12 +93,6 @@ export async function createScenario({
         type: type as any,
         priority: priority as any,
         tags: JSON.stringify(tags), // Converter array para JSON string
-        // TODO: assigneeEmail não existe no schema atual
-        // assigneeEmail: finalAssigneeEmail,
-        // TODO: environment não existe no schema atual
-        // environment: environment as any,
-        // TODO: release não existe no schema atual
-        // release,
         projectId,
         steps: {
           create: steps.map((step, index) => ({
@@ -121,7 +116,7 @@ export async function createScenario({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in createScenario:', error)
+      logger.error('Error in createScenario:', error)
     }
     throw error
   }

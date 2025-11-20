@@ -212,6 +212,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from 'src/services/api'
+import logger from '../utils/logger'
 
 const router = useRouter()
 const route = useRoute()
@@ -264,7 +265,7 @@ async function loadProject() {
       }
     }
   } catch (err: unknown) {
-    console.error('Error loading project:', err)
+    logger.error('Error loading project:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar projeto',

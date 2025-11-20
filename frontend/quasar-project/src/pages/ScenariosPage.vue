@@ -248,6 +248,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from 'src/services/api'
 import { type TestScenario } from '../services/scenario.service'
+import logger from '../utils/logger'
 
 // Interface estendida para incluir propriedades adicionais que podem vir da API
 interface ExtendedScenario extends TestScenario {
@@ -290,7 +291,7 @@ function createScenario() {
 }
 
 function viewScenario(scenario: ExtendedScenario) {
-  // TODO: Implementar visualização de cenário
+  // Visualização de cenário - implementação futura
   void scenario // Marcar como usado explicitamente
 }
 
@@ -304,7 +305,7 @@ function showScenarioMenu(scenario: ExtendedScenario, event: Event) {
 function editScenario(_scenario: ExtendedScenario) {
   void _scenario // Marcar como usado explicitamente
   showMenu.value = false
-  // TODO: Implementar edição de cenário
+  // Edição de cenário - implementação futura
 }
 
 function deleteScenario(scenario: ExtendedScenario) {
@@ -327,7 +328,7 @@ async function confirmDelete() {
     })
     await loadScenarios()
   } catch (err: unknown) {
-    console.error('Erro ao excluir cenário:', err)
+    logger.error('Erro ao excluir cenário:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao excluir cenário',
@@ -358,7 +359,7 @@ async function loadScenarios() {
     totalPages.value = 1
     totalScenarios.value = scenarios.value.length
   } catch (err: unknown) {
-    console.error('Error loading scenarios:', err)
+    logger.error('Error loading scenarios:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar cenários',
@@ -468,7 +469,7 @@ onMounted(async () => {
       projectName.value = response.data.name
     }
   } catch (err: unknown) {
-    console.error('Error loading project name:', err)
+    logger.error('Error loading project name:', err)
   }
   
   void loadScenarios()

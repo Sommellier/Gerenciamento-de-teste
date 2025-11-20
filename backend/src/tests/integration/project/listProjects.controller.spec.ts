@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, beforeEach, afterAll, jest } from '@je
 
 import { prisma } from '../../../infrastructure/prisma'
 import { createUser } from '../../../application/use-cases/user/createUser.use-case'
-import { createProject } from '../../../application/use-cases/projetos/createProject.use-case'
+import { createProject } from '../../../application/use-cases/projects/createProject.use-case'
 import { listProjects, listProjectsQuery } from '../../../controllers/project/listProjects.controller'
 
 // -------------------- Helpers p/ integração --------------------

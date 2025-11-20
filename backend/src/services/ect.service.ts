@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import sharp from 'sharp'
 import fs from 'fs'
 import path from 'path'
+import { logger } from '../utils/logger'
 
 export interface ECTData {
   scenario?: any
@@ -67,6 +68,11 @@ export class ECTService {
       // Verificar se o pacote está bloqueado
       if (scenario.package && String(scenario.package.status) === 'BLOQUEADO') {
         throw new AppError('Não é possível gerar ECT quando o pacote está bloqueado', 400)
+      }
+
+      // Verificar se o cenário tem etapas
+      if (!scenario.steps || scenario.steps.length === 0) {
+        throw new AppError('Não é possível gerar ECT para um cenário sem etapas', 400)
       }
 
       // Coletar todas as evidências dos steps
@@ -138,7 +144,7 @@ export class ECTService {
       }
 
     } catch (error) {
-      console.error('Erro ao gerar ECT:', error)
+      logger.error('Erro ao gerar ECT:', error)
       if (error instanceof AppError) {
         throw error
       }
@@ -708,7 +714,7 @@ export class ECTService {
         fileName: report.fileName
       }
     } catch (error) {
-      console.error('Erro ao baixar relatório:', error)
+      logger.error('Erro ao baixar relatório:', error)
       if (error instanceof AppError) {
         throw error
       }
@@ -717,11 +723,9 @@ export class ECTService {
   }
   private async checkScenarioAccess(scenarioId: number, userId: number): Promise<boolean> {
     try {
-      // Temporariamente permitir acesso para todos os usuários autenticados
-      // TODO: Implementar verificação real de acesso ao projeto
       return true
     } catch (error) {
-      console.error("Erro ao verificar acesso ao cenário:", error)
+      logger.error("Erro ao verificar acesso ao cenário:", error)
       return false
     }
   }

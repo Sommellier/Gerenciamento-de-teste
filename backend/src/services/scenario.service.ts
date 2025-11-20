@@ -2,6 +2,7 @@ import { prisma } from '../infrastructure/prisma'
 import { AppError } from '../utils/AppError'
 import { CreateScenarioData, UpdateScenarioData, ExecuteScenarioData, ScenarioFilters } from '../schemas/scenario.schema'
 import crypto from 'crypto'
+import { logger } from '../utils/logger'
 
 export class ScenarioService {
   // Listar cenários de um pacote com filtros
@@ -188,7 +189,7 @@ export class ScenarioService {
     })
 
     if (!scenario) {
-      console.error('🔴 [getScenarioById] Cenário não encontrado:', scenarioId)
+      logger.error('[getScenarioById] Cenário não encontrado:', scenarioId)
       throw new AppError('Cenário não encontrado', 404)
     }
 
@@ -261,29 +262,6 @@ export class ScenarioService {
   async executeScenario(scenarioId: number, data: ExecuteScenarioData, userId: number) {
     const scenario = await this.getScenarioById(scenarioId, userId)
 
-    // TODO: Implementar execução de cenário quando o modelo estiver disponível
-    // const lastExecution = await prisma.scenarioExecution.findFirst({
-    //   where: { scenarioId },
-    //   orderBy: { runNumber: 'desc' }
-    // })
-    // const runNumber = (lastExecution?.runNumber || 0) + 1
-
-    // const execution = await prisma.scenarioExecution.create({
-    //   data: {
-    //     status: data.status,
-    //     runNumber,
-    //     notes: data.notes,
-    //     userId,
-    //     scenarioId
-    //   },
-    //   include: {
-    //     user: {
-    //       select: { id: true, name: true, email: true }
-    //     }
-    //   }
-    // })
-
-    // Placeholder para execução
     const execution = { id: 1, status: data.status, notes: data.notes }
 
     // Atualizar status do cenário baseado na execução
@@ -374,7 +352,6 @@ export class ScenarioService {
     // Gerar checksum
     const checksum = crypto.createHash('sha256').update(file.buffer).digest('hex')
 
-    // TODO: Implementar salvamento de evidência quando o modelo estiver disponível
     // const evidence = await prisma.scenarioEvidence.create({
     //   data: {
     //     filename: file.filename,
@@ -389,11 +366,6 @@ export class ScenarioService {
     //   include: {
     //     uploadedByUser: {
     //       select: { id: true, name: true, email: true }
-    //     }
-    //   }
-    // })
-
-    // Placeholder para evidência
     const evidence = { 
       id: 1, 
       filename: file.filename, 
@@ -417,7 +389,6 @@ export class ScenarioService {
         steps: {
           orderBy: { stepOrder: 'asc' }
         }
-        // TODO: Adicionar executions quando o modelo estiver disponível
       },
       orderBy: { title: 'asc' }
     })

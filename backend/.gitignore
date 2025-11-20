@@ -1,8 +1,12 @@
 node_modules/
 .env
+.env.test
 dist/
 coverage/
 .prisma/
 .db
 uploads/
 temp/
+avatars/
+newrelic_agent.log
+*.tsbuildinfo

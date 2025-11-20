@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface AddStepCommentInput {
   stepId: number
@@ -50,14 +51,12 @@ export async function addStepComment({
         }
       }
     })
-    // TODO: Enviar notificações para usuários mencionados
 
-    
     return comment
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in addStepComment:', error)
+      logger.error('Error in addStepComment:', error)
     }
     throw error
   }

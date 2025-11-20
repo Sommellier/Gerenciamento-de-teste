@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface CreatePackageInput {
   projectId: number
@@ -96,7 +97,7 @@ export async function createPackage({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in createPackage:', error)
+      logger.error('Error in createPackage:', error)
     }
     throw error
   }
