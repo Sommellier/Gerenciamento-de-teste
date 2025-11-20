@@ -168,6 +168,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Notify } from 'quasar'
 import { scenarioService, type TestScenario, type ScenarioEvidence, type ScenarioExecution } from '../../services/scenario.service'
+import logger from '../../utils/logger'
 
 interface Props {
   modelValue: boolean
@@ -204,7 +205,7 @@ const loadEvidences = async () => {
     executionsWithEvidence.value = (response.scenario.executions || [])
       .filter(exec => exec.evidences && exec.evidences.length > 0)
   } catch (error) {
-    console.error('Erro ao carregar evidências:', error)
+    logger.error('Erro ao carregar evidências:', error)
   }
 }
 
@@ -224,7 +225,7 @@ const uploadFile = async () => {
     await loadEvidences()
     emit('uploaded')
   } catch (error) {
-    console.error('Erro ao enviar arquivo:', error)
+    logger.error('Erro ao enviar arquivo:', error)
     Notify.create({
       type: 'negative',
       message: 'Erro ao enviar arquivo'
@@ -267,7 +268,7 @@ const deleteEvidence = (evidenceId: number) => {
       message: 'Funcionalidade de exclusão será implementada'
     })
   } catch (error) {
-    console.error('Erro ao excluir evidência:', error)
+    logger.error('Erro ao excluir evidência:', error)
     Notify.create({
       type: 'negative',
       message: 'Erro ao excluir evidência'

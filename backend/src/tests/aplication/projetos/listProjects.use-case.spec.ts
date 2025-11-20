@@ -12,7 +12,7 @@ jest.mock('../../../infrastructure/prisma', () => {
 })
 
 import { prisma } from '../../../infrastructure/prisma'
-import { listProjectsQuery } from '../../../application/use-cases/projetos/listProjects.use-case'
+import { listProjectsQuery } from '../../../application/use-cases/projects/listProjects.use-case'
 import { listProjects } from '../../../controllers/project/listProjects.controller'
 
 const mockedFindMemberships =

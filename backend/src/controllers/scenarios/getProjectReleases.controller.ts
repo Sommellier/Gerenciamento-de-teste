@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { getProjectReleases } from '../../application/use-cases/scenarios/getProjectReleases.use-case'
+import { logger } from '../../utils/logger'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -22,7 +23,7 @@ export const getProjectReleasesController = async (
     const releases = await getProjectReleases({ projectId: Number(projectId) })
     res.json(releases)
   } catch (err: any) {
-    console.error('Erro no getProjectReleasesController:', err)
+    logger.error('Erro no getProjectReleasesController:', err)
     next(err)
   }
 }

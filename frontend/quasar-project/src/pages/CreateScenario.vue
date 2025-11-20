@@ -264,6 +264,7 @@ import {
   getProjectMembers,
   type ProjectMember
 } from '../services/project.service'
+import logger from '../utils/logger'
 
 // Composables
 const route = useRoute()
@@ -388,7 +389,7 @@ async function createScenario() {
     }
 
     // Preparar dados para a API
-    // TODO: Implementar chamada para a API quando o endpoint estiver disponível
+    // Chamada para a API - implementação futura se necessário
     // const scenarioData = {
     //   title: scenarioForm.value.name,
     //   description: `Cenário de teste: ${scenarioForm.value.name}`,
@@ -411,7 +412,7 @@ async function createScenario() {
     showSuccessDialog.value = true
     
   } catch (error: unknown) {
-    console.error('Error creating scenario:', error)
+    logger.error('Error creating scenario:', error)
     const errorMsg = error instanceof Error 
       ? error.message 
       : 'Erro inesperado ao criar cenário'
@@ -435,7 +436,7 @@ async function loadData() {
       scenarioForm.value.approver = owner.id
     }
   } catch (error) {
-    console.error('Error loading data:', error)
+    logger.error('Error loading data:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar dados do projeto',

@@ -1,6 +1,6 @@
 // src/controllers/project/deleteProject.controller.ts
 import { RequestHandler } from 'express'
-import { deleteProject } from '../../application/use-cases/projetos/deleteProject.use-case'
+import { deleteProject } from '../../application/use-cases/projects/deleteProject.use-case'
 
 export const deleteProjectController: RequestHandler = async (req, res, next) => {
   try {

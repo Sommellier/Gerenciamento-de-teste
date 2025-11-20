@@ -253,6 +253,7 @@ import { createPackage } from '../services/package.service'
 import { getProjectReleases, getProjectMembers, addRelease } from '../services/project.service'
 import { TYPE_OPTIONS, PRIORITY_OPTIONS, ENVIRONMENT_OPTIONS } from '../utils/constants'
 import { createRequiredRule, getOptionValue } from '../utils/helpers'
+import logger from '../utils/logger'
 
 const router = useRouter()
 const route = useRoute()
@@ -317,10 +318,9 @@ const onDateSelected = (date: string) => {
 const loadProjectData = async () => {
   try {
     loadingData.value = true
-    console.log('Route params:', route.params)
-    console.log('ProjectId from params:', route.params.projectId)
+    logger.debug('Route params:', route.params)
     const projectId = Number(route.params.projectId)
-    console.log('ProjectId after Number():', projectId)
+    logger.debug('ProjectId:', projectId)
     
     if (!projectId || isNaN(projectId)) {
       throw new Error('ID do projeto inválido')
@@ -353,7 +353,7 @@ const loadProjectData = async () => {
       })
       .filter((member): member is { label: string; value: string } => member !== null)
   } catch (error: unknown) {
-    console.error('Erro ao carregar dados do projeto:', error)
+logger.error('Erro ao carregar dados do projeto:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar dados do projeto'
@@ -413,7 +413,7 @@ const createNewRelease = () => {
       message: 'Release criada com sucesso!'
     })
   } catch (error: unknown) {
-    console.error('Erro ao criar release:', error)
+logger.error('Erro ao criar release:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao criar release'
@@ -433,7 +433,7 @@ const onSubmit = async () => {
     loading.value = true
 
     const projectId = route.params.projectId as string
-    console.log('onSubmit - projectId:', projectId)
+    logger.debug('onSubmit - projectId:', projectId)
     
     // Converter objetos para valores antes de enviar (getOptionValue importado de utils/helpers)
     type PackageType = 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E'
@@ -468,7 +468,7 @@ const onSubmit = async () => {
     if (assigneeEmailValue) {
       packageData.assigneeEmail = assigneeEmailValue
     }
-    console.log('onSubmit - packageData:', packageData)
+    logger.debug('onSubmit - packageData:', packageData)
 
     await createPackage(Number(projectId), packageData)
 
@@ -479,7 +479,7 @@ const onSubmit = async () => {
 
     void router.push(`/projects/${projectId}`)
   } catch (error: unknown) {
-    console.error('Erro ao criar pacote:', error)
+logger.error('Erro ao criar pacote:', error)
     const errorMessage = error && typeof error === 'object' && 'response' in error
       ? (error as { response?: { data?: { message?: string } } }).response?.data?.message || 'Erro ao criar pacote'
       : 'Erro ao criar pacote'

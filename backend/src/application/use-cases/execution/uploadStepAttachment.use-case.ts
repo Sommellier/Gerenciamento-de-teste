@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface UploadStepAttachmentInput {
   stepId: number
@@ -76,7 +77,7 @@ export async function uploadStepAttachment({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in uploadStepAttachment:', error)
+      logger.error('Error in uploadStepAttachment:', error)
       // Se for um erro do sistema de arquivos ou do banco, converter para AppError
       if (error instanceof Error) {
         throw new AppError(`Erro ao fazer upload: ${error.message}`, 500)

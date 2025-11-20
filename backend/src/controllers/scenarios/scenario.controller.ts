@@ -10,6 +10,7 @@ import {
   validateScenarioFilters
 } from '../../schemas/scenario.schema'
 import { AppError } from '../../utils/AppError'
+import { logger } from '../../utils/logger'
 
 const scenarioService = new ScenarioService()
 
@@ -41,7 +42,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao buscar cenários:', error)
+      logger.error('Erro ao buscar cenários:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -72,7 +73,7 @@ export class ScenarioController {
       if (error instanceof Error && error.message.includes('obrigatório')) {
         return res.status(400).json({ message: error.message })
       }
-      console.error('Erro ao criar cenário:', error)
+      logger.error('Erro ao criar cenário:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -97,7 +98,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao buscar cenário:', error)
+      logger.error('Erro ao buscar cenário:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -138,7 +139,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao atualizar cenário:', error)
+      logger.error('Erro ao atualizar cenário:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -160,7 +161,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao deletar cenário:', error)
+      logger.error('Erro ao deletar cenário:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -191,7 +192,7 @@ export class ScenarioController {
       if (error instanceof Error && error.message.includes('obrigatório')) {
         return res.status(400).json({ message: error.message })
       }
-      console.error('Erro ao executar cenário:', error)
+      logger.error('Erro ao executar cenário:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -216,7 +217,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao duplicar cenário:', error)
+      logger.error('Erro ao duplicar cenário:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -245,7 +246,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao enviar evidência:', error)
+      logger.error('Erro ao enviar evidência:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -269,7 +270,7 @@ export class ScenarioController {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao exportar cenários:', error)
+      logger.error('Erro ao exportar cenários:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }
@@ -314,7 +315,7 @@ ${scenarios.scenarios.map((s: any) =>
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ message: error.message })
       }
-      console.error('Erro ao gerar relatório:', error)
+      logger.error('Erro ao gerar relatório:', error)
       res.status(500).json({ message: 'Erro interno do servidor' })
     }
   }

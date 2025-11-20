@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { createProject } from '../../application/use-cases/projetos/createProject.use-case'
+import { createProject } from '../../application/use-cases/projects/createProject.use-case'
 
 export const createProjectController = async (req: Request, res: Response, next: NextFunction) => {
   try {

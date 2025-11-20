@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { getProjectScenarioMetrics } from '../scenarios/getProjectScenarioMetrics.use-case'
+import { logger } from '../../../utils/logger'
 
 interface GetProjectDetailsInput {
   projectId: number
@@ -9,7 +10,7 @@ interface GetProjectDetailsInput {
 
 export async function getProjectDetails({ projectId, release }: GetProjectDetailsInput) {
   try {
-    console.log('getProjectDetails chamado com:', { projectId, release })
+    logger.log('getProjectDetails chamado com:', { projectId, release })
     
     // Verificar se o projeto existe
     const project = await prisma.project.findUnique({
@@ -27,11 +28,11 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
     })
 
     if (!project) {
-      console.log('Projeto não encontrado:', projectId)
+      logger.log('Projeto não encontrado:', projectId)
       throw new AppError('Projeto não encontrado', 404)
     }
 
-    console.log('Projeto encontrado:', project.name)
+    logger.log('Projeto encontrado:', project.name)
 
     // Buscar membros do projeto
     const members = await prisma.userOnProject.findMany({
@@ -174,7 +175,7 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Erro no getProjectDetails:', error)
+      logger.error('Erro no getProjectDetails:', error)
     }
     throw error
   }

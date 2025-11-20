@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppError } from '../../utils/AppError'
 import { prisma } from '../../infrastructure/prisma'
+import { logger } from '../../utils/logger'
 import { addStepComment } from '../../application/use-cases/execution/addStepComment.use-case'
 import { getStepComments } from '../../application/use-cases/execution/getStepComments.use-case'
 import { uploadStepAttachment } from '../../application/use-cases/execution/uploadStepAttachment.use-case'
@@ -143,7 +144,7 @@ export class ExecutionController {
       const userId = await getValidUserId(req)
       const { status, actualResult } = req.body
 
-      console.log('updateStepStatusHandler - stepId:', stepId, 'status:', status, 'actualResult:', actualResult)
+      logger.log('updateStepStatusHandler - stepId:', stepId, 'status:', status, 'actualResult:', actualResult)
 
       if (!status) {
         throw new AppError('Status é obrigatório', 400)
@@ -156,14 +157,14 @@ export class ExecutionController {
         userId
       })
 
-      console.log('updateStepStatusHandler - Step atualizado:', step)
+      logger.log('updateStepStatusHandler - Step atualizado:', step)
 
       res.json({
         message: 'Status da etapa atualizado com sucesso',
         step
       })
     } catch (err: any) {
-      console.error('updateStepStatusHandler - Erro:', err)
+      logger.error('updateStepStatusHandler - Erro:', err)
       next(err)
     }
   }

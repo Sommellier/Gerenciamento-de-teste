@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface RegisterExecutionHistoryInput {
   scenarioId: number
@@ -54,7 +55,7 @@ export async function registerExecutionHistory({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in registerExecutionHistory:', error)
+      logger.error('Error in registerExecutionHistory:', error)
     }
     throw error
   }

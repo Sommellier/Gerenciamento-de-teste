@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { AppError } from '../../utils/AppError'
 import { listMembers } from '../../application/use-cases/members/listMembers.use-case'
 import type { Role } from '@prisma/client'
+import { logger } from '../../utils/logger'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -53,7 +54,7 @@ export async function listMembersController(
 
     return res.status(200).json(result)
   } catch (err) {
-    console.error('Error in listMembersController:', err)
+    logger.error('Error in listMembersController:', err)
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ message: err.message })
     }

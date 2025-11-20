@@ -1,5 +1,5 @@
 import { prisma } from '../../../infrastructure/prisma'
-import { getProjectDetails } from '../../../application/use-cases/projetos/getProjectDetails.use-case'
+import { getProjectDetails } from '../../../application/use-cases/projects/getProjectDetails.use-case'
 import { AppError } from '../../../utils/AppError'
 
 // Mock das dependências

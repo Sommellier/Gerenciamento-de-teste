@@ -138,6 +138,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { Notify } from 'quasar'
 import { scenarioService, type TestScenario } from '../../services/scenario.service'
+import logger from '../../utils/logger'
 
 interface Props {
   modelValue: boolean
@@ -242,7 +243,7 @@ const onExecute = async () => {
     emit('executed')
     show.value = false
   } catch (error) {
-    console.error('Erro ao executar cenário:', error)
+    logger.error('Erro ao executar cenário:', error)
     Notify.create({
       type: 'negative',
       message: 'Erro ao registrar execução'

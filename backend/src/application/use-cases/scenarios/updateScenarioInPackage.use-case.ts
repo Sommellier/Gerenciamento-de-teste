@@ -1,5 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
+import { ScenarioStatus } from '@prisma/client'
 
 interface UpdateScenarioInPackageInput {
   scenarioId: number
@@ -160,6 +162,30 @@ export async function updateScenarioInPackage({
         }
       })
 
+      // Verificar se todas as etapas estão bloqueadas e atualizar status do cenário
+      if (finalScenario && finalScenario.steps.length > 0) {
+        const allStepsBlocked = finalScenario.steps.every(step => step.status === 'BLOCKED')
+        const currentStatus = finalScenario.status
+
+        if (allStepsBlocked && String(currentStatus) !== 'BLOQUEADO') {
+          // Atualizar status do cenário para BLOQUEADO
+          await prisma.testScenario.update({
+            where: { id: scenarioId },
+            data: { status: 'BLOQUEADO' as ScenarioStatus }
+          })
+          // Atualizar o objeto retornado
+          finalScenario.status = 'BLOQUEADO' as ScenarioStatus
+        } else if (!allStepsBlocked && String(currentStatus) === 'BLOQUEADO') {
+          // Se não está mais bloqueado, reverter para EXECUTED
+          await prisma.testScenario.update({
+            where: { id: scenarioId },
+            data: { status: ScenarioStatus.EXECUTED }
+          })
+          // Atualizar o objeto retornado
+          finalScenario.status = ScenarioStatus.EXECUTED
+        }
+      }
+
       return {
         ...finalScenario,
         tags: finalScenario?.tags ? JSON.parse(finalScenario.tags) : []
@@ -173,7 +199,7 @@ export async function updateScenarioInPackage({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in updateScenarioInPackage:', error)
+      logger.error('Error in updateScenarioInPackage:', error)
     }
     throw error
   }

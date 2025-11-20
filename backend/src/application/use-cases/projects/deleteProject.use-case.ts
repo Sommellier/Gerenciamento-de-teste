@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import fs from 'fs'
 import path from 'path'
+import { logger } from '../../../utils/logger'
 
 type Input = {
   projectId: number
@@ -51,7 +52,7 @@ export async function deleteProject({ projectId, requesterId }: Input): Promise<
         fs.unlinkSync(filePath)
       }
     } catch (fileError) {
-      console.error(`Erro ao deletar arquivo de evidência ${attachment.filename}:`, fileError)
+      logger.error(`Erro ao deletar arquivo de evidência ${attachment.filename}:`, fileError)
       // Continuar mesmo se não conseguir deletar o arquivo
     }
   }
@@ -64,7 +65,7 @@ export async function deleteProject({ projectId, requesterId }: Input): Promise<
         fs.unlinkSync(filePath)
       }
     } catch (fileError) {
-      console.error(`Erro ao deletar arquivo de anexo de bug ${attachment.filename}:`, fileError)
+      logger.error(`Erro ao deletar arquivo de anexo de bug ${attachment.filename}:`, fileError)
       // Continuar mesmo se não conseguir deletar o arquivo
     }
   }

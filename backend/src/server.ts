@@ -4,6 +4,7 @@ import helmet from 'helmet'
 import morgan from 'morgan'
 import path from 'path'
 import { publicLimiter } from './infrastructure/rateLimiter'
+import { logger } from './utils/logger'
 
 import userRoutes from './routes/user.routes'
 import authRoutes from './routes/auth.routes'
@@ -87,7 +88,7 @@ const corsOptions: cors.CorsOptions = {
     if (allowedOrigins.length === 0) {
       // Se não configurado, permitir temporariamente com aviso (consistente com o middleware OPTIONS)
       if (process.env.NODE_ENV === 'production') {
-        console.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
+        logger.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
       }
       return callback(null, true)
     }
@@ -228,9 +229,7 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // Error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(err?.stack || err)
-  }
+  logger.error(err?.stack || err)
 
   const status = err?.statusCode || 500
   const message =

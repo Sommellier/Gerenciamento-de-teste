@@ -1,4 +1,5 @@
 import api from './api'
+import logger from '../utils/logger'
 
 export interface ECTGenerationResponse {
   message: string
@@ -10,12 +11,12 @@ export const ectService = {
   // Gerar ECT para um cenário
   async generateECT(scenarioId: number): Promise<ECTGenerationResponse> {
     try {
-      console.log('Gerando ECT para cenário:', scenarioId)
+      logger.log('Gerando ECT para cenário:', scenarioId)
       const response = await api.post<ECTGenerationResponse>(`/scenarios/${scenarioId}/ect`)
-      console.log('ECT gerado com sucesso:', response.data)
+      logger.log('ECT gerado com sucesso:', response.data)
       return response.data
     } catch (error: unknown) {
-      console.error('Erro ao gerar ECT:', error)
+      logger.error('Erro ao gerar ECT:', error)
       interface AxiosError {
         response?: {
           data?: {
@@ -33,7 +34,7 @@ export const ectService = {
   // Download de relatório
   async downloadReport(reportId: number): Promise<void> {
     try {
-      console.log('Baixando relatório:', reportId)
+      logger.log('Baixando relatório:', reportId)
       const response = await api.get<Blob>(`/reports/${reportId}/download`, {
         responseType: 'blob'
       })
@@ -65,9 +66,9 @@ export const ectService = {
       // Limpar URL
       window.URL.revokeObjectURL(url)
       
-      console.log('Download iniciado:', fileName)
+      logger.log('Download iniciado:', fileName)
     } catch (error: unknown) {
-      console.error('Erro ao baixar relatório:', error)
+      logger.error('Erro ao baixar relatório:', error)
       interface AxiosError {
         response?: {
           data?: {
@@ -85,12 +86,12 @@ export const ectService = {
   // Aprovar relatório ECT
   async approveReport(reportId: number, comment?: string): Promise<unknown> {
     try {
-      console.log('Aprovando relatório:', reportId)
+      logger.log('Aprovando relatório:', reportId)
       const response = await api.post(`/reports/${reportId}/approve`, { comment })
-      console.log('Relatório aprovado com sucesso:', response.data)
+      logger.log('Relatório aprovado com sucesso:', response.data)
       return response.data
     } catch (error: unknown) {
-      console.error('Erro ao aprovar relatório:', error)
+      logger.error('Erro ao aprovar relatório:', error)
       interface AxiosError {
         response?: {
           data?: {
@@ -108,12 +109,12 @@ export const ectService = {
   // Reprovar relatório ECT
   async rejectReport(reportId: number, comment: string): Promise<unknown> {
     try {
-      console.log('Reprovando relatório:', reportId)
+      logger.log('Reprovando relatório:', reportId)
       const response = await api.post(`/reports/${reportId}/reject`, { comment })
-      console.log('Relatório reprovado com sucesso:', response.data)
+      logger.log('Relatório reprovado com sucesso:', response.data)
       return response.data
     } catch (error: unknown) {
-      console.error('Erro ao reprovar relatório:', error)
+      logger.error('Erro ao reprovar relatório:', error)
       interface AxiosError {
         response?: {
           data?: {

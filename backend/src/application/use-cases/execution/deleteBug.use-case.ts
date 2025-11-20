@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import fs from 'fs'
 import path from 'path'
+import { logger } from '../../../utils/logger'
 
 interface DeleteBugInput {
   bugId: number
@@ -34,7 +35,7 @@ export async function deleteBug({ bugId, userId }: DeleteBugInput) {
           fs.unlinkSync(filePath)
         }
       } catch (fileError) {
-        console.error(`Erro ao deletar arquivo de anexo de bug ${attachment.filename}:`, fileError)
+        logger.error(`Erro ao deletar arquivo de anexo de bug ${attachment.filename}:`, fileError)
         // Continuar mesmo se não conseguir deletar o arquivo
       }
     }
@@ -48,7 +49,7 @@ export async function deleteBug({ bugId, userId }: DeleteBugInput) {
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in deleteBug:', error)
+      logger.error('Error in deleteBug:', error)
     }
     throw error
   }

@@ -517,6 +517,7 @@ import { Notify, useQuasar } from 'quasar'
 import { scenarioService, type TestScenario, type ScenarioStep, type CreateScenarioData } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 import { executionService, type Bug, type ExecutionHistory, type StepComment, type StepAttachment } from '../services/execution.service'
+import logger from '../utils/logger'
 
 const route = useRoute()
 const router = useRouter()
@@ -696,7 +697,7 @@ async function loadScenario() {
       executionStatus.value = 'NOT_STARTED'
     }
   } catch (err: unknown) {
-    console.error('Erro ao carregar cenário:', err)
+    logger.error('Erro ao carregar cenário:', err)
     interface AxiosError {
       response?: {
         data?: {
@@ -738,7 +739,7 @@ async function loadStepData(stepId: number, stepIndex: number) {
       }
     }
   } catch (err: unknown) {
-    console.error('Erro ao carregar dados da etapa:', err)
+    logger.error('Erro ao carregar dados da etapa:', err)
   } finally {
     loadingComments.value = false
   }
@@ -784,7 +785,7 @@ async function startExecution() {
       message: 'Execução iniciada!'
     })
   } catch (err: unknown) {
-    console.error('Erro ao iniciar execução:', err)
+    logger.error('Erro ao iniciar execução:', err)
     // Reverter status em caso de erro
     executionStatus.value = 'NOT_STARTED'
     if (scenario.value) {
@@ -904,7 +905,7 @@ async function finishExecution() {
       timeout: 5000
     })
   } catch (err: unknown) {
-    console.error('Erro ao concluir execução:', err)
+    logger.error('Erro ao concluir execução:', err)
     Notify.create({
       type: 'negative',
       message: 'Erro ao concluir execução'
@@ -955,7 +956,7 @@ async function restartExecution() {
       try {
         await executionService.updateStepStatus(step.id, 'PENDING', '')
       } catch (err) {
-        console.error('Erro ao resetar etapa:', err)
+        logger.error('Erro ao resetar etapa:', err)
       }
     }
     
@@ -995,7 +996,7 @@ async function restartExecution() {
       message: 'Cenário reiniciado! Você pode executar novamente.'
     })
   } catch (err: unknown) {
-    console.error('Erro ao reiniciar execução:', err)
+    logger.error('Erro ao reiniciar execução:', err)
     Notify.create({
       type: 'negative',
       message: 'Erro ao reiniciar execução'
@@ -1047,7 +1048,7 @@ async function setStepStatus(status: string) {
             } as UpdateScenarioData & Partial<CreateScenarioData>)
             scenario.value.status = 'EXECUTED'
           } catch (err) {
-            console.error('Erro ao atualizar status do cenário:', err)
+            logger.error('Erro ao atualizar status do cenário:', err)
           }
         }
       }
@@ -1078,7 +1079,7 @@ async function setStepStatus(status: string) {
         timeout: 1500
       })
     } catch (err: unknown) {
-      console.error('Erro ao salvar status da etapa:', err)
+      logger.error('Erro ao salvar status da etapa:', err)
       // Reverter mudança em caso de erro
       if (currentStep.value && previousStatus) {
         currentStep.value.status = previousStatus
@@ -1177,7 +1178,7 @@ async function handleFileUpload(event: Event) {
         message: `Arquivo ${file.name} anexado!`
       })
     } catch (err: unknown) {
-      console.error('Erro ao fazer upload:', err)
+      logger.error('Erro ao fazer upload:', err)
       interface AxiosError {
         response?: {
           data?: {
@@ -1321,7 +1322,7 @@ async function addComment() {
       message: 'Comentário adicionado!'
     })
   } catch (err: unknown) {
-    console.error('Erro ao adicionar comentário:', err)
+    logger.error('Erro ao adicionar comentário:', err)
     interface AxiosError {
       response?: {
         data?: {
@@ -1406,7 +1407,7 @@ async function createBug() {
       attachments: []
     }
   } catch (err: unknown) {
-    console.error('Erro ao criar bug:', err)
+    logger.error('Erro ao criar bug:', err)
     interface AxiosError {
       response?: {
         data?: {
@@ -1428,7 +1429,7 @@ async function createBug() {
 }
 
 function viewAttachment(attachment: StepAttachment) {
-  // TODO: Implementar lightbox
+  // Lightbox para visualização de evidências - implementação futura
   window.open(attachment.url, '_blank')
 }
 
@@ -1464,7 +1465,7 @@ async function deleteAttachment(attachmentId: number) {
       message: 'Evidência removida'
     })
   } catch (err: unknown) {
-    console.error('Erro ao excluir evidência:', err)
+    logger.error('Erro ao excluir evidência:', err)
     interface AxiosError {
       response?: {
         data?: {

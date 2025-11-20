@@ -1,5 +1,6 @@
 import { RequestHandler } from 'express'
 import jwt from 'jsonwebtoken'
+import { logger } from '../utils/logger'
 
 type JwtPayload = { userId: number; email?: string; iat?: number; exp?: number }
 
@@ -17,7 +18,7 @@ export const auth: RequestHandler = (req, res, next) => {
     if (!secret) {
       // Não logar em ambiente de teste - é um erro esperado
       if (process.env.NODE_ENV !== 'test') {
-        console.error('JWT_SECRET não configurado')
+        logger.error('JWT_SECRET não configurado')
       }
       res.status(500).json({ message: 'JWT secret not configured' })
       return
@@ -41,7 +42,7 @@ export const auth: RequestHandler = (req, res, next) => {
   } catch (error) {
     // Não logar erros esperados de autenticação em ambiente de teste
     if (process.env.NODE_ENV !== 'test') {
-      console.error('Erro de autenticação', error)
+      logger.error('Erro de autenticação', error)
     }
     res.status(401).json({ message: 'Token inválido' })
   }

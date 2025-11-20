@@ -6,7 +6,7 @@ import jwt from 'jsonwebtoken'
 import { prisma } from '../../../infrastructure/prisma'
 import { getProjectDetailsController } from '../../../controllers/project/getProjectDetails.controller'
 import { AppError } from '../../../utils/AppError'
-import * as getProjectDetailsUC from '../../../application/use-cases/projetos/getProjectDetails.use-case'
+import * as getProjectDetailsUC from '../../../application/use-cases/projects/getProjectDetails.use-case'
 
 const unique = (p: string) =>
   `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`

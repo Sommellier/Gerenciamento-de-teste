@@ -448,6 +448,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from '../services/api'
+import logger from '../utils/logger'
 
 // Composables
 const router = useRouter()
@@ -541,7 +542,7 @@ function goToProjects() {
 }
 
 function goToExecutions() {
-  // TODO: Navegar para página de execuções quando criada
+  // Navegação para página de execuções - implementação futura
   $q.notify({
     type: 'info',
     message: 'Funcionalidade em desenvolvimento',
@@ -704,7 +705,7 @@ async function loadProfile() {
       originalName.value = name.value
     }
   } catch (err: unknown) {
-    console.error('Error loading profile:', err)
+    logger.error('Error loading profile:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar perfil',
@@ -780,7 +781,7 @@ async function submitForm() {
     newPassword.value = ''
     confirmPassword.value = ''
   } catch (err: unknown) {
-    console.error('Error updating profile:', err)
+    logger.error('Error updating profile:', err)
     errorText.value = getCustomErrorMessage(err)
     errorDialog.value = true
   } finally {
@@ -818,7 +819,7 @@ async function deleteAccount() {
       void router.push('/login')
     }, 2000)
   } catch (err: unknown) {
-    console.error('Error deleting account:', err)
+    logger.error('Error deleting account:', err)
     errorText.value = getCustomErrorMessage(err)
     errorDialog.value = true
     showDeleteConfirmDialog.value = false

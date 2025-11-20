@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface DeleteScenarioInPackageInput {
   scenarioId: number
@@ -35,7 +36,7 @@ export async function deleteScenarioInPackage({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in deleteScenarioInPackage:', error)
+      logger.error('Error in deleteScenarioInPackage:', error)
     }
     throw error
   }

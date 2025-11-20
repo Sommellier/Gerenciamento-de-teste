@@ -1,7 +1,7 @@
 // @ts-expect-error - vitest types are available but TypeScript can't find them in this context
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { projectService } from './project.service'
-import api from './api'
+import { projectService } from '../../../src/services/project.service'
+import api from '../../../src/services/api'
 
 // Mock da API
 vi.mock('./api', () => ({

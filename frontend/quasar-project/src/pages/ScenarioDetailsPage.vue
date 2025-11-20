@@ -37,14 +37,15 @@
           @click="editScenario"
           class="action-btn"
         />
-        <q-btn
-          color="positive"
-          icon="picture_as_pdf"
-          label="Gerar ECT (PDF)"
-          @click="generateECT"
-          :loading="generatingECT"
-          class="action-btn"
-        />
+          <q-btn
+            color="positive"
+            icon="picture_as_pdf"
+            label="Gerar ECT (PDF)"
+            @click="generateECT"
+            :loading="generatingECT"
+            :disable="!scenario?.steps || scenario.steps.length === 0"
+            class="action-btn"
+          />
         <!-- Botões de aprovar/reprovar ECT (apenas se permitido e houver relatório sem aprovação) -->
         <template v-if="canApproveRejectECT && latestReportWithoutApproval">
           <q-btn
@@ -202,7 +203,7 @@
               icon="add"
               label="Adicionar Etapa"
               @click="handleAddStep"
-              :disable="scenario?.status === 'PASSED'"
+              :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED'"
               unelevated
             />
           </div>
@@ -230,7 +231,7 @@
                   icon="edit"
                   size="sm"
                   @click="editStep(step)"
-                  :disable="scenario?.status === 'PASSED'"
+                  :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED'"
                   color="primary"
                 >
                   <q-tooltip>Editar etapa</q-tooltip>
@@ -241,7 +242,7 @@
                   icon="delete"
                   size="sm"
                   @click="step.id ? deleteStep(step.id) : null"
-                  :disable="scenario?.status === 'PASSED' || !step.id"
+                  :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED' || !step.id"
                   color="negative"
                 >
                   <q-tooltip>Excluir etapa</q-tooltip>
@@ -260,7 +261,7 @@
               icon="add"
               label="Adicionar Primeira Etapa"
               @click="handleAddStep"
-              :disable="scenario?.status === 'PASSED'"
+              :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED'"
             />
           </div>
         </q-card-section>
@@ -589,6 +590,7 @@ import { scenarioService, type TestScenario, type ScenarioStep } from '../servic
 import { ectService } from '../services/ect.service'
 import { getProjectMembers, type ProjectMember } from '../services/project.service'
 import api from '../services/api'
+import logger from '../utils/logger'
 
 // Interfaces
 interface CurrentUser {
@@ -661,13 +663,6 @@ const canApproveRejectECT = computed(() => {
   return isOwner || isApprover
 })
 
-// Verificar se existe QUALQUER relatório aprovado/reprovado
-// Uma vez que algum ECT foi aprovado/reprovado, não pode mais aprovar/reprovar outros
-const hasAnyApprovedReport = computed(() => {
-  if (!scenario.value?.reports || scenario.value.reports.length === 0) return false
-  return scenario.value.reports.some((report) => report.approval !== null && report.approval !== undefined)
-})
-
 // Encontrar o relatório mais recente (ordenado por createdAt desc)
 const latestReport = computed(() => {
   if (!scenario.value?.reports || scenario.value.reports.length === 0) return null
@@ -676,14 +671,14 @@ const latestReport = computed(() => {
   return scenario.value.reports[0] || null
 })
 
-// Encontrar QUALQUER relatório que tem aprovação/reprovação para exibir status
-// Mostra sempre o relatório aprovado/reprovado (mesmo que não seja o mais recente)
+// Encontrar o relatório mais recente que tem aprovação/reprovação para exibir status
+// Mostra o relatório aprovado/reprovado mais recente (para manter histórico)
 const latestReportWithApproval = computed(() => {
   if (!scenario.value?.reports || scenario.value.reports.length === 0) {
     return null
   }
   
-  // Encontrar o primeiro relatório que tem aprovação/reprovação
+  // Encontrar o relatório mais recente que tem aprovação/reprovação
   // Os relatórios vêm ordenados por createdAt desc, então pega o primeiro que encontrar
   const approvedReport = scenario.value.reports.find((report) => {
     const hasApproval = report.approval !== null && report.approval !== undefined
@@ -699,20 +694,17 @@ const latestReportWithApproval = computed(() => {
   return approvedReport || null
 })
 
-// Só mostrar botões de aprovar/reprovar se:
-// 1. NÃO existe nenhum relatório aprovado/reprovado (uma vez aprovado, não pode mais aprovar outros)
-// 2. Há um relatório mais recente sem aprovação/reprovação
+// Mostrar botões de aprovar/reprovar se:
+// 1. Há um relatório mais recente sem aprovação/reprovação
+// Permite aprovar/reprovar novos relatórios mesmo que existam relatórios anteriores aprovados/reprovados
 const latestReportWithoutApproval = computed(() => {
-  // Se já existe QUALQUER relatório aprovado/reprovado, não permitir mais aprovações/reprovações
-  if (hasAnyApprovedReport.value) return null
-  
   const latest = latestReport.value
   if (!latest) return null
   
   // Se o relatório mais recente já tem aprovação/reprovação, não mostrar botões
   if (latest.approval) return null
   
-  // Se não tem aprovação e não há nenhum relatório aprovado, pode aprovar/reprovar
+  // Se não tem aprovação, pode aprovar/reprovar (mesmo que existam relatórios anteriores aprovados/reprovados)
   return latest
 })
 
@@ -742,7 +734,7 @@ async function loadCurrentUser() {
     const response = await api.get<CurrentUser>('/profile')
     currentUser.value = response.data
   } catch (err: unknown) {
-    console.error('Erro ao carregar usuário atual:', err)
+    logger.error('Erro ao carregar usuário atual:', err)
   }
 }
 
@@ -762,7 +754,7 @@ async function loadScenario() {
     // Aguardar o próximo tick para garantir que os computed sejam recalculados
     await nextTick()
   } catch (err: unknown) {
-    console.error('Erro ao carregar cenário:', err)
+    logger.error('Erro ao carregar cenário:', err)
     interface AxiosError {
       response?: {
         data?: {
@@ -843,7 +835,7 @@ async function generateECT() {
     await loadScenario()
     
   } catch (error: unknown) {
-    console.error('Erro ao gerar ECT:', error)
+    logger.error('Erro ao gerar ECT:', error)
     
     const errorMessage = error instanceof Error ? error.message : 'Erro ao gerar ECT'
     Notify.create({
@@ -900,7 +892,7 @@ async function approveECTReport() {
     // Aguardar mais um tick após o segundo carregamento
     await nextTick()
   } catch (error: unknown) {
-    console.error('Erro ao aprovar ECT:', error)
+    logger.error('Erro ao aprovar ECT:', error)
     
     let errorMessage = 'Erro ao aprovar relatório'
     if (error instanceof Error) {
@@ -954,7 +946,7 @@ async function rejectECTReport() {
     // Aguardar mais um tick após o segundo carregamento
     await nextTick()
   } catch (error: unknown) {
-    console.error('Erro ao reprovar ECT:', error)
+    logger.error('Erro ao reprovar ECT:', error)
     
     let errorMessage = 'Erro ao reprovar relatório'
     if (error instanceof Error) {
@@ -979,10 +971,10 @@ async function rejectECTReport() {
 }
 
 function handleAddStep() {
-  if (scenario.value?.status === 'PASSED') {
+  if (scenario.value?.status === 'PASSED' || scenario.value?.status === 'APPROVED') {
     Notify.create({
       type: 'warning',
-      message: 'Não é possível adicionar etapas em um cenário concluído',
+      message: 'Não é possível adicionar etapas em um cenário concluído ou aprovado',
       timeout: 3000
     })
     return
@@ -991,10 +983,10 @@ function handleAddStep() {
 }
 
 function editStep(step: ScenarioStep) {
-  if (scenario.value?.status === 'PASSED') {
+  if (scenario.value?.status === 'PASSED' || scenario.value?.status === 'APPROVED') {
     Notify.create({
       type: 'warning',
-      message: 'Não é possível editar etapas em um cenário concluído',
+      message: 'Não é possível editar etapas em um cenário concluído ou aprovado',
       timeout: 3000
     })
     return
@@ -1072,7 +1064,7 @@ async function saveStep() {
     
     closeStepDialog()
   } catch (err: unknown) {
-    console.error('Erro ao salvar etapa:', err)
+    logger.error('Erro ao salvar etapa:', err)
     
     let errorMessage = 'Erro ao salvar etapa'
     if (err instanceof Error) {
@@ -1096,11 +1088,11 @@ async function saveStep() {
 }
 
 async function deleteStep(stepId: number) {
-  // Validar se o cenário está concluído
-  if (!scenario.value || scenario.value.status === 'PASSED') {
+  // Validar se o cenário está concluído ou aprovado
+  if (!scenario.value || scenario.value.status === 'PASSED' || scenario.value.status === 'APPROVED') {
     Notify.create({
       type: 'warning',
-      message: 'Não é possível excluir etapas em um cenário concluído',
+      message: 'Não é possível excluir etapas em um cenário concluído ou aprovado',
       timeout: 3000
     })
     return
@@ -1127,7 +1119,7 @@ async function deleteStep(stepId: number) {
       message: 'Etapa excluída com sucesso!'
     })
   } catch (err: unknown) {
-    console.error('Erro ao excluir etapa:', err)
+    logger.error('Erro ao excluir etapa:', err)
     
     let errorMessage = 'Erro ao excluir etapa'
     if (err instanceof Error) {
@@ -1201,7 +1193,7 @@ async function loadMembers() {
       members.value = await getProjectMembers(projectId)
     }
   } catch (error) {
-    console.error('Erro ao carregar membros:', error)
+    logger.error('Erro ao carregar membros:', error)
   }
 }
 
@@ -1255,7 +1247,7 @@ async function saveScenarioEdit() {
       message: 'Cenário atualizado com sucesso!'
     })
   } catch (err: unknown) {
-    console.error('Erro ao atualizar cenário:', err)
+    logger.error('Erro ao atualizar cenário:', err)
     interface AxiosError {
       response?: {
         data?: {

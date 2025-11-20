@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface UpdateBugInput {
   bugId: number
@@ -61,7 +62,7 @@ export async function updateBug({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in updateBug:', error)
+      logger.error('Error in updateBug:', error)
     }
     throw error
   }

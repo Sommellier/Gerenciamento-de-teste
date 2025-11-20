@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { PackageStatus } from '@prisma/client'
+import { logger } from '../../../utils/logger'
 
 interface CreateScenarioInPackageInput {
   packageId: number
@@ -190,7 +191,7 @@ export async function createScenarioInPackage({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in createScenarioInPackage:', error)
+      logger.error('Error in createScenarioInPackage:', error)
     }
     throw error
   }

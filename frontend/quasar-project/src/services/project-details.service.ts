@@ -178,16 +178,10 @@ export async function getProjectDetails(projectId: number, release?: string): Pr
   }
 
   // Real API call
-  try {
-    const response = await api.get<ProjectDetails>(`/projects/${projectId}/details`, {
-      params: { release }
-    })
-    console.log('API Response:', response.data)
-    return response.data
-  } catch (error) {
-    console.error('Erro ao buscar detalhes do projeto:', error)
-    throw error
-  }
+  const response = await api.get<ProjectDetails>(`/projects/${projectId}/details`, {
+    params: { release }
+  })
+  return response.data
 }
 
 interface CreateTestPackageResponse {

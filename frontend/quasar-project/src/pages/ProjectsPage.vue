@@ -324,6 +324,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from 'src/services/api'
+import logger from '../utils/logger'
 
 const router = useRouter()
 const $q = useQuasar()
@@ -464,7 +465,7 @@ async function confirmLeaveProject() {
     })
     await loadProjects()
   } catch (err: unknown) {
-    console.error('Erro ao sair do projeto:', err)
+    logger.error('Erro ao sair do projeto:', err)
     interface ErrorWithMessage {
       message?: string
       response?: {
@@ -497,7 +498,7 @@ async function loadCurrentUser() {
     const response = await api.get<{ id: number; name: string; email: string }>('/profile')
     currentUser.value = response.data
   } catch (err: unknown) {
-    console.error('Erro ao carregar usuário atual:', err)
+    logger.error('Erro ao carregar usuário atual:', err)
   }
 }
 
@@ -514,7 +515,7 @@ async function confirmDelete() {
     })
     await loadProjects()
   } catch (err: unknown) {
-    console.error('Erro ao excluir projeto:', err)
+    logger.error('Erro ao excluir projeto:', err)
     $q.notify({
       type: 'negative',
       message: 'Erro ao excluir projeto',
@@ -528,7 +529,7 @@ async function confirmDelete() {
 
 // Data loading
 async function loadProjects() {
-  console.log('loadProjects called, setting loading to true')
+  logger.debug('loadProjects called, setting loading to true')
   loading.value = true
   try {
     // Se não há busca ativa, carrega todos os projetos
@@ -538,7 +539,7 @@ async function loadProjects() {
         pageSize: '12'
       })
       
-      console.log('Loading projects with params:', params.toString())
+      logger.debug('Loading projects with params:', params.toString())
       const response = await api.get<{
         items: Project[]
         total: number
@@ -551,23 +552,20 @@ async function loadProjects() {
           'Pragma': 'no-cache'
         }
       })
-      console.log('Projects response:', response.data)
-      console.log('Projects items:', response.data?.items)
-      console.log('Projects length:', response.data?.items?.length)
+      logger.debug('Projects response:', response.data)
       
       projects.value = response.data?.items || []
       allProjects.value = response.data?.items || [] // Armazena todos os projetos
       totalPages.value = response.data?.totalPages || 1
       totalProjects.value = response.data?.total || 0
       
-      console.log('projects.value after assignment:', projects.value)
-      console.log('projects.value.length:', projects.value.length)
+      logger.debug('Projects loaded:', projects.value.length)
     } else {
       // Busca local nos projetos já carregados
       performLocalSearch()
     }
   } catch (err: unknown) {
-    console.error('Error loading projects:', err)
+    logger.error('Error loading projects:', err)
     
     // Mensagem de erro mais detalhada
     let errorMessage = 'Erro ao carregar projetos'
@@ -576,12 +574,11 @@ async function loadProjects() {
       const axiosError = err as { response?: { status?: number; data?: { message?: string; error?: string } } }
       // Erro da resposta HTTP
       errorMessage = axiosError.response?.data?.message || axiosError.response?.data?.error || errorMessage
-      console.error('Erro HTTP:', axiosError.response?.status, errorMessage)
-      console.error('Response data:', axiosError.response?.data)
+      logger.error('Erro HTTP:', axiosError.response?.status, errorMessage)
     } else if (err && typeof err === 'object' && 'request' in err) {
       // Erro de rede/conexão
       errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
-      console.error('Erro de rede:', err.request)
+      logger.error('Erro de rede:', err.request)
     } else if (err instanceof Error) {
       errorMessage = err.message
     }
@@ -593,7 +590,7 @@ async function loadProjects() {
       timeout: 5000
     })
   } finally {
-    console.log('loadProjects finished, setting loading to false')
+    logger.debug('loadProjects finished')
     loading.value = false
   }
 }
@@ -652,7 +649,7 @@ function formatDate(dateString: string | undefined) {
 }
 
 function getProjectStatus(_project: Project) {
-  // TODO: Implementar lógica de status baseada no projeto
+  // Status baseado no projeto - implementação futura se necessário
   void _project // Marcar como usado explicitamente
   return 'Ativo'
 }
@@ -668,7 +665,7 @@ async function loadAllProjects() {
     })
     allProjects.value = (response.data as { items?: Project[] })?.items || []
   } catch (err: unknown) {
-    console.error('Error loading all projects:', err)
+    logger.error('Error loading all projects:', err)
   }
 }
 

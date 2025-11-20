@@ -69,7 +69,7 @@ export async function approveReport({ reportId, approverId, comment }: ApproveRe
       comment: comment || null,
       approvedBy: approverId,
       fileHash,
-      verificationUrl: null // TODO: Implementar QR code se necessário
+      verificationUrl: null
     },
     include: {
       approver: {

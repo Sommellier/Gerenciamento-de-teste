@@ -5,7 +5,7 @@ import request from 'supertest'
 import jwt from 'jsonwebtoken'
 import { prisma } from '../../../infrastructure/prisma'
 import { createProjectController } from '../../../controllers/project/createProject.controller'
-import * as createUC from '../../../application/use-cases/projetos/createProject.use-case'
+import * as createUC from '../../../application/use-cases/projects/createProject.use-case'
 
 const unique = (p: string) =>
   `${p}_${Date.now()}_${Math.random().toString(36).slice(2)}`

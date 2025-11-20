@@ -264,6 +264,7 @@ import { getProjectMembers, type ProjectMember } from '../services/project-detai
 import { TYPE_OPTIONS, PRIORITY_OPTIONS } from '../utils/constants'
 import { createRequiredRule } from '../utils/helpers'
 import MemberOptionItem from '../components/scenarios/MemberOptionItem.vue'
+import logger from '../utils/logger'
 
 // Composables
 const route = useRoute()
@@ -359,7 +360,7 @@ async function loadMembers() {
       }
     }
   } catch (error: unknown) {
-    console.error('Erro ao carregar membros:', error)
+    logger.error('Erro ao carregar membros:', error)
     members.value = [] // Garantir que sempre seja um array
     Notify.create({
       type: 'negative',
@@ -435,7 +436,7 @@ async function createScenario() {
     }, 1500)
     
   } catch (error: unknown) {
-    console.error('Error creating scenario:', error)
+    logger.error('Error creating scenario:', error)
     const errorMsg = error && typeof error === 'object' && 'message' in error
       ? (error as { message?: string }).message || 'Erro inesperado ao criar cenário'
       : 'Erro inesperado ao criar cenário'

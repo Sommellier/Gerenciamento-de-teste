@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface CreateBugInput {
   scenarioId: number
@@ -94,12 +95,10 @@ export async function createBug({
         userId
       }
     })
-//teste
     return bug
   } catch (error) {
-    // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in createBug:', error)
+      logger.error('Error in createBug:', error)
     }
     throw error
   }

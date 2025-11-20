@@ -1176,6 +1176,7 @@ import { scenarioService } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 import { executionService, type Bug, type StepAttachment } from '../services/execution.service'
 import api from '../services/api'
+import logger from '../utils/logger'
 
 // Interfaces
 interface CurrentUser {
@@ -1690,7 +1691,7 @@ const loadPackageDetails = async () => {
     // Carregar bugs reais do pacote
     await loadPackageBugs()
   } catch (err: unknown) {
-    console.error('Error loading package details:', err)
+    logger.error('Error loading package details:', err)
     
     // Formatar mensagem de erro mais detalhada
     let errorMessage = 'Erro ao carregar detalhes do pacote'
@@ -1699,7 +1700,7 @@ const loadPackageDetails = async () => {
       // Verificar se é um erro de resposta HTTP
       if ('response' in err && err.response && typeof err.response === 'object') {
         const response = err.response as { status?: number; data?: { message?: string; error?: string } }
-        console.error('Erro HTTP:', response.status, errorMessage)
+        logger.error('Erro HTTP:', response.status, errorMessage)
         
         if ('data' in err.response && err.response.data && typeof err.response.data === 'object') {
           const responseData = err.response.data as { message?: string; error?: string }
@@ -1712,7 +1713,7 @@ const loadPackageDetails = async () => {
       } else if ('request' in err) {
         // Erro de rede/conexão
         errorMessage = 'Erro de conexão. Verifique se o servidor está rodando.'
-        console.error('Erro de rede:', err.request)
+        logger.error('Erro de rede:', err.request)
       } else if ('message' in err && typeof err.message === 'string') {
         errorMessage = err.message
       }
@@ -1735,7 +1736,7 @@ const loadPackageBugs = async () => {
     const bugsData = await executionService.getPackageBugs(projectId.value, packageId.value)
     bugs.value = bugsData
   } catch (err: unknown) {
-    console.error('Error loading package bugs:', err)
+    logger.error('Error loading package bugs:', err)
     // Não mostrar erro ao usuário, apenas logar
     bugs.value = []
   }
@@ -1784,7 +1785,7 @@ const loadCurrentUser = async () => {
     const response = await api.get<CurrentUser>('/profile')
     currentUser.value = response.data
   } catch (err: unknown) {
-    console.error('Erro ao carregar usuário atual:', err)
+    logger.error('Erro ao carregar usuário atual:', err)
   }
 }
 
@@ -1813,7 +1814,7 @@ const handleApprovePackageWhenAllScenariosApproved = async () => {
     // Recarregar dados
     await loadPackageDetails()
   } catch (error: unknown) {
-    console.error('Erro ao aprovar pacote:', error)
+    logger.error('Erro ao aprovar pacote:', error)
     let errorMessage = 'Erro ao aprovar pacote'
     if (error && typeof error === 'object' && 'response' in error && error.response && typeof error.response === 'object' && 'data' in error.response) {
       const responseData = error.response.data
@@ -2061,7 +2062,7 @@ const saveBugEdit = async () => {
     showEditBugDialog.value = false
     bugEditForm.value = null
   } catch (err: unknown) {
-    console.error('Erro ao atualizar bug:', err)
+    logger.error('Erro ao atualizar bug:', err)
     let errorMessage = 'Erro ao atualizar bug'
     if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
       const responseData = err.response.data
@@ -2100,7 +2101,7 @@ const resolveBug = async (bug: ExtendedBug | Bug) => {
       message: 'Bug marcado como resolvido!'
     })
   } catch (err: unknown) {
-    console.error('Erro ao resolver bug:', err)
+    logger.error('Erro ao resolver bug:', err)
     let errorMessage = 'Erro ao resolver bug'
     if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
       const responseData = err.response.data
@@ -2139,7 +2140,7 @@ const deleteBugConfirmed = async () => {
     showDeleteBugDialog.value = false
     selectedBug.value = null
   } catch (err: unknown) {
-    console.error('Erro ao excluir bug:', err)
+    logger.error('Erro ao excluir bug:', err)
     let errorMessage = 'Erro ao excluir bug'
     if (err && typeof err === 'object' && 'response' in err && err.response && typeof err.response === 'object' && 'data' in err.response) {
       const responseData = err.response.data
@@ -2232,7 +2233,7 @@ const downloadBugAttachment = async (attachment: StepAttachment) => {
       position: 'top'
     })
   } catch (err: unknown) {
-    console.error('Erro ao baixar anexo:', err)
+    logger.error('Erro ao baixar anexo:', err)
     Notify.create({
       type: 'negative',
       message: 'Erro ao baixar anexo',
@@ -2437,7 +2438,7 @@ const loadMembers = async () => {
     isLoadingMembers.value = true
     members.value = await getProjectMembers(projectId.value)
   } catch (error: unknown) {
-    console.error('Error loading members:', error)
+    logger.error('Error loading members:', error)
     members.value = []
   } finally {
     isLoadingMembers.value = false

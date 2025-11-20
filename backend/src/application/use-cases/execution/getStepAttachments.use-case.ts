@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { logger } from '../../../utils/logger'
 
 interface GetStepAttachmentsInput {
   stepId: number
@@ -51,7 +52,7 @@ export async function getStepAttachments({
   } catch (error) {
     // Apenas logar erros inesperados, não AppErrors esperados
     if (!(error instanceof AppError)) {
-      console.error('Error in getStepAttachments:', error)
+      logger.error('Error in getStepAttachments:', error)
     }
     throw error
   }

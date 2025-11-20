@@ -240,6 +240,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import { getProjectPackages, deletePackage } from '../services/package.service'
 import type { TestPackage } from '../services/package.service'
+import logger from '../utils/logger'
 
 const route = useRoute()
 const router = useRouter()
@@ -277,7 +278,7 @@ const loadPackages = async () => {
     
     // Verificar se data é um array
     if (!Array.isArray(data)) {
-      console.error('❌ Data is not an array:', data)
+      logger.error('❌ Data is not an array:', data)
       packages.value = []
       return
     }
@@ -299,7 +300,7 @@ const loadPackages = async () => {
     const releases = [...new Set(data.map(pkg => pkg.release))].sort().reverse()
     releaseOptions.value = releases
   } catch (error: unknown) {
-    console.error('Erro ao carregar pacotes:', error)
+    logger.error('Erro ao carregar pacotes:', error)
     $q.notify({
       type: 'negative',
       message: 'Erro ao carregar pacotes'
@@ -356,7 +357,7 @@ const deletePackageAction = (packageId?: number) => {
         })
         void loadPackages()
       } catch (error: unknown) {
-        console.error('Erro ao excluir pacote:', error)
+        logger.error('Erro ao excluir pacote:', error)
         $q.notify({
           type: 'negative',
           message: 'Erro ao excluir pacote'

@@ -3,6 +3,7 @@ import { ECTService } from '../services/ect.service'
 import { AppError } from '../utils/AppError'
 import { approveReport } from '../application/use-cases/reports/approveReport.use-case'
 import { rejectReport } from '../application/use-cases/reports/rejectReport.use-case'
+import { logger } from '../utils/logger'
 
 const ectService = new ECTService()
 
@@ -33,7 +34,7 @@ export class ECTController {
         downloadUrl: result.downloadUrl
       })
     } catch (error) {
-      console.error('Erro ao gerar ECT:', error)
+      logger.error('Erro ao gerar ECT:', error)
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ message: error.message })
         return
@@ -65,7 +66,7 @@ export class ECTController {
 
       res.send(result.buffer)
     } catch (error) {
-      console.error('Erro ao baixar relatório:', error)
+      logger.error('Erro ao baixar relatório:', error)
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ message: error.message })
         return
@@ -100,7 +101,7 @@ export class ECTController {
         approval: result.approval
       })
     } catch (error) {
-      console.error('🔴 [ECTController.approveReport] Erro ao aprovar relatório:', error)
+      logger.error('[ECTController.approveReport] Erro ao aprovar relatório:', error)
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ message: error.message })
         return
@@ -139,7 +140,7 @@ export class ECTController {
         approval: result.approval
       })
     } catch (error) {
-      console.error('🔴 [ECTController.rejectReport] Erro ao reprovar relatório:', error)
+      logger.error('[ECTController.rejectReport] Erro ao reprovar relatório:', error)
       if (error instanceof AppError) {
         res.status(error.statusCode).json({ message: error.message })
         return
