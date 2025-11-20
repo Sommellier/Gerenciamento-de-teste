@@ -1,16 +1,19 @@
 import rateLimit from 'express-rate-limit'
+import { Request } from 'express'
 
 // Verificar se está em desenvolvimento
 const isDevelopment = process.env.NODE_ENV !== 'production'
 
 // Ajustar limites baseado no ambiente
-// Em desenvolvimento, limites mais altos para evitar bloqueios durante testes
+// Em desenvolvimento, limites muito mais altos para evitar bloqueios durante testes automatizados
 // Em produção, limites aumentados para suportar uso em faculdade (múltiplos usuários no mesmo IP)
-const loginMax = isDevelopment ? 20 : 15 // 20 em dev, 15 em produção (proteção contra brute force, mas permite uso legítimo)
-const registerMax = isDevelopment ? 20 : 50 // 20 em dev, 50 em produção (permite turma inteira se registrar)
+const loginMax = isDevelopment ? 100 : 12 // 100 em dev (testes), 12 em produção (proteção contra brute force)
+const registerMax = isDevelopment ? 200 : 50 // 200 em dev (testes), 50 em produção (permite turma inteira se registrar)
 const uploadMax = isDevelopment ? 100 : 100 // 100 em dev, 100 em produção (alunos fazendo upload de evidências)
 const inviteMax = isDevelopment ? 50 : 30 // 50 em dev, 30 em produção (professor convidando turma)
-const publicMax = isDevelopment ? 500 : 200 // 500 em dev, 200 em produção (rotas públicas)
+const publicMax = isDevelopment ? 1000 : 200 // 1000 em dev (testes), 200 em produção (rotas públicas)
+const userMax = isDevelopment ? 500 : 60 // 500 em dev (testes), 60 em produção (60 req/min por usuário autenticado)
+const passwordResetMax = isDevelopment ? 50 : 5 // 50 em dev (testes), 5 em produção (5 req/hora por email)
 
 // Rate limiter mais rigoroso para login
 export const loginLimiter = rateLimit({
@@ -56,5 +59,45 @@ export const publicLimiter = rateLimit({
   message: 'Muitas requisições deste IP, tente novamente mais tarde.',
   standardHeaders: true,
   legacyHeaders: false,
+})
+
+// Rate limiter por usuário autenticado
+// Útil para ambientes com múltiplos usuários no mesmo IP (faculdade, VPN, proxy)
+export const userLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: userMax,
+  message: 'Muitas requisições. Tente novamente em alguns instantes.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request): string => {
+    // Extrair userId do objeto user adicionado pelo middleware de autenticação
+    const user = (req as any).user
+    if (user?.id) {
+      return `user:${user.id}`
+    }
+    // Fallback para IP se não houver usuário autenticado
+    return req.ip || 'unknown'
+  },
+  skipSuccessfulRequests: false, // Conta todas as requisições, bem-sucedidas ou não
+})
+
+// Rate limiter para recuperação de senha (por email)
+// Previne abuso e spam de emails de recuperação
+export const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: passwordResetMax,
+  message: 'Muitas tentativas de recuperação de senha. Tente novamente em 1 hora.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req: Request): string => {
+    // Usar email do body como chave, normalizado para lowercase
+    const email = req.body?.email
+    if (email && typeof email === 'string') {
+      return `password-reset:${email.trim().toLowerCase()}`
+    }
+    // Fallback para IP se não houver email
+    return `password-reset:ip:${req.ip || 'unknown'}`
+  },
+  skipSuccessfulRequests: false, // Conta todas as requisições para prevenir abuso
 })
 

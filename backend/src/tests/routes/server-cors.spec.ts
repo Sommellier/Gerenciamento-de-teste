@@ -9,6 +9,8 @@ jest.mock('../../infrastructure/rateLimiter', () => ({
   registerLimiter: (_req: any, _res: any, next: any) => next(),
   uploadLimiter: (_req: any, _res: any, next: any) => next(),
   inviteLimiter: (_req: any, _res: any, next: any) => next(),
+  userLimiter: (_req: any, _res: any, next: any) => next(),
+  passwordResetLimiter: (_req: any, _res: any, next: any) => next(),
 }))
 
 // Mock das rotas
