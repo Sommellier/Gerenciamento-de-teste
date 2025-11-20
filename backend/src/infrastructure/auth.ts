@@ -1,6 +1,7 @@
-import { RequestHandler } from 'express'
+import { RequestHandler, Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { logger } from '../utils/logger'
+import { userLimiter } from './rateLimiter'
 
 type JwtPayload = { userId: number; email?: string; iat?: number; exp?: number }
 
@@ -46,6 +47,19 @@ export const auth: RequestHandler = (req, res, next) => {
     }
     res.status(401).json({ message: 'Token inválido' })
   }
+}
+
+// Middleware combinado: autenticação + rate limiting por usuário
+// Útil para aplicar em rotas que precisam de ambos
+export const authWithRateLimit: RequestHandler = (req: Request, res: Response, next: NextFunction) => {
+  // Primeiro autentica
+  auth(req, res, (err?: any) => {
+    if (err) {
+      return next(err)
+    }
+    // Depois aplica rate limiting por usuário
+    userLimiter(req, res, next)
+  })
 }
 
 export default auth

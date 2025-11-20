@@ -36,6 +36,28 @@ jest.mock('../../controllers/user/resetPassword.controller', () => ({
   }),
 }))
 
+// Mock do middleware de autenticação
+jest.mock('../../infrastructure/auth', () => ({
+  __esModule: true,
+  default: (req: ExpressRequest, _res: ExpressResponse, next: express.NextFunction) => {
+    // Simular usuário autenticado para os testes
+    ;(req as any).user = { id: 1 }
+    next()
+  },
+  auth: (req: ExpressRequest, _res: ExpressResponse, next: express.NextFunction) => {
+    ;(req as any).user = { id: 1 }
+    next()
+  },
+}))
+
+// Mock dos rate limiters
+jest.mock('../../infrastructure/rateLimiter', () => ({
+  loginLimiter: (_req: any, _res: any, next: any) => next(),
+  registerLimiter: (_req: any, _res: any, next: any) => next(),
+  passwordResetLimiter: (_req: any, _res: any, next: any) => next(),
+  userLimiter: (_req: any, _res: any, next: any) => next(),
+}))
+
 // importa o router alvo
 import userRouter from '../../routes/user.routes'
 
