@@ -85,7 +85,7 @@ describe('projectService', () => {
     })
 
     it('deve retornar array vazio quando não há releases', async () => {
-      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: [] })
+      vi.mocked(api.get).mockResolvedValue({ data: [] } as never)
 
       const result = await projectService.getProjectReleases(1)
 
@@ -102,7 +102,7 @@ describe('projectService', () => {
         ],
       }
 
-      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: mockMembers })
+      vi.mocked(api.get).mockResolvedValue({ data: mockMembers } as never)
 
       const result = await projectService.getProjectMembers(1)
 
@@ -115,7 +115,7 @@ describe('projectService', () => {
         { id: 1, name: 'Alice', email: 'alice@test.com', role: 'MANAGER' },
       ]
 
-      ;(api.get as unknown as MockedApiGet).mockResolvedValue({ data: mockMembers })
+      vi.mocked(api.get).mockResolvedValue({ data: mockMembers } as never)
 
       const result = await projectService.getProjectMembers(1)
 
