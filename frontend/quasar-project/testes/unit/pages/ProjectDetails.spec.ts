@@ -768,7 +768,6 @@ describe('ProjectDetails', () => {
 
     it('deve retornar cor de função corretamente', () => {
       expect(wrapper.vm.getRoleColor('OWNER')).toBe('purple')
-      expect(wrapper.vm.getRoleColor('ADMIN')).toBe('blue')
       expect(wrapper.vm.getRoleColor('MANAGER')).toBe('green')
       expect(wrapper.vm.getRoleColor('TESTER')).toBe('orange')
       expect(wrapper.vm.getRoleColor('APPROVER')).toBe('teal')
@@ -776,7 +775,7 @@ describe('ProjectDetails', () => {
     })
 
     it('deve retornar descrição de função corretamente', () => {
-      expect(wrapper.vm.getRoleDescription('ADMIN')).toContain('Acesso total')
+      expect(wrapper.vm.getRoleDescription('OWNER')).toContain('acesso total')
       expect(wrapper.vm.getRoleDescription('MANAGER')).toContain('gerenciar')
       expect(wrapper.vm.getRoleDescription('TESTER')).toContain('executar')
       expect(wrapper.vm.getRoleDescription('APPROVER')).toContain('aprovar')

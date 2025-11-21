@@ -14,7 +14,7 @@
       <header class="page-header">
         <div class="header-content">
         <div class="header-left">
-            <button class="back-button" @click="goBack" aria-label="Voltar ao dashboard">
+            <button class="back-button" data-cy="btn-back-dashboard" @click="goBack" aria-label="Voltar ao dashboard">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -36,6 +36,7 @@
           <div class="header-actions">
             <button 
               class="create-button"
+              data-cy="btn-submit-create-project"
               @click="submitForm"
               :disabled="submitting || !isFormValid"
               aria-label="Criar projeto"
@@ -53,6 +54,7 @@
             <div class="profile-icon-container">
               <button 
                 class="profile-icon-button"
+                data-cy="btn-go-to-profile"
                 @click="goToProfile"
                 aria-label="Ir para o perfil"
               >
@@ -85,7 +87,7 @@
             </div>
             
             <div class="card-content">
-              <form @submit.prevent="onSubmit" class="project-form">
+              <form @submit.prevent="onSubmit" class="project-form" data-cy="form-create-project">
                 <div class="form-group">
                   <label class="form-label">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -97,6 +99,7 @@
                     v-model="name"
                     type="text"
                     class="form-input"
+                    data-cy="input-project-name"
                     placeholder="Digite o nome do projeto"
                     maxlength="100"
                     required
@@ -118,6 +121,7 @@
                   <textarea
                     v-model="description"
                     class="form-textarea"
+                    data-cy="input-project-description"
                     placeholder="Descreva o objetivo do projeto..."
                     maxlength="500"
                     rows="4"
@@ -165,12 +169,14 @@
                       v-model="emailInput"
                       type="email"
                       class="email-input"
+                      data-cy="input-collaborator-email"
                       placeholder="Adicionar por e-mail"
                       @keyup.enter="addEmail"
                     />
                   </div>
                   <button 
                     class="add-button"
+                    data-cy="btn-add-collaborator"
                     @click="addEmail"
                     :disabled="!emailRegex.test(emailInput)"
                   >
@@ -248,11 +254,11 @@
     </main>
 
     <!-- Menu de ações do colaborador -->
-    <div v-if="showMenu" class="menu-overlay" @click="closeMenu">
+    <div v-if="showMenu" class="menu-overlay" data-cy="dialog-collaborator-menu" @click="closeMenu">
       <div class="menu-container" @click.stop>
         <div class="menu-header">
           <h3>Ações do Colaborador</h3>
-          <button class="menu-close" @click="closeMenu">
+          <button class="menu-close" data-cy="btn-close-collaborator-menu" @click="closeMenu">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -263,6 +269,7 @@
           <button 
             v-if="selectedCollaborator"
             class="menu-action" 
+            data-cy="btn-resend-invite"
             @click="selectedCollaborator && resendInvite(selectedCollaborator)"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -274,6 +281,7 @@
           <button 
             v-if="selectedCollaborator"
             class="menu-action danger" 
+            data-cy="btn-remove-collaborator"
             @click="selectedCollaborator && removeCollaborator(selectedCollaborator.email)"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -287,7 +295,7 @@
     </div>
 
     <!-- Success dialog -->
-    <div v-if="successDialog" class="dialog-overlay" @click="closeSuccessDialog">
+    <div v-if="successDialog" class="dialog-overlay" data-cy="dialog-success-create-project" @click="closeSuccessDialog">
       <div class="dialog-container success" @click.stop>
         <div class="dialog-header">
           <div class="dialog-icon success">
@@ -302,7 +310,7 @@
           <p>{{ successText }}</p>
         </div>
         <div class="dialog-actions">
-          <button class="confirm-button success" @click="onSuccessOk">
+          <button class="confirm-button success" data-cy="btn-ok-success" @click="onSuccessOk">
             OK
           </button>
         </div>
@@ -310,7 +318,7 @@
     </div>
 
     <!-- Error dialog -->
-    <div v-if="errorDialog" class="dialog-overlay" @click="closeErrorDialog">
+    <div v-if="errorDialog" class="dialog-overlay" data-cy="dialog-error-create-project" @click="closeErrorDialog">
       <div class="dialog-container error" @click.stop>
         <div class="dialog-header">
           <div class="dialog-icon error">
@@ -326,7 +334,7 @@
           <p>{{ errorText }}</p>
         </div>
         <div class="dialog-actions">
-          <button class="confirm-button error" @click="closeErrorDialog">
+          <button class="confirm-button error" data-cy="btn-close-error" @click="closeErrorDialog">
             Fechar
           </button>
         </div>

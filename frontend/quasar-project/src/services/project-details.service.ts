@@ -7,7 +7,7 @@ export interface ProjectMember {
   id: number
   name: string
   email: string
-  role: 'OWNER' | 'ADMIN' | 'MANAGER' | 'TESTER' | 'APPROVER'
+  role: 'OWNER' | 'MANAGER' | 'TESTER' | 'APPROVER'
   avatar?: string
 }
 
@@ -67,7 +67,7 @@ const mockMembers: ProjectMember[] = [
     id: 2,
     name: 'João Silva',
     email: 'joao.silva@example.com',
-    role: 'ADMIN'
+    role: 'MANAGER'
   },
   {
     id: 3,

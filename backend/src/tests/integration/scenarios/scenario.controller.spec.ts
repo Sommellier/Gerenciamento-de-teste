@@ -211,12 +211,7 @@ describe('ScenarioController', () => {
       description: 'New Test Description',
       type: 'FUNCTIONAL',
       priority: 'HIGH',
-      // TODO: campos não existem no schema atual
-      // severity: 'MEDIUM',
-      // module: 'Auth',
-      // environment: 'DEV',
       tags: ['test', 'auth'],
-      // preconditions: ['User logged in'],
       steps: [
         {
           order: 1,
@@ -294,10 +289,6 @@ describe('ScenarioController', () => {
     })
 
     afterEach(async () => {
-      // TODO: scenarioExecution não existe no schema atual
-      // await prisma.scenarioExecution.deleteMany({
-      //   where: { scenarioId: scenario.id }
-      // })
       await prisma.testScenarioStep.deleteMany({
         where: { scenarioId: scenario.id }
       })
@@ -320,8 +311,6 @@ describe('ScenarioController', () => {
 
       expect(response.body.message).toBe('Execução registrada com sucesso')
       expect(response.body.execution.status).toBe('PASSED')
-      // TODO: runNumber não existe no schema atual
-      // expect(response.body.execution.runNumber).toBe(1)
     })
 
     it('deve rejeitar status inválido', async () => {

@@ -23,6 +23,7 @@
           class="profile-menu-btn"
           menu-anchor="bottom right"
           menu-self="top right"
+          data-cy="btn-profile-menu"
         >
           <template v-slot:label>
             <div class="profile-icon-wrapper">
@@ -33,7 +34,7 @@
             </div>
           </template>
           <q-list dark class="profile-menu-list">
-            <q-item clickable v-close-popup @click="goToProfile" class="profile-menu-item">
+            <q-item clickable v-close-popup @click="goToProfile" class="profile-menu-item" data-cy="btn-menu-go-to-profile">
               <q-item-section avatar>
                 <q-icon name="person" />
               </q-item-section>
@@ -42,7 +43,7 @@
               </q-item-section>
             </q-item>
             <q-separator dark />
-            <q-item clickable v-close-popup @click="handleLogout" class="profile-menu-item logout-item">
+            <q-item clickable v-close-popup @click="handleLogout" class="profile-menu-item logout-item" data-cy="btn-menu-logout">
               <q-item-section avatar>
                 <q-icon name="logout" />
               </q-item-section>
@@ -59,7 +60,7 @@
     <main class="dashboard-main">
       <div class="cards-grid">
         <!-- Ver Projetos -->
-        <div class="modern-card projects-card" @click="goToProjects">
+        <div class="modern-card projects-card" @click="goToProjects" data-cy="card-dashboard-projects">
           <div class="card-icon">
             <div class="icon-wrapper projects-icon">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -79,7 +80,7 @@
         </div>
 
         <!-- Criar Projeto -->
-        <div class="modern-card create-card" @click="goToCreate">
+        <div class="modern-card create-card" @click="goToCreate" data-cy="card-dashboard-create-project">
           <div class="card-icon">
             <div class="icon-wrapper create-icon">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -99,7 +100,7 @@
         </div>
 
         <!-- Ver Convites -->
-        <div class="modern-card invites-card" @click="goToInvites">
+        <div class="modern-card invites-card" @click="goToInvites" data-cy="card-dashboard-invites">
           <div class="card-icon">
             <div class="icon-wrapper invites-icon">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

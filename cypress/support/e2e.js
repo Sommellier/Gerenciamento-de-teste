@@ -4,6 +4,8 @@ import './commands/auth'
 import './commands/projetos.js'
 import './commands/pacotes.js'
 import './commands/cenario.js'
+import './commands/membros.js'
+import './commands/bugs.js'
 
 // Importar helpers para uso global
 import * as helpers from './helpers.js'

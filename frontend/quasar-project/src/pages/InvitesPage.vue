@@ -14,7 +14,7 @@
       <header class="page-header">
         <div class="header-content">
           <div class="header-left">
-            <button class="back-button" @click="goBack" aria-label="Voltar ao dashboard">
+            <button class="back-button" @click="goBack" aria-label="Voltar ao dashboard" data-cy="btn-back">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -40,6 +40,7 @@
               @click="loadInvites"
               :disabled="loading"
               aria-label="Atualizar convites"
+              data-cy="btn-refresh-invites"
             >
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M23 4V10H17M1 20V14H7M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22.99 14A9 9 0 0 1 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -53,6 +54,7 @@
                 class="profile-icon-button"
                 @click="goToProfile"
                 aria-label="Ir para o perfil"
+                data-cy="btn-go-to-profile"
               >
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M20 21V19C20 17.9391 19.5786 16.9217 18.8284 16.1716C18.0783 15.4214 17.0609 15 16 15H8C6.93913 15 5.92172 15.4214 5.17157 16.1716C4.42143 16.9217 4 17.9391 4 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -77,6 +79,7 @@
               type="text"
               placeholder="Buscar por usuário..."
               class="search-input"
+              data-cy="input-search-invites"
               @input="onSearch"
             />
             <button 
@@ -84,6 +87,7 @@
               class="clear-button"
               @click="clearSearch"
               aria-label="Limpar busca"
+              data-cy="btn-clear-search-invites"
             >
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -98,6 +102,7 @@
             <select 
               v-model="statusFilter" 
               class="filter-select"
+              data-cy="select-filter-invite-status"
               @change="onSearch"
             >
               <option value="">Todos os status</option>
@@ -132,12 +137,13 @@
         </div>
 
         <!-- Lista de convites -->
-        <div v-else class="invites-grid">
+        <div v-else class="invites-grid" data-cy="grid-invites">
           <div 
             v-for="invite in invites" 
             :key="invite.id" 
             class="invite-card"
             :class="`status-${invite.status.toLowerCase()}`"
+            :data-cy="`card-invite-${invite.id}`"
           >
             <div class="card-header">
               <div class="status-indicator">
@@ -172,6 +178,7 @@
                   class="action-button"
                   @click="showInviteMenu(invite)"
                   aria-label="Mais opções"
+                  :data-cy="`btn-menu-invite-${invite.id}`"
                 >
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="1" fill="currentColor"/>
@@ -227,6 +234,7 @@
                   class="accept-button"
                   @click="acceptInvite(invite)"
                   :disabled="processingInvite === invite.id || processingInvite !== null"
+                  :data-cy="`btn-accept-invite-${invite.id}`"
                 >
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M22 11.08V12A10 10 0 1 1 5.93 5.93" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -238,6 +246,7 @@
                   class="decline-button"
                   @click="declineInvite(invite)"
                   :disabled="processingInvite === invite.id || processingInvite !== null"
+                  :data-cy="`btn-decline-invite-${invite.id}`"
                 >
                   <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
@@ -259,6 +268,7 @@
             class="page-button"
             :disabled="currentPage === 1"
             @click="goToPage(currentPage - 1)"
+            data-cy="btn-pagination-prev"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -272,6 +282,7 @@
               class="page-number"
               :class="{ active: page === currentPage }"
               @click="goToPage(page)"
+              :data-cy="`btn-pagination-page-${page}`"
             >
               {{ page }}
             </button>
@@ -281,6 +292,7 @@
             class="page-button"
             :disabled="currentPage === totalPages"
             @click="goToPage(currentPage + 1)"
+            data-cy="btn-pagination-next"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -291,11 +303,11 @@
     </main>
 
     <!-- Menu de ações -->
-    <div v-if="showMenu" class="menu-overlay" @click="closeMenu">
+    <div v-if="showMenu" class="menu-overlay" @click="closeMenu" data-cy="dialog-invite-menu">
       <div class="menu-container" @click.stop>
         <div class="menu-header">
           <h4>Ações do Convite</h4>
-          <button class="close-menu" @click="closeMenu">
+          <button class="close-menu" @click="closeMenu" data-cy="btn-close-invite-menu">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -306,6 +318,7 @@
             v-if="selectedInvite?.status === 'PENDING'" 
             class="menu-action"
             @click="resendInvite"
+            data-cy="btn-resend-invite"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M23 4V10H17M1 20V14H7M20.49 9A9 9 0 0 0 5.64 5.64L1 10M22.99 14A9 9 0 0 1 18.36 18.36L23 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -316,6 +329,7 @@
             v-if="selectedInvite" 
             class="menu-action"
             @click="viewProject"
+            data-cy="btn-view-project-invite"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M22 19A2 2 0 0 1 20 21H4A2 2 0 0 1 2 19V5A2 2 0 0 1 4 3H9L11 5H20A2 2 0 0 1 22 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -327,7 +341,7 @@
     </div>
 
     <!-- Diálogos de confirmação -->
-    <div v-if="acceptDialog" class="dialog-overlay" @click="closeAcceptDialog">
+    <div v-if="acceptDialog" class="dialog-overlay" @click="closeAcceptDialog" data-cy="dialog-accept-invite">
       <div class="dialog-container" @click.stop>
         <div class="dialog-header">
           <div class="dialog-icon success">
@@ -342,11 +356,12 @@
           <p>Tem certeza que deseja aceitar o convite para o projeto <strong>"{{ inviteToProcess?.project.name }}"</strong>?</p>
         </div>
         <div class="dialog-actions">
-          <button class="cancel-button" @click="closeAcceptDialog">Cancelar</button>
+          <button class="cancel-button" @click="closeAcceptDialog" data-cy="btn-cancel-accept-invite">Cancelar</button>
           <button 
             class="confirm-button success" 
             @click="confirmAccept"
             :disabled="processingInvite !== null"
+            data-cy="btn-confirm-accept-invite"
           >
             Aceitar
           </button>
@@ -354,7 +369,7 @@
       </div>
     </div>
 
-    <div v-if="declineDialog" class="dialog-overlay" @click="closeDeclineDialog">
+    <div v-if="declineDialog" class="dialog-overlay" @click="closeDeclineDialog" data-cy="dialog-decline-invite">
       <div class="dialog-container" @click.stop>
         <div class="dialog-header">
           <div class="dialog-icon error">
@@ -370,11 +385,12 @@
           <p>Tem certeza que deseja recusar o convite para o projeto <strong>"{{ inviteToProcess?.project.name }}"</strong>?</p>
         </div>
         <div class="dialog-actions">
-          <button class="cancel-button" @click="closeDeclineDialog">Cancelar</button>
+          <button class="cancel-button" @click="closeDeclineDialog" data-cy="btn-cancel-decline-invite">Cancelar</button>
           <button 
             class="confirm-button error" 
             @click="confirmDecline"
             :disabled="processingInvite !== null"
+            data-cy="btn-confirm-decline-invite"
           >
             Recusar
           </button>

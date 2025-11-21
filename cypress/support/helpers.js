@@ -8,8 +8,12 @@
  * @param {RegExp|string} labelRegex - Regex ou string para encontrar o label do campo
  */
 export const selectRandomFromQSelect = (labelRegex) => {
-    cy.findByLabelText(labelRegex).click();
-    cy.get('.q-menu, [role="listbox"]')
+    // O elemento de foco do Quasar tem opacity: 0, então usamos force: true
+    cy.findByLabelText(labelRegex)
+        .should('exist')
+        .click({ force: true });
+    
+    cy.get('.q-menu, [role="listbox"]', { timeout: 5000 })
         .should('be.visible')
         .and($m => {
             const style = getComputedStyle($m[0]);
@@ -41,8 +45,15 @@ export const selectRandomFromQSelect = (labelRegex) => {
  * @param {'first'|'last'|'random'|number} which - Qual opção selecionar
  */
 export const pickFromQSelect = (labelRegex, which = 'first') => {
-    cy.findByLabelText(labelRegex).as('select').click();
-    cy.get('@select').should('have.attr', 'aria-expanded', 'true');
+    // O elemento de foco do Quasar tem opacity: 0, então usamos force: true
+    cy.findByLabelText(labelRegex)
+        .should('exist')
+        .as('select')
+        .click({ force: true });
+    
+    // Aguardar o menu abrir
+    cy.get('[role="listbox"]', { timeout: 5000 })
+        .should('be.visible');
 
     cy.get('[role="listbox"] [role="option"]:not([aria-disabled="true"])')
         .then($opts => {

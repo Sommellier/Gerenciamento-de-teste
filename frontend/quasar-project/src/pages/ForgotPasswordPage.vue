@@ -24,7 +24,7 @@
             <p class="forgot-subtitle">Digite seu email para receber o link de recuperação</p>
           </div>
 
-          <q-form @submit.prevent="handleReset" class="forgot-form">
+          <q-form @submit.prevent="handleReset" class="forgot-form" data-cy="form-forgot-password">
             <div class="input-group">
               <q-input 
                 v-model="email" 
@@ -34,6 +34,7 @@
                 rounded 
                 color="primary" 
                 class="modern-input"
+                data-cy="input-email-forgot-password"
                 :rules="[val => !!val || 'Email é obrigatório', val => /.+@.+\..+/.test(val) || 'Email inválido']"
                 lazy-rules
               >
@@ -53,6 +54,7 @@
               no-caps
               size="lg"
               :loading="isLoading"
+              data-cy="btn-submit-forgot-password"
             />
 
             <!-- Mensagem de resposta -->
@@ -62,6 +64,7 @@
               dense
               class="message-banner"
               rounded
+              data-cy="banner-forgot-password-message"
             >
               <template v-slot:avatar>
                 <q-icon :name="isError ? 'error' : 'check_circle'" :color="isError ? 'negative' : 'positive'" />
@@ -80,7 +83,8 @@
                 label="Fazer login" 
                 color="primary" 
                 class="login-btn"
-                @click="goToLogin" 
+                @click="goToLogin"
+                data-cy="btn-link-login"
               />
             </div>
           </q-form>

@@ -183,7 +183,6 @@ describe('getProjectScenarioMetrics', () => {
       })
     })
 
-    // TODO: Comentado teste que usa campo 'release' - não existe no schema atual
     // it('retorna métricas filtradas por release', async () => {
     //   // Criar cenários com diferentes releases
     //   await prisma.testScenario.createMany({
@@ -235,7 +234,6 @@ describe('getProjectScenarioMetrics', () => {
     //   })
     // })
 
-    // TODO: Comentado teste que usa campo 'release' - não existe no schema atual
     // it('retorna métricas sem filtro de release quando release não é especificada', async () => {
     //   // Criar cenários com diferentes releases
     //   await prisma.testScenario.createMany({
@@ -379,7 +377,6 @@ describe('getProjectScenarioMetrics', () => {
   })
 
   describe('getProjectScenarioMetrics - validação de entrada', () => {
-    // TODO: Comentados testes que usam parâmetro 'release' - não existe no schema atual
     // it('aceita release como string vazia', async () => {
     //   const result = await getProjectScenarioMetrics({ projectId, release: '' })
 
@@ -413,7 +410,6 @@ describe('getProjectScenarioMetrics', () => {
     //   })
     // })
 
-    // TODO: Comentado teste que usa campo 'release' - não existe no schema atual
     // it('aceita diferentes formatos de release válidos', async () => {
     //   const releases = ['2024-01', '2024-12', '2023-06', '2025-03']
       
@@ -762,7 +758,6 @@ describe('getProjectScenarioMetrics', () => {
   })
 
   describe('getProjectScenarioMetrics - casos de edge', () => {
-    // TODO: Comentado teste de performance que cria 1000 cenários - campo 'release' não existe no schema
     // it('funciona com projeto que tem muitos cenários de um status', async () => {
     //   // Criar muitos cenários com status CREATED
     //   const scenarios = []

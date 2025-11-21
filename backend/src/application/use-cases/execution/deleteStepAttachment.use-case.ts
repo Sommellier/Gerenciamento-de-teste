@@ -35,7 +35,7 @@ export async function deleteStepAttachment({
     }
 
     // Verificar se o usuário tem permissão para deletar
-    // Permitir se o usuário fez o upload ou se é ADMIN/MANAGER/OWNER do projeto
+    // Permitir se o usuário fez o upload ou se é MANAGER/OWNER do projeto
     const project = attachment.step.scenario.project
     const isOwner = project.ownerId === userId
     const userProject = await prisma.userOnProject.findFirst({
@@ -48,7 +48,6 @@ export async function deleteStepAttachment({
     const canDelete = 
       attachment.uploadedBy === userId ||
       isOwner ||
-      userProject?.role === 'ADMIN' ||
       userProject?.role === 'MANAGER' ||
       userProject?.role === 'OWNER'
 

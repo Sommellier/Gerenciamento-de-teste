@@ -110,15 +110,8 @@ describe('Multiple Invites Test', () => {
         .set('Authorization', `Bearer ${token}`)
         .send(invite)
       
-      // Log para debug se houver erro
-      if (response.status !== 201) {
-        console.error('Erro ao criar convite:', {
-          email: invite.email,
-          role: invite.role,
-          status: response.status,
-          body: response.body
-        })
-      }
+      // Se houver erro, o teste falhará naturalmente na validação abaixo
+      // Não é necessário logar, pois o teste já valida o status
       
       responses.push(response)
     }

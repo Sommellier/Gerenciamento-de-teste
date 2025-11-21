@@ -101,12 +101,12 @@ const bugAttachmentUpload = multer({
 })
 
 // Rotas de comentários em etapas
-// Permissões: TESTER, MANAGER, ADMIN, OWNER podem comentar
+// Permissões: TESTER, MANAGER, OWNER podem comentar
 router.post('/steps/:stepId/comments', auth, asyncH(executionController.addComment.bind(executionController)))
 router.get('/steps/:stepId/comments', auth, asyncH(executionController.getComments.bind(executionController)))
 
 // Rotas de anexos/evidências em etapas
-// Permissões: TESTER, MANAGER, ADMIN, OWNER podem fazer upload
+// Permissões: TESTER, MANAGER, OWNER podem fazer upload
 router.post('/steps/:stepId/attachments', auth, uploadLimiter, upload.single('file'), asyncH(executionController.uploadAttachment.bind(executionController)))
 router.get('/steps/:stepId/attachments', auth, asyncH(executionController.getAttachments.bind(executionController)))
 router.delete('/steps/:stepId/attachments/:attachmentId', auth, asyncH(executionController.deleteAttachment.bind(executionController)))
@@ -115,7 +115,7 @@ router.delete('/steps/:stepId/attachments/:attachmentId', auth, asyncH(execution
 router.put('/execution/steps/:stepId/status', auth, asyncH(executionController.updateStepStatusHandler.bind(executionController)))
 
 // Rotas de bugs
-// Permissões: TESTER, MANAGER, ADMIN, OWNER podem criar bugs
+// Permissões: TESTER, MANAGER, OWNER podem criar bugs
 router.post('/scenarios/:scenarioId/bugs', auth, asyncH(executionController.createBug.bind(executionController)))
 router.get('/scenarios/:scenarioId/bugs', auth, asyncH(executionController.getScenarioBugs.bind(executionController)))
 router.get('/projects/:projectId/packages/:packageId/bugs', auth, asyncH(executionController.getPackageBugsHandler.bind(executionController)))

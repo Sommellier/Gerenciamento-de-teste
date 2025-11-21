@@ -10,6 +10,7 @@
               icon="arrow_back"
               @click="goBack"
               class="back-btn"
+              data-cy="btn-back"
               color="primary"
               size="lg"
             />
@@ -24,7 +25,7 @@
     </div>
 
     <q-card class="form-card glass-card">
-      <q-form @submit="onSubmit" class="package-form">
+      <q-form @submit="onSubmit" class="package-form" data-cy="form-create-package">
         <q-card-section class="form-section">
           <!-- Informações Básicas -->
           <div class="form-group">
@@ -40,6 +41,7 @@
                 label-color="white"
                 input-class="text-white"
                 class="form-input"
+                data-cy="input-package-title"
                 hint="Ex: Login e Autenticação"
               />
             </div>
@@ -54,6 +56,7 @@
                 label-color="white"
                 input-class="text-white"
                 class="form-input"
+                data-cy="input-package-description"
                 hint="Descrição detalhada do pacote de teste"
                 rows="3"
               />
@@ -174,6 +177,7 @@
             color="grey"
             @click="goBack"
             class="action-btn"
+            data-cy="btn-cancel-create-package"
           />
           <q-btn
             type="submit"
@@ -181,6 +185,7 @@
             color="primary"
             :loading="loading"
             class="action-btn primary"
+            data-cy="btn-submit-create-package"
           />
         </q-card-actions>
       </q-form>

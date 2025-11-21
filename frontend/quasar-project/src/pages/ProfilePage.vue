@@ -18,6 +18,7 @@
               icon="arrow_back"
               @click="goBack"
               class="back-btn"
+              data-cy="btn-back"
               color="white"
               size="md"
             />
@@ -36,6 +37,7 @@
                     dense
                     icon="edit"
                     class="edit-avatar-btn"
+                    data-cy="btn-edit-avatar"
                     @click="triggerFileInput"
                   >
                     <q-tooltip>A Alterar foto</q-tooltip>
@@ -57,6 +59,7 @@
                   color="white"
                   @click="startEditing"
                   class="edit-btn"
+                  data-cy="btn-edit-profile"
                 />
                 <q-btn
                   v-else
@@ -68,6 +71,7 @@
                   :disable="!hasChanges"
                   @click="submitForm"
                   class="save-btn-header"
+                  data-cy="btn-save-profile-header"
                 />
                 <q-btn
                   flat
@@ -77,6 +81,7 @@
                   @click="showDeleteConfirmDialog = true"
                   :loading="deleting"
                   class="delete-account-btn-header"
+                  data-cy="btn-delete-account"
                 />
               </div>
             </div>
@@ -125,6 +130,7 @@
                   color="white"
                   @click="triggerFileInput"
                   :loading="uploading"
+                  data-cy="btn-select-avatar"
                 />
               </div>
               
@@ -144,7 +150,7 @@
           </q-card-section>
 
           <q-card-section>
-            <q-form ref="formRef" @submit="submitForm" class="profile-form">
+            <q-form ref="formRef" @submit="submitForm" class="profile-form" data-cy="form-profile">
               <div class="form-grid">
                 <!-- Coluna Esquerda -->
                 <div class="form-column">
@@ -154,6 +160,7 @@
                     :rules="nameRules"
                     outlined
                     class="form-input"
+                    data-cy="input-profile-name"
                     :disable="!isEditing"
                     :loading="submitting"
                     autogrow
@@ -169,6 +176,7 @@
                     type="email"
                     filled
                     class="form-input"
+                    data-cy="input-profile-email"
                     :readonly="true"
                     hint="O e-mail não pode ser alterado"
                   >
@@ -188,6 +196,7 @@
                     :rules="passwordRules"
                     outlined
                     class="form-input"
+                    data-cy="input-profile-new-password"
                     :disable="!isEditing"
                     :loading="submitting"
                     hint="Mínimo 8 caracteres"
@@ -202,6 +211,7 @@
                         :name="showNewPassword ? 'visibility_off' : 'visibility'"
                         @click="showNewPassword = !showNewPassword"
                         class="cursor-pointer"
+                        data-cy="icon-toggle-new-password"
                       />
                     </template>
                   </q-input>
@@ -214,6 +224,7 @@
                     :rules="confirmPasswordRules"
                     outlined
                     class="form-input"
+                    data-cy="input-profile-confirm-password"
                     :disable="!isEditing"
                     :loading="submitting"
                     hint="Confirme sua nova senha"
@@ -226,6 +237,7 @@
                         :name="showConfirmPassword ? 'visibility_off' : 'visibility'"
                         @click="showConfirmPassword = !showConfirmPassword"
                         class="cursor-pointer"
+                        data-cy="icon-toggle-confirm-password"
                       />
                     </template>
                   </q-input>
@@ -239,6 +251,7 @@
                   label="Cancelar"
                   @click="cancelEdit"
                   :disable="submitting"
+                  data-cy="btn-cancel-edit-profile"
                 />
                 <q-btn
                   type="submit"
@@ -249,6 +262,7 @@
                   :disable="!hasChanges || submitting"
                   unelevated
                   class="save-btn"
+                  data-cy="btn-save-profile"
                 />
               </div>
             </q-form>
@@ -261,6 +275,7 @@
             class="stat-card"
             @click="goToProjects"
             v-if="profile?.stats"
+            data-cy="card-stat-projects-owned"
           >
             <q-card-section class="stat-card-content">
               <q-icon name="folder" size="32px" color="primary" />
@@ -276,6 +291,7 @@
             class="stat-card"
             @click="goToProjects"
             v-if="profile?.stats"
+            data-cy="card-stat-projects-participating"
           >
             <q-card-section class="stat-card-content">
               <q-icon name="group" size="32px" color="positive" />
@@ -291,6 +307,7 @@
             class="stat-card"
             @click="goToExecutions"
             v-if="profile?.stats"
+            data-cy="card-stat-test-executions"
           >
             <q-card-section class="stat-card-content">
               <q-icon name="play_arrow" size="32px" color="orange" />
@@ -321,10 +338,11 @@
       accept="image/*"
       @change="handleFileSelect"
       style="display: none"
+      data-cy="input-file-avatar"
     />
 
     <!-- Success dialog -->
-    <q-dialog v-model="successDialog">
+    <q-dialog v-model="successDialog" data-cy="dialog-profile-success">
       <q-card class="dialog-card">
         <q-card-section class="dialog-header success">
           <q-icon name="check_circle" size="48px" color="positive" />
@@ -336,13 +354,14 @@
             label="OK"
             @click="successDialog = false"
             unelevated
+            data-cy="btn-ok-profile-success"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Error dialog -->
-    <q-dialog v-model="errorDialog">
+    <q-dialog v-model="errorDialog" data-cy="dialog-profile-error">
       <q-card class="dialog-card">
         <q-card-section class="dialog-header error">
           <q-icon name="error" size="48px" color="negative" />
@@ -356,13 +375,14 @@
             color="negative"
             label="Fechar"
             @click="errorDialog = false"
+            data-cy="btn-close-profile-error"
           />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Delete Account Confirmation Dialog -->
-    <q-dialog v-model="showDeleteConfirmDialog" persistent>
+    <q-dialog v-model="showDeleteConfirmDialog" persistent data-cy="dialog-delete-account">
       <q-card class="delete-dialog-card">
         <q-card-section class="delete-dialog-header">
           <div class="delete-header-content">
@@ -414,6 +434,7 @@
               color="negative"
               label="Entendo que esta ação é irreversível e desejo deletar minha conta"
               class="confirm-checkbox"
+              data-cy="checkbox-confirm-delete-account"
             />
           </div>
         </q-card-section>
@@ -426,6 +447,7 @@
             @click="cancelDelete"
             :disable="deleting"
             class="cancel-btn"
+            data-cy="btn-cancel-delete-account"
           />
           <q-btn
             color="negative"
@@ -436,6 +458,7 @@
             :disable="!deleteConfirmed"
             unelevated
             class="delete-btn"
+            data-cy="btn-confirm-delete-account"
           />
         </q-card-actions>
       </q-card>

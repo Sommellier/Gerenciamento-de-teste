@@ -27,6 +27,18 @@ export interface TestScenario {
     name: string
     email: string
   }
+  testadorId?: number
+  testador?: {
+    id: number
+    name: string
+    email: string
+  }
+  aprovadorId?: number
+  aprovador?: {
+    id: number
+    name: string
+    email: string
+  }
   dueDate?: string
   preconditions?: string[]
   status: 'CREATED' | 'EXECUTED' | 'PASSED' | 'FAILED' | 'BLOCKED' | 'BLOQUEADO' | 'APPROVED' | 'REPROVED'

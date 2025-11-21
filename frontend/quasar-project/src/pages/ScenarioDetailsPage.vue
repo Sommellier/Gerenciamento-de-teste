@@ -9,6 +9,7 @@
           icon="arrow_back"
           @click="goBack"
           class="back-btn"
+          data-cy="btn-back"
           color="white"
         />
         <div class="header-info">
@@ -24,6 +25,7 @@
           @click="executeScenario"
           :disable="!scenario || !scenario.steps || scenario.steps.length === 0"
           class="action-btn"
+          data-cy="btn-execute-scenario"
         >
           <q-tooltip v-if="!scenario || !scenario.steps || scenario.steps.length === 0">
             Adicione pelo menos uma etapa ao cenário antes de executar
@@ -36,6 +38,7 @@
           label="Editar"
           @click="editScenario"
           class="action-btn"
+          data-cy="btn-edit-scenario"
         />
           <q-btn
             color="positive"
@@ -45,6 +48,7 @@
             :loading="generatingECT"
             :disable="!scenario?.steps || scenario.steps.length === 0"
             class="action-btn"
+            data-cy="btn-generate-ect"
           />
         <!-- Botões de aprovar/reprovar ECT (apenas se permitido e houver relatório sem aprovação) -->
         <template v-if="canApproveRejectECT && latestReportWithoutApproval">
@@ -54,6 +58,7 @@
             label="Aprovar ECT"
             @click="openECTApprovalDialog"
             class="action-btn"
+            data-cy="btn-approve-ect"
           />
           <q-btn
             color="negative"
@@ -61,6 +66,7 @@
             label="Reprovar ECT"
             @click="openECTRejectionDialog"
             class="action-btn"
+            data-cy="btn-reject-ect"
           />
         </template>
       </div>
@@ -77,7 +83,7 @@
       <q-icon name="error_outline" size="80px" color="negative" />
       <h3>Erro ao carregar cenário</h3>
       <p>{{ error }}</p>
-      <q-btn color="primary" @click="loadScenario" label="Tentar novamente" />
+      <q-btn color="primary" @click="loadScenario" label="Tentar novamente" data-cy="btn-retry-load-scenario" />
     </div>
 
     <!-- Main Content -->
@@ -205,15 +211,17 @@
               @click="handleAddStep"
               :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED'"
               unelevated
+              data-cy="btn-add-step"
             />
           </div>
 
           <!-- Steps List -->
-          <div v-if="scenario.steps && scenario.steps.length > 0" class="steps-list">
+          <div v-if="scenario.steps && scenario.steps.length > 0" class="steps-list" data-cy="list-steps">
             <div
               v-for="(step, index) in scenario.steps"
               :key="step.id"
               class="step-item"
+              :data-cy="`step-item-${step.id || index + 1}`"
             >
               <div class="step-number">{{ index + 1 }}</div>
               <div class="step-content">
@@ -233,6 +241,7 @@
                   @click="editStep(step)"
                   :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED'"
                   color="primary"
+                  :data-cy="`btn-edit-step-${step.id || index + 1}`"
                 >
                   <q-tooltip>Editar etapa</q-tooltip>
                 </q-btn>
@@ -244,6 +253,7 @@
                   @click="step.id ? deleteStep(step.id) : null"
                   :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED' || !step.id"
                   color="negative"
+                  :data-cy="`btn-delete-step-${step.id || index + 1}`"
                 >
                   <q-tooltip>Excluir etapa</q-tooltip>
                 </q-btn>
@@ -262,6 +272,7 @@
               label="Adicionar Primeira Etapa"
               @click="handleAddStep"
               :disable="scenario?.status === 'PASSED' || scenario?.status === 'APPROVED'"
+              data-cy="btn-add-first-step"
             />
           </div>
         </q-card-section>
@@ -269,114 +280,108 @@
     </div>
 
     <!-- Edit Scenario Dialog -->
-    <q-dialog v-model="showEditDialog" persistent>
-      <q-card class="edit-dialog glass-card">
+    <q-dialog v-model="showEditDialog" persistent data-cy="dialog-edit-scenario">
+      <q-card class="edit-dialog" style="min-width: 500px; max-width: 600px">
         <q-card-section class="dialog-header">
-          <div class="dialog-header-content">
-            <h3 class="dialog-title">Editar Cenário</h3>
-            <q-btn
-              flat
-              round
-              icon="close"
-              @click="showEditDialog = false"
-              class="close-btn"
-              color="white"
-            />
-          </div>
+          <div class="text-h6">Editar Cenário</div>
+          <q-btn
+            flat
+            round
+            icon="close"
+            @click="showEditDialog = false"
+            class="close-btn"
+            data-cy="btn-close-edit-scenario"
+          />
         </q-card-section>
 
-        <q-card-section class="dialog-body">
-          <q-form @submit.prevent="saveScenarioEdit" class="edit-form">
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="title" class="label-icon" />
-                Título do Cenário *
-              </label>
+        <q-card-section class="dialog-content">
+          <q-form @submit.prevent="saveScenarioEdit" class="edit-form" data-cy="form-edit-scenario">
+            <div class="form-row">
               <q-input
                 v-model="editForm.title"
-                placeholder="Digite o título do cenário"
-                filled
-                dark
-                label-color="white"
-                input-class="text-white"
+                label="Título *"
+                outlined
                 :rules="[val => !!val || 'Título é obrigatório']"
                 class="form-input"
+                hint="Nome ou identificação do cenário de teste"
+                dense
+                data-cy="input-edit-scenario-title"
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="description" class="label-icon" />
-                Descrição
-              </label>
+            <div class="form-row">
               <q-input
                 v-model="editForm.description"
-                placeholder="Descreva o cenário de teste"
-                filled
-                dark
-                label-color="white"
-                input-class="text-white"
+                label="Descrição"
+                outlined
                 type="textarea"
                 rows="3"
                 class="form-input"
+                hint="Descreva o propósito e o escopo deste cenário de teste"
+                dense
+                data-cy="input-edit-scenario-description"
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="category" class="label-icon" />
-                Tipo *
-              </label>
+            <div class="form-row">
               <q-select
                 v-model="editForm.type"
                 :options="typeOptions"
-                placeholder="Selecione o tipo"
-                filled
-                dark
-                label-color="white"
+                label="Tipo *"
+                outlined
                 :rules="[val => !!val || 'Tipo é obrigatório']"
-                class="form-input"
                 emit-value
                 map-options
+                class="form-input"
+                hint="Selecione o tipo de teste"
+                dense
+                data-cy="select-edit-scenario-type"
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="flag" class="label-icon" />
-                Prioridade *
-              </label>
+            <div class="form-row">
               <q-select
                 v-model="editForm.priority"
                 :options="priorityOptions"
-                placeholder="Selecione a prioridade"
-                filled
-                dark
-                label-color="white"
+                label="Prioridade *"
+                outlined
                 :rules="[val => !!val || 'Prioridade é obrigatória']"
-                class="form-input"
                 emit-value
                 map-options
+                class="form-input"
+                hint="Nível de prioridade para execução do teste"
+                dense
+                data-cy="select-edit-scenario-priority"
               />
             </div>
 
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="person" class="label-icon" />
-                Testador Responsável *
-              </label>
+            <div class="form-row">
               <q-select
                 v-model="editForm.testadorId"
                 :options="testerOptions"
-                placeholder="Selecione o testador"
-                filled
-                dark
-                label-color="white"
+                label="Testador Responsável *"
+                outlined
                 :rules="[val => !!val || 'Testador é obrigatório']"
-                class="form-input"
                 emit-value
                 map-options
+                class="form-input"
+                hint="Pessoa responsável por executar o teste"
+                dense
               >
+                <template v-slot:selected>
+                  <template v-if="editForm.testadorId">
+                    <q-item v-if="testerOptions.find(opt => opt.value === editForm.testadorId)" dense>
+                      <q-item-section avatar>
+                        <q-avatar :color="getMemberColor(editForm.testadorId)" text-color="white" size="24px">
+                          {{ getInitials(testerOptions.find(opt => opt.value === editForm.testadorId)?.label || '') }}
+                        </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ testerOptions.find(opt => opt.value === editForm.testadorId)?.label }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </template>
                 <template v-slot:option="scope">
                   <q-item v-bind="scope.itemProps">
                     <q-item-section avatar>
@@ -393,23 +398,33 @@
               </q-select>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">
-                <q-icon name="verified_user" class="label-icon" />
-                Aprovador Responsável *
-              </label>
+            <div class="form-row">
               <q-select
                 v-model="editForm.aprovadorId"
                 :options="approverOptions"
-                placeholder="Selecione o aprovador"
-                filled
-                dark
-                label-color="white"
+                label="Aprovador Responsável *"
+                outlined
                 :rules="[val => !!val || 'Aprovador é obrigatório']"
-                class="form-input"
                 emit-value
                 map-options
+                class="form-input"
+                hint="Pessoa responsável por aprovar o teste"
+                dense
               >
+                <template v-slot:selected>
+                  <template v-if="editForm.aprovadorId">
+                    <q-item v-if="approverOptions.find(opt => opt.value === editForm.aprovadorId)" dense>
+                      <q-item-section avatar>
+                        <q-avatar :color="getMemberColor(editForm.aprovadorId)" text-color="white" size="24px">
+                          {{ getInitials(approverOptions.find(opt => opt.value === editForm.aprovadorId)?.label || '') }}
+                        </q-avatar>
+                      </q-item-section>
+                      <q-item-section>
+                        <q-item-label>{{ approverOptions.find(opt => opt.value === editForm.aprovadorId)?.label }}</q-item-label>
+                      </q-item-section>
+                    </q-item>
+                  </template>
+                </template>
                 <template v-slot:option="scope">
                   <q-item v-bind="scope.itemProps">
                     <q-item-section avatar>
@@ -425,26 +440,24 @@
                 </template>
               </q-select>
             </div>
-
-            <div class="dialog-actions-form">
-              <q-btn
-                flat
-                label="Cancelar"
-                @click="showEditDialog = false"
-                class="cancel-btn"
-                color="white"
-              />
-              <q-btn
-                type="submit"
-                label="Salvar Alterações"
-                color="primary"
-                :loading="savingScenario"
-                class="save-btn"
-                unelevated
-              />
-            </div>
           </q-form>
         </q-card-section>
+
+        <q-card-actions class="dialog-actions">
+          <q-btn
+            flat
+            label="Cancelar"
+            @click="showEditDialog = false"
+            class="cancel-btn"
+          />
+          <q-btn
+            color="primary"
+            label="Salvar"
+            @click="saveScenarioEdit"
+            :loading="savingScenario"
+            class="save-btn"
+          />
+        </q-card-actions>
       </q-card>
     </q-dialog>
 
@@ -586,7 +599,7 @@
 import { ref, onMounted, computed, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'
-import { scenarioService, type TestScenario, type ScenarioStep } from '../services/scenario.service'
+import { scenarioService, type TestScenario, type ScenarioStep, type CreateScenarioData } from '../services/scenario.service'
 import { ectService } from '../services/ect.service'
 import { getProjectMembers, type ProjectMember } from '../services/project.service'
 import api from '../services/api'
@@ -772,19 +785,49 @@ async function loadScenario() {
   }
 }
 
-function editScenario() {
+async function editScenario() {
   if (!scenario.value) return
   
+  // Garantir que os membros estejam carregados antes de abrir o diálogo
+  if (members.value.length === 0) {
+    await loadMembers()
+    // Aguardar o próximo tick para garantir que as opções sejam atualizadas
+    await nextTick()
+  }
+  
   // Preencher o formulário com os dados do cenário
+  // Priorizar testadorId/aprovadorId diretos, depois os objetos relacionados
+  let testadorId = scenario.value.testadorId || scenario.value.testador?.id || scenario.value.ownerUserId || null
+  let aprovadorId = scenario.value.aprovadorId || scenario.value.aprovador?.id || null
+  
+  // Verificar se os IDs existem nas opções disponíveis
+  // Se não existirem, usar null para evitar mostrar apenas números
+  if (testadorId !== null) {
+    const testerExists = testerOptions.value.some(opt => opt.value === testadorId)
+    if (!testerExists) {
+      // Se o testador não existe nas opções, tentar usar o ownerUserId como fallback
+      testadorId = scenario.value.ownerUserId || null
+    }
+  }
+  
+  if (aprovadorId !== null) {
+    const approverExists = approverOptions.value.some(opt => opt.value === aprovadorId)
+    if (!approverExists) {
+      aprovadorId = null
+    }
+  }
+  
   editForm.value = {
     title: scenario.value.title,
     description: scenario.value.description || '',
     type: scenario.value.type || '',
     priority: scenario.value.priority || '',
-    testadorId: scenario.value.testador?.id || scenario.value.ownerUserId || null,
-    aprovadorId: scenario.value.aprovador?.id || null
+    testadorId: testadorId,
+    aprovadorId: aprovadorId
   }
   
+  // Aguardar mais um tick para garantir que o formulário seja atualizado
+  await nextTick()
   showEditDialog.value = true
 }
 
@@ -1161,7 +1204,7 @@ const testerOptions = computed(() => {
   return members.value
     .filter(member => {
       const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'TESTER'
+      return role === 'OWNER' || role === 'MANAGER' || role === 'TESTER'
     })
     .map(member => ({
       label: member.name || member.email,
@@ -1176,7 +1219,7 @@ const approverOptions = computed(() => {
   return members.value
     .filter(member => {
       const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'APPROVER'
+      return role === 'OWNER' || role === 'MANAGER' || role === 'APPROVER'
     })
     .map(member => ({
       label: member.name || member.email,
@@ -1212,12 +1255,12 @@ async function saveScenarioEdit() {
 
   // Verificar se testador e aprovador são diferentes (exceto se for OWNER)
   if (editForm.value.testadorId === editForm.value.aprovadorId && editForm.value.testadorId) {
-    const selected = members.value.find(m => m.id === editForm.value.testadorId)
-    const isOwner = selected?.role === 'OWNER'
+    const selectedTester = members.value.find(m => m.id === editForm.value.testadorId)
+    const isOwner = selectedTester?.role === 'OWNER'
     if (!isOwner) {
       Notify.create({
         type: 'negative',
-        message: 'O testador e o aprovador devem ser pessoas diferentes'
+        message: 'O testador e o aprovador devem ser pessoas diferentes, exceto quando o testador é o dono do projeto'
       })
       return
     }
@@ -1228,14 +1271,23 @@ async function saveScenarioEdit() {
     
     const scenarioId = Number(route.params.scenarioId)
     
-    await scenarioService.updateScenario(scenarioId, {
+    // Preparar dados para atualização incluindo testadorId e aprovadorId
+    const updateData: Partial<CreateScenarioData> & { testadorId?: number; aprovadorId?: number } = {
       title: editForm.value.title,
       description: editForm.value.description,
       type: editForm.value.type as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
       priority: editForm.value.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-      // Nota: testadorId e aprovadorId não são parte do tipo CreateScenarioData
-      // Essas propriedades devem ser atualizadas através de um endpoint específico se necessário
-    })
+    }
+    
+    // Adicionar testadorId e aprovadorId se fornecidos
+    if (editForm.value.testadorId !== null && editForm.value.testadorId !== undefined) {
+      updateData.testadorId = editForm.value.testadorId
+    }
+    if (editForm.value.aprovadorId !== null && editForm.value.aprovadorId !== undefined) {
+      updateData.aprovadorId = editForm.value.aprovadorId
+    }
+    
+    await scenarioService.updateScenario(scenarioId, updateData)
 
     // Recarregar o cenário
     await loadScenario()
@@ -1656,104 +1708,56 @@ onMounted(async () => {
 
 /* Edit Dialog Styles */
 .edit-dialog {
-  min-width: 600px;
-  max-width: 700px;
+  min-width: 500px;
+  max-width: 600px;
 }
 
 .dialog-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.dialog-content {
   padding: 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.dialog-header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.dialog-title {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 700;
-  color: white;
-}
-
-.close-btn {
-  color: white;
-}
-
-.dialog-body {
-  padding: 24px;
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
 .edit-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.form-row {
+  margin-bottom: 16px;
 }
 
-.form-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: white;
-  font-size: 14px;
-}
-
-.label-icon {
-  font-size: 18px;
+.form-row:last-child {
+  margin-bottom: 0;
 }
 
 .form-input {
   width: 100%;
 }
 
-.form-input :deep(.q-field__control) {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-radius: 8px;
-}
-
-.form-input :deep(.q-field__native) {
-  color: white !important;
-}
-
-.form-input :deep(.q-field__label) {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.form-input :deep(.q-field__messages) {
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-.form-input :deep(.q-field__input) {
-  color: white !important;
-}
-
-.dialog-actions-form {
+.dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .cancel-btn {
-  color: white;
+  min-width: 100px;
 }
 
 .save-btn {
+  min-width: 100px;
   font-weight: 600;
 }
 

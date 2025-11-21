@@ -56,6 +56,16 @@ export async function acceptInvite({
     throw new AppError('Convite expirado', 410)
   }
 
+  // Validar que não pode haver múltiplos OWNERs
+  if (invite.role === 'OWNER') {
+    const existingOwner = await prisma.userOnProject.findFirst({
+      where: { projectId: invite.projectId, role: 'OWNER' }
+    })
+    if (existingOwner) {
+      throw new AppError('Já existe um dono do projeto. Apenas um dono é permitido por projeto.', 409)
+    }
+  }
+
   const accepted = await prisma.$transaction(async (tx) => {
     await tx.userOnProject.upsert({
       where: {

@@ -15,6 +15,7 @@
             size="md"
             @click="goBack"
             class="back-btn"
+            data-cy="btn-back"
           >
             <q-tooltip>Voltar aos pacotes</q-tooltip>
           </q-btn>
@@ -29,7 +30,7 @@
     <!-- Formulário -->
     <q-card class="form-card">
       <q-card-section>
-        <q-form ref="formRef" @submit.prevent="onSubmit" class="q-gutter-md">
+        <q-form ref="formRef" @submit.prevent="onSubmit" class="q-gutter-md" data-cy="form-edit-package">
           <!-- Informações Básicas -->
           <div class="form-section">
             <h3 class="section-title">Informações Básicas</h3>
@@ -40,6 +41,7 @@
                 outlined
                 class="form-input"
                 :rules="nameRules"
+                data-cy="input-edit-package-name"
               />
               <q-input
                 v-model="packageForm.description"
@@ -48,6 +50,7 @@
                 type="textarea"
                 rows="3"
                 class="form-input"
+                data-cy="input-edit-package-description"
               />
             </div>
           </div>
@@ -63,6 +66,7 @@
                 outlined
                 class="form-input"
                 :rules="typeRules"
+                data-cy="select-edit-package-type"
                 emit-value
                 map-options
               />
@@ -73,6 +77,7 @@
                 outlined
                 class="form-input"
                 :rules="priorityRules"
+                data-cy="select-edit-package-priority"
                 emit-value
                 map-options
               />
@@ -84,6 +89,7 @@
                 label="Ambiente"
                 outlined
                 class="form-input"
+                data-cy="select-edit-package-environment"
                 emit-value
                 map-options
               />
@@ -93,6 +99,7 @@
                 outlined
                 class="form-input"
                 :rules="releaseRules"
+                data-cy="input-edit-package-release"
               />
             </div>
           </div>
@@ -146,6 +153,7 @@
               label="Cancelar"
               @click="goBack"
               class="action-btn"
+              data-cy="btn-cancel-edit-package"
             />
             <q-btn
               type="submit"
@@ -153,6 +161,7 @@
               label="Salvar Alterações"
               :loading="updatingPackage"
               class="action-btn"
+              data-cy="btn-save-package"
             />
           </div>
         </q-form>

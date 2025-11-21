@@ -220,65 +220,6 @@ describe('deleteStepAttachment', () => {
       expect(deletedAttachment).toBeNull()
     })
 
-    it('deleta anexo quando usuário é admin do projeto', async () => {
-      // Criar usuário admin
-      const admin = await prisma.user.create({
-        data: {
-          name: 'Admin User',
-          email: `admin_${Date.now()}@example.com`,
-          password: 'password123'
-        }
-      })
-
-      // Adicionar admin ao projeto
-      await prisma.userOnProject.create({
-        data: {
-          userId: admin.id,
-          projectId: projectId,
-          role: Role.ADMIN
-        }
-      })
-
-      // Criar outro anexo feito por outro usuário
-      const otherAttachment = await prisma.stepAttachment.create({
-        data: {
-          filename: 'other-attachment.jpg',
-          originalName: 'original-other.jpg',
-          mimeType: 'image/jpeg',
-          size: 1024 * 1024,
-          url: '/uploads/evidences/other-attachment.jpg',
-          stepId,
-          uploadedBy: userId
-        }
-      })
-
-      const result = await deleteStepAttachment({
-        attachmentId: otherAttachment.id,
-        userId: admin.id
-      })
-
-      expect(result).toMatchObject({
-        success: true
-      })
-
-      // Verificar se o anexo foi deletado
-      const deletedAttachment = await prisma.stepAttachment.findUnique({
-        where: { id: otherAttachment.id }
-      })
-      expect(deletedAttachment).toBeNull()
-
-      // Limpar admin
-      await prisma.userOnProject.delete({
-        where: {
-          userId_projectId: {
-            userId: admin.id,
-            projectId
-          }
-        }
-      })
-      await prisma.user.delete({ where: { id: admin.id } })
-    })
-
     it('deleta arquivo físico se existir', async () => {
       // Criar arquivo físico
       const filePath = path.join(process.cwd(), 'uploads', 'evidences', 'test-attachment.jpg')
