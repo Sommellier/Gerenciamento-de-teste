@@ -24,7 +24,7 @@
             <p class="register-subtitle">Preencha os dados abaixo para criar sua conta</p>
           </div>
 
-          <q-form @submit.prevent="handleRegister" class="register-form">
+          <q-form @submit.prevent="handleRegister" class="register-form" data-cy="form-register">
             <div class="input-group">
               <q-input 
                 v-model="name" 
@@ -34,6 +34,7 @@
                 rounded 
                 color="primary" 
                 class="modern-input"
+                data-cy="input-name-register"
                 :rules="[val => !!val || 'Nome é obrigatório', val => val.length >= 2 || 'Nome deve ter pelo menos 2 caracteres']"
                 lazy-rules
               >
@@ -52,6 +53,7 @@
                 rounded 
                 color="primary" 
                 class="modern-input"
+                data-cy="input-email-register"
                 :rules="[val => !!val || 'Email é obrigatório', val => /.+@.+\..+/.test(val) || 'Email inválido']"
                 lazy-rules
               >
@@ -70,6 +72,7 @@
                 rounded 
                 color="primary" 
                 class="modern-input"
+                data-cy="input-password-register"
                 :rules="[val => !!val || 'Senha é obrigatória', val => val.length >= 6 || 'Senha deve ter pelo menos 6 caracteres']"
                 lazy-rules
               >
@@ -81,6 +84,7 @@
                     :name="showPassword ? 'visibility_off' : 'visibility'" 
                     @click="showPassword = !showPassword"
                     class="cursor-pointer password-toggle"
+                    data-cy="icon-toggle-password"
                   />
                 </template>
               </q-input>
@@ -91,6 +95,7 @@
               label="Criar Conta" 
               color="primary" 
               class="register-btn"
+              data-cy="btn-submit-register"
               unelevated 
               rounded 
               no-caps
@@ -104,6 +109,7 @@
               :class="isError ? 'error-banner' : 'success-banner'"
               dense
               class="message-banner"
+              data-cy="banner-register-message"
               rounded
             >
               <template v-slot:avatar>
@@ -123,6 +129,7 @@
                 label="Fazer login" 
                 color="primary" 
                 class="login-btn"
+                data-cy="btn-link-login"
                 @click="goToLogin" 
               />
             </div>

@@ -74,7 +74,18 @@ export async function updateMemberRole({
     throw new AppError('Apenas o dono ou gerente podem alterar roles', 403)
   }
 
-  // 5) Regra de último OWNER (vale inclusive para auto-rebaixamento)
+  // 5) Regra: não pode haver múltiplos OWNERs
+  // Se está tentando promover alguém para OWNER, verificar se já existe um
+  if (newRole === 'OWNER' && target.role !== 'OWNER') {
+    const existingOwner = await prisma.userOnProject.findFirst({
+      where: { projectId, role: 'OWNER' }
+    })
+    if (existingOwner) {
+      throw new AppError('Já existe um dono do projeto. Apenas um dono é permitido por projeto.', 409)
+    }
+  }
+
+  // 6) Regra de último OWNER (vale inclusive para auto-rebaixamento)
   if (target.role === 'OWNER' && newRole !== 'OWNER') {
     const owners = await prisma.userOnProject.count({
       where: { projectId, role: 'OWNER' }
@@ -84,7 +95,7 @@ export async function updateMemberRole({
     }
   }
 
-  // 6) Idempotência
+  // 7) Idempotência
   if (target.role === newRole) {
     // Retorna o registro atual (sem update)
     return {
@@ -94,7 +105,7 @@ export async function updateMemberRole({
     } as unknown as MemberRecord
   }
 
-  // 7) Atualiza papel
+  // 8) Atualiza papel
   const updated = await prisma.userOnProject.update({
     where: { userId_projectId: { userId: targetUserId, projectId } },
     data: { role: newRole }

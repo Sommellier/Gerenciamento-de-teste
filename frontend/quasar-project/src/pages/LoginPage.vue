@@ -24,7 +24,7 @@
             <p class="login-subtitle">Acesse sua conta para continuar</p>
           </div>
 
-          <q-form @submit.prevent="handleLogin" class="login-form">
+          <q-form @submit.prevent="handleLogin" class="login-form" data-cy="form-login">
             <div class="input-group">
               <q-input 
                 v-model="email" 
@@ -34,6 +34,7 @@
                 rounded 
                 color="primary" 
                 class="modern-input"
+                data-cy="input-email-login"
                 :rules="[val => !!val || 'Email é obrigatório']"
                 lazy-rules
               >
@@ -52,6 +53,7 @@
                 rounded 
                 color="primary" 
                 class="modern-input"
+                data-cy="input-password-login"
                 :rules="[val => !!val || 'Senha é obrigatória']"
                 lazy-rules
               >
@@ -63,6 +65,7 @@
                     :name="showPassword ? 'visibility_off' : 'visibility'" 
                     @click="showPassword = !showPassword"
                     class="cursor-pointer password-toggle"
+                    data-cy="icon-toggle-password"
                   />
                 </template>
               </q-input>
@@ -74,12 +77,14 @@
                 label="Lembrar de mim" 
                 color="primary" 
                 class="remember-checkbox"
+                data-cy="checkbox-remember-me"
               />
               <q-btn 
                 flat 
                 label="Esqueceu a senha?" 
                 color="primary" 
                 class="forgot-btn"
+                data-cy="btn-forgot-password"
                 @click="forgotPassword" 
               />
             </div>
@@ -89,6 +94,7 @@
               label="Entrar" 
               color="primary" 
               class="login-btn"
+              data-cy="btn-submit-login"
               unelevated 
               rounded 
               no-caps
@@ -107,6 +113,7 @@
                 label="Criar conta" 
                 color="primary" 
                 class="signup-btn"
+                data-cy="btn-link-register"
                 @click="signUp" 
               />
             </div>

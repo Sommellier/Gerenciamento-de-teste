@@ -11,6 +11,7 @@
               icon="arrow_back"
               @click="goBack"
               class="back-btn"
+              data-cy="btn-back"
               size="lg"
             />
             <div class="project-info">
@@ -41,6 +42,7 @@
                 outlined
                 dense
                 class="release-selector"
+                data-cy="select-release"
                 @update:model-value="onReleaseChange"
               >
                 <template v-slot:prepend>
@@ -235,6 +237,7 @@
                 label="Criar Primeiro Pacote"
                 @click="goToCreatePackage"
                 class="q-mt-md"
+                data-cy="btn-create-first-package"
                 size="md"
               />
             </div>
@@ -347,6 +350,7 @@
               label="Criar Pacote"
               @click="goToCreatePackage"
               class="create-package-btn"
+              data-cy="btn-create-package"
               size="md"
               :disable="!projectId"
             />
@@ -356,6 +360,7 @@
               label="Ver Pacotes"
               @click="goToPackages"
               class="view-packages-btn"
+              data-cy="btn-view-packages"
               size="md"
               outline
               :disable="!projectId"
@@ -383,13 +388,14 @@
               outlined
               dense
               class="search-input"
+              data-cy="input-search-members"
               clearable
             >
               <template v-slot:prepend>
                 <q-icon name="search" />
               </template>
               <template v-slot:append v-if="memberSearch">
-                <q-icon name="clear" class="cursor-pointer" @click="memberSearch = ''" />
+                <q-icon name="clear" class="cursor-pointer" data-cy="btn-clear-member-search" @click="memberSearch = ''" />
               </template>
             </q-input>
             <q-btn
@@ -398,6 +404,7 @@
               label="Adicionar Membro"
               @click="showAddMemberDialog = true"
               class="add-member-btn"
+              data-cy="btn-add-member"
               size="md"
             />
           </div>
@@ -410,6 +417,7 @@
             flat
             :pagination="{ rowsPerPage: 0 }"
             class="members-table"
+            data-cy="table-members"
           >
             <template v-slot:body-cell-avatar="props">
               <q-td :props="props">
@@ -451,6 +459,7 @@
                     size="xs"
                     @click="startEditingRole(props.row)"
                     class="q-ml-xs"
+                    :data-cy="`btn-edit-role-member-${props.row?.id}`"
                   >
                     <q-tooltip>Alterar cargo</q-tooltip>
                   </q-btn>
@@ -469,6 +478,7 @@
                   size="sm"
                   @click="confirmRemoveMember(props.row)"
                   :disable="removingMember"
+                  :data-cy="`btn-remove-member-${props.row?.id}`"
                 >
                   <q-tooltip>Remover membro</q-tooltip>
                 </q-btn>
@@ -480,7 +490,7 @@
     </div>
 
     <!-- Remove Member Dialog -->
-    <q-dialog v-model="showRemoveMemberDialog" persistent>
+    <q-dialog v-model="showRemoveMemberDialog" persistent data-cy="dialog-remove-member">
       <q-card class="remove-member-dialog" style="min-width: 400px">
         <q-card-section class="dialog-header">
           <div class="text-h6">Confirmar Remoção</div>
@@ -490,6 +500,7 @@
             icon="close"
             @click="showRemoveMemberDialog = false"
             class="close-btn"
+            data-cy="btn-close-remove-member-dialog"
           />
         </q-card-section>
 
@@ -504,12 +515,14 @@
             label="Cancelar"
             @click="showRemoveMemberDialog = false"
             class="cancel-btn"
+            data-cy="btn-cancel-remove-member"
           />
           <q-btn
             color="negative"
             label="Remover"
             @click="removeMember"
             class="remove-btn"
+            data-cy="btn-confirm-remove-member"
             :loading="removingMember"
           />
         </q-card-actions>
@@ -517,7 +530,7 @@
     </q-dialog>
 
     <!-- Add Member Dialog -->
-    <q-dialog v-model="showAddMemberDialog" persistent>
+    <q-dialog v-model="showAddMemberDialog" persistent data-cy="dialog-add-member">
       <q-card class="add-member-dialog" style="min-width: 500px">
         <q-card-section class="dialog-header">
           <div class="text-h6">Adicionar Membro ao Projeto</div>
@@ -527,11 +540,12 @@
             icon="close"
             @click="showAddMemberDialog = false"
             class="close-btn"
+            data-cy="btn-close-add-member-dialog"
           />
         </q-card-section>
 
         <q-card-section class="dialog-content">
-          <q-form @submit="addMember" class="add-member-form">
+          <q-form @submit="addMember" class="add-member-form" data-cy="form-add-member">
             <div class="form-row">
               <q-input
                 v-model="addMemberForm.email"
@@ -540,6 +554,7 @@
                 type="email"
                 :rules="[val => !!val || 'Email é obrigatório', val => isValidEmail(val) || 'Email inválido']"
                 class="form-input"
+                data-cy="input-member-email"
                 hint="Digite o email do usuário que deseja adicionar ao projeto"
               />
             </div>
@@ -554,6 +569,7 @@
                 map-options
                 :rules="[val => !!val || 'Função é obrigatória']"
                 class="form-input"
+                data-cy="select-member-role"
                 hint="Selecione a função que o membro terá no projeto"
               />
             </div>
@@ -571,12 +587,14 @@
             label="Cancelar"
             @click="showAddMemberDialog = false"
             class="cancel-btn"
+            data-cy="btn-cancel-add-member"
           />
           <q-btn
             color="primary"
             label="Adicionar Membro"
             @click="addMember"
             class="save-btn"
+            data-cy="btn-submit-add-member"
             :loading="addingMember"
           />
         </q-card-actions>
@@ -632,7 +650,6 @@ const changingRole = ref(false)
 
 // Role options
 const roleOptions = [
-  { label: 'Administrador', value: 'ADMIN' },
   { label: 'Gerente', value: 'MANAGER' },
   { label: 'Testador', value: 'TESTER' },
   { label: 'Aprovador', value: 'APPROVER' }
@@ -641,7 +658,6 @@ const roleOptions = [
 // Role options for changing (only for owner)
 const roleOptionsForChange = [
   { label: 'Dono', value: 'OWNER' },
-  { label: 'Administrador', value: 'ADMIN' },
   { label: 'Gerente', value: 'MANAGER' },
   { label: 'Testador', value: 'TESTER' },
   { label: 'Aprovador', value: 'APPROVER' }
@@ -1112,7 +1128,6 @@ function getAvatarUrl(avatar: string) {
 function getRoleColor(role: string) {
   const colors: Record<string, string> = {
     'OWNER': 'purple',
-    'ADMIN': 'blue',
     'MANAGER': 'green',
     'TESTER': 'orange',
     'APPROVER': 'teal'
@@ -1195,7 +1210,7 @@ async function addMember() {
 
 function getRoleDescription(role: string) {
   const descriptions: Record<string, string> = {
-    'ADMIN': 'Acesso total ao projeto, pode gerenciar membros e configurações',
+    'OWNER': 'Dono do projeto, acesso total e pode gerenciar todos os aspectos',
     'MANAGER': 'Pode gerenciar cenários, pacotes e membros (exceto proprietário)',
     'TESTER': 'Pode executar testes e criar cenários',
     'APPROVER': 'Pode aprovar resultados de testes e cenários'

@@ -14,7 +14,7 @@
       <header class="page-header">
         <div class="header-content">
           <div class="header-left">
-            <button class="back-button" @click="goBack" aria-label="Voltar aos projetos">
+            <button class="back-button" @click="goBack" aria-label="Voltar aos projetos" data-cy="btn-back">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -40,6 +40,7 @@
               @click="submitForm"
               :disabled="submitting"
               aria-label="Salvar alterações"
+              data-cy="btn-save-project"
             >
               <svg v-if="!submitting" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 21H5A2 2 0 0 1 3 19V5A2 2 0 0 1 5 3H16L21 8V19A2 2 0 0 1 19 21Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -77,7 +78,7 @@
             </div>
             
             <div class="card-content">
-              <form @submit.prevent="submitForm" class="project-form">
+              <form @submit.prevent="submitForm" class="project-form" data-cy="form-edit-project">
                 <div class="form-group">
                   <label class="form-label">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -93,6 +94,7 @@
                     maxlength="100"
                     required
                     :disabled="submitting"
+                    data-cy="input-edit-project-name"
                   />
                   <div class="input-counter">{{ name.length }}/100</div>
                 </div>
@@ -114,6 +116,7 @@
                     maxlength="500"
                     rows="4"
                     :disabled="submitting"
+                    data-cy="input-edit-project-description"
                   ></textarea>
                   <div class="input-counter">{{ description.length }}/500</div>
                 </div>
@@ -178,7 +181,7 @@
     </main>
 
     <!-- Success dialog -->
-    <q-dialog v-model="successDialog">
+    <q-dialog v-model="successDialog" data-cy="dialog-edit-project-success">
       <q-card class="dialog-card">
         <q-card-section class="row items-center q-gutter-sm">
           <q-icon name="check_circle" color="positive" size="32px" />
@@ -186,13 +189,13 @@
         </q-card-section>
         <q-card-section class="q-pt-none">{{ successText }}</q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="OK" color="primary" v-close-popup @click="goBack" />
+          <q-btn flat label="OK" color="primary" v-close-popup @click="goBack" data-cy="btn-ok-edit-project-success" />
         </q-card-actions>
       </q-card>
     </q-dialog>
 
     <!-- Error dialog -->
-    <q-dialog v-model="errorDialog">
+    <q-dialog v-model="errorDialog" data-cy="dialog-edit-project-error">
       <q-card class="dialog-card">
         <q-card-section class="row items-center q-gutter-sm">
           <q-icon name="error" color="negative" size="32px" />
@@ -200,7 +203,7 @@
         </q-card-section>
         <q-card-section class="q-pt-none">{{ errorText }}</q-card-section>
         <q-card-actions align="right">
-          <q-btn flat label="Fechar" color="primary" v-close-popup />
+          <q-btn flat label="Fechar" color="primary" v-close-popup data-cy="btn-close-edit-project-error" />
         </q-card-actions>
       </q-card>
     </q-dialog>

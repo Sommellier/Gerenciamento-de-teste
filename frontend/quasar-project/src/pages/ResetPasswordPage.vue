@@ -3,7 +3,7 @@
     <q-card class="q-pa-xl" style="width: 100%; max-width: 400px">
       <div class="text-h5 text-center q-mb-md">Reset Password</div>
 
-      <q-form @submit.prevent="handleResetPassword">
+      <q-form @submit.prevent="handleResetPassword" data-cy="form-reset-password">
         <q-input
           v-model="password"
           type="password"
@@ -11,6 +11,7 @@
           filled
           dense
           class="q-mb-md"
+          data-cy="input-reset-password"
           :rules="[val => !!val || 'Password is required']"
         />
         <q-input
@@ -20,6 +21,7 @@
           filled
           dense
           class="q-mb-lg"
+          data-cy="input-reset-password-confirm"
           :rules="[val => val === password || 'Passwords must match']"
         />
 
@@ -29,6 +31,7 @@
           type="submit"
           unelevated
           class="full-width"
+          data-cy="btn-submit-reset-password"
         />
       </q-form>
     </q-card>

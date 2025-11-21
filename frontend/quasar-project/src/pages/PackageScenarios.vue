@@ -18,6 +18,7 @@
             icon="arrow_back"
             @click="goBack"
             class="back-btn"
+            data-cy="btn-back"
             color="white"
           />
           <div class="header-info">
@@ -42,7 +43,7 @@
           </div>
 
           <div class="card-body">
-            <q-form @submit="createScenario" class="scenario-form">
+            <q-form @submit="createScenario" class="scenario-form" data-cy="form-create-scenario-package">
               <!-- Scenario Name -->
               <div class="form-group">
                 <label class="form-label">
@@ -58,6 +59,7 @@
                   input-class="text-white"
                   :rules="nameRules"
                   class="form-input"
+                  data-cy="input-scenario-name-package"
                   hint="Ex: Login com credenciais válidas"
                 />
               </div>
@@ -78,6 +80,7 @@
                   type="textarea"
                   rows="3"
                   class="form-input"
+                  data-cy="input-scenario-description-package"
                   hint="Opcional - Adicione detalhes sobre o cenário"
                 />
               </div>
@@ -97,6 +100,7 @@
                   label-color="white"
                   :rules="testerRules"
                   class="form-input"
+                  data-cy="select-scenario-tester-package"
                   emit-value
                   map-options
                 >
@@ -124,6 +128,7 @@
                   label-color="white"
                   :rules="typeRules"
                   class="form-input"
+                  data-cy="select-scenario-type-package"
                   emit-value
                   map-options
                 >
@@ -148,6 +153,7 @@
                   label-color="white"
                   :rules="priorityRules"
                   class="form-input"
+                  data-cy="select-scenario-priority-package"
                   emit-value
                   map-options
                 >
@@ -172,6 +178,7 @@
                   label-color="white"
                   :rules="approverRules"
                   class="form-input"
+                  data-cy="select-scenario-approver-package"
                   emit-value
                   map-options
                 >
@@ -191,6 +198,7 @@
                   label="Cancelar"
                   @click="goBack"
                   class="cancel-btn"
+                  data-cy="btn-cancel-create-scenario-package"
                 />
                 <q-btn
                   type="submit"
@@ -198,6 +206,7 @@
                   label="Criar Cenário"
                   :loading="creatingScenario"
                   class="create-btn"
+                  data-cy="btn-submit-create-scenario-package"
                 />
               </div>
             </q-form>
@@ -208,7 +217,7 @@
     </div>
 
     <!-- Success Dialog -->
-    <q-dialog v-model="showSuccessDialog" persistent>
+    <q-dialog v-model="showSuccessDialog" persistent data-cy="dialog-create-scenario-success">
       <q-card class="success-dialog">
         <q-card-section class="dialog-content">
           <div class="success-icon">
@@ -225,13 +234,14 @@
             label="Continuar"
             @click="showSuccessDialog = false"
             class="continue-btn"
+            data-cy="btn-continue-create-scenario-success"
           />
         </q-card-actions>
     </q-card>
     </q-dialog>
 
     <!-- Error Dialog -->
-    <q-dialog v-model="showErrorDialog" persistent>
+    <q-dialog v-model="showErrorDialog" persistent data-cy="dialog-create-scenario-error">
       <q-card class="error-dialog">
         <q-card-section class="dialog-content">
           <div class="error-icon">
@@ -248,6 +258,7 @@
             label="Tentar Novamente"
             @click="showErrorDialog = false"
             class="retry-btn"
+            data-cy="btn-retry-create-scenario"
           />
         </q-card-actions>
       </q-card>
@@ -307,11 +318,11 @@ const createMemberOptions = (allowedRoles: string[]) => {
     }))
 }
 
-// Membros que podem ser testadores (OWNER, ADMIN, MANAGER, TESTER)
-const testerOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'TESTER']))
+// Membros que podem ser testadores (OWNER, MANAGER, TESTER)
+const testerOptions = computed(() => createMemberOptions(['OWNER', 'MANAGER', 'TESTER']))
 
-// Membros que podem ser aprovadores (OWNER, ADMIN, MANAGER, APPROVER)
-const approverOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'APPROVER']))
+// Membros que podem ser aprovadores (OWNER, MANAGER, APPROVER)
+const approverOptions = computed(() => createMemberOptions(['OWNER', 'MANAGER', 'APPROVER']))
 
 // Opções dos selects (importadas de utils/constants)
 const typeOptions = TYPE_OPTIONS

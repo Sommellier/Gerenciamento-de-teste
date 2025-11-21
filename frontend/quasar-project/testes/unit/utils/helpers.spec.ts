@@ -176,10 +176,6 @@ describe('helpers.ts', () => {
       expect(getRoleColor('TESTER')).toBe('positive')
     })
 
-    it('deve retornar cor para ADMIN', () => {
-      expect(getRoleColor('ADMIN')).toBe('warning')
-    })
-
     it('deve retornar cor para APPROVER', () => {
       expect(getRoleColor('APPROVER')).toBe('teal')
     })

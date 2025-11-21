@@ -1,12 +1,12 @@
 <template>
-  <q-dialog v-model="show" persistent max-width="800px">
+  <q-dialog v-model="show" persistent max-width="800px" data-cy="dialog-attachments">
     <q-card style="width: 100%; max-width: 800px">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">
           Anexos - {{ scenario?.title }}
         </div>
         <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
+        <q-btn icon="close" flat round dense v-close-popup data-cy="btn-close-attachments-dialog" />
       </q-card-section>
 
       <q-card-section>
@@ -20,6 +20,7 @@
             max-file-size="5242880"
             @rejected="onFileRejected"
             filled
+            data-cy="input-file-attachment"
           >
             <template v-slot:prepend>
               <q-icon name="attach_file" />
@@ -39,6 +40,7 @@
             @click="uploadFile"
             :loading="uploading"
             class="q-mt-sm"
+            data-cy="btn-upload-attachment"
           />
         </div>
 
@@ -46,11 +48,12 @@
         <div class="q-mb-md">
           <div class="text-subtitle2 q-mb-sm">Evidências Enviadas</div>
           
-          <q-list bordered separator v-if="evidences.length > 0">
+          <q-list bordered separator v-if="evidences.length > 0" data-cy="list-attachments">
             <q-item
               v-for="evidence in evidences"
               :key="evidence.id"
               class="q-pa-md"
+              :data-cy="`attachment-item-${evidence.id}`"
             >
               <q-item-section avatar>
                 <q-icon
@@ -76,6 +79,7 @@
                     flat
                     round
                     dense
+                    :data-cy="`btn-preview-attachment-${evidence.id}`"
                     @click="previewFile(evidence)"
                   >
                     <q-tooltip>Visualizar</q-tooltip>
@@ -86,6 +90,7 @@
                     flat
                     round
                     dense
+                    :data-cy="`btn-download-attachment-${evidence.id}`"
                     @click="downloadFile(evidence)"
                   >
                     <q-tooltip>Download</q-tooltip>
@@ -97,6 +102,7 @@
                     round
                     dense
                     color="negative"
+                    :data-cy="`btn-delete-attachment-${evidence.id}`"
                     @click="deleteEvidence(evidence.id)"
                   >
                     <q-tooltip>Excluir</q-tooltip>

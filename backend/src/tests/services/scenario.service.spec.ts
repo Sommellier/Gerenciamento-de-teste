@@ -67,8 +67,6 @@ describe('ScenarioService', () => {
 
   afterEach(async () => {
     // Limpar dados de teste
-    // TODO: Adicionar limpeza de scenarioEvidence quando o modelo estiver disponível
-    // TODO: Adicionar limpeza de scenarioExecution quando o modelo estiver disponível
     await prisma.testScenarioStep.deleteMany({
       where: { scenario: { projectId } }
     })
@@ -293,7 +291,6 @@ describe('ScenarioService', () => {
       const result = await scenarioService.executeScenario(scenario.id, executionData, userId)
 
       expect(result.status).toBe('PASSED')
-      // expect(result.runNumber).toBe(1) // TODO: Implementar quando modelo estiver disponível
       expect(result.notes).toBe('Execution completed successfully')
 
       // Verificar se status do cenário foi atualizado
@@ -325,8 +322,6 @@ describe('ScenarioService', () => {
       
       // Segunda execução
       const result = await scenarioService.executeScenario(scenario.id, { status: 'FAILED' }, userId)
-
-      // expect(result.runNumber).toBe(2) // TODO: Implementar quando modelo estiver disponível
     })
   })
 
@@ -338,11 +333,7 @@ describe('ScenarioService', () => {
           description: 'Original Description',
           type: 'FUNCTIONAL',
           priority: 'HIGH',
-          // severity: 'MEDIUM', // TODO: Implementar quando campo estiver disponível
-          // module: 'Auth', // TODO: Implementar quando campo estiver disponível
-          // environment: 'DEV', // TODO: Implementar quando campo estiver disponível
           tags: JSON.stringify(['test', 'auth']),
-          // preconditions: JSON.stringify(['User logged in']), // TODO: Implementar quando campo estiver disponível
           status: 'PASSED',
           packageId,
           projectId,

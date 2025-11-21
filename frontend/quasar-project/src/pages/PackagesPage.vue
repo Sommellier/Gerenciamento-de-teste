@@ -11,6 +11,7 @@
               icon="arrow_back"
               @click="goBack"
               class="back-button"
+              data-cy="btn-back"
               size="lg"
             />
             <div class="header-info">
@@ -68,6 +69,7 @@
               label="Criar Pacote"
               color="primary"
               class="action-btn"
+              data-cy="btn-create-package"
               size="md"
               unelevated
             />
@@ -97,6 +99,7 @@
               label="Criar Primeiro Pacote"
               color="primary"
               size="md"
+              data-cy="btn-create-first-package"
               unelevated
               class="empty-action-btn"
             />
@@ -107,11 +110,12 @@
           <div class="packages-header">
             <span class="packages-count">{{ packages.length }} {{ packages.length === 1 ? 'pacote encontrado' : 'pacotes encontrados' }}</span>
           </div>
-          <div class="packages-grid">
+          <div class="packages-grid" data-cy="grid-packages">
             <q-card
               v-for="packageItem in packages"
               :key="packageItem.id"
               class="package-card glass-card"
+              :data-cy="`card-package-${packageItem.id}`"
               @click="goToPackageDetails(packageItem.id)"
             >
               <q-card-section class="package-header">
@@ -133,12 +137,13 @@
                   round
                   @click.stop
                   class="package-menu-btn"
+                  :data-cy="`btn-menu-package-${packageItem.id}`"
                   dark
                   menu-anchor="bottom right"
                   menu-self="top right"
                 >
                   <q-list dark class="package-menu-list">
-                    <q-item clickable @click="goToScenarios(packageItem.id)" class="menu-item">
+                    <q-item clickable @click="goToScenarios(packageItem.id)" class="menu-item" :data-cy="`btn-view-scenarios-package-${packageItem.id}`">
                       <q-item-section avatar>
                         <q-icon name="playlist_play" />
                       </q-item-section>
@@ -146,7 +151,7 @@
                         <q-item-label>Cenários</q-item-label>
                       </q-item-section>
                     </q-item>
-                    <q-item clickable @click="editPackage(packageItem.id)" class="menu-item">
+                    <q-item clickable @click="editPackage(packageItem.id)" class="menu-item" :data-cy="`btn-edit-package-${packageItem.id}`">
                       <q-item-section avatar>
                         <q-icon name="edit" />
                       </q-item-section>
@@ -155,7 +160,7 @@
                       </q-item-section>
                     </q-item>
                     <q-separator dark />
-                    <q-item clickable @click="deletePackageAction(packageItem.id)" class="menu-item delete-item">
+                    <q-item clickable @click="deletePackageAction(packageItem.id)" class="menu-item delete-item" :data-cy="`btn-delete-package-${packageItem.id}`">
                       <q-item-section avatar>
                         <q-icon name="delete" />
                       </q-item-section>

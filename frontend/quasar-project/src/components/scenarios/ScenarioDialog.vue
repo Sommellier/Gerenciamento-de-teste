@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-model="show" persistent max-width="600px">
+  <q-dialog v-model="show" persistent max-width="600px" data-cy="dialog-scenario">
     <q-card class="modern-scenario-dialog">
       <!-- Header -->
       <q-card-section class="dialog-header">
@@ -18,12 +18,13 @@
           icon="close"
           @click="closeDialog"
           class="close-btn"
+          data-cy="btn-close-scenario-dialog"
         />
       </q-card-section>
 
       <!-- Form Content -->
       <q-card-section class="dialog-body">
-        <q-form @submit="onSubmit" class="scenario-form">
+        <q-form @submit="onSubmit" class="scenario-form" data-cy="form-scenario-dialog">
           <!-- Scenario Name -->
           <div class="form-group">
             <label class="form-label">
@@ -36,6 +37,7 @@
               outlined
               :rules="nameRules"
               class="form-input"
+              data-cy="input-scenario-name-dialog"
               hint="Ex: Login com credenciais válidas"
             />
           </div>
@@ -53,6 +55,7 @@
               type="textarea"
               rows="3"
               class="form-input"
+              data-cy="input-scenario-description-dialog"
               hint="Opcional - Adicione detalhes sobre o cenário"
             />
           </div>
@@ -70,6 +73,7 @@
               outlined
               :rules="testerRules"
               class="form-input"
+              data-cy="select-scenario-tester"
               emit-value
               map-options
             >
@@ -95,6 +99,7 @@
               outlined
               :rules="typeRules"
               class="form-input"
+              data-cy="select-scenario-type"
               emit-value
               map-options
             >
@@ -117,6 +122,7 @@
               outlined
               :rules="priorityRules"
               class="form-input"
+              data-cy="select-scenario-priority"
               emit-value
               map-options
             >
@@ -139,6 +145,7 @@
               outlined
               :rules="approverRules"
               class="form-input"
+              data-cy="select-scenario-approver"
               emit-value
               map-options
             >
@@ -160,6 +167,7 @@
           label="Cancelar"
           @click="closeDialog"
           class="cancel-btn"
+          data-cy="btn-cancel-scenario-dialog"
         />
         <q-btn
           color="primary"
@@ -167,6 +175,7 @@
           @click="onSubmit"
           :loading="loading"
           class="create-btn"
+          data-cy="btn-submit-scenario-dialog"
         />
       </q-card-actions>
     </q-card>
@@ -235,11 +244,11 @@ const createMemberOptions = (allowedRoles: string[]) => {
     }))
 }
 
-// Membros que podem ser testadores (OWNER, ADMIN, MANAGER, TESTER)
-const testerOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'TESTER']))
+// Membros que podem ser testadores (OWNER, MANAGER, TESTER)
+const testerOptions = computed(() => createMemberOptions(['OWNER', 'MANAGER', 'TESTER']))
 
-// Membros que podem ser aprovadores (OWNER, ADMIN, MANAGER, APPROVER)
-const approverOptions = computed(() => createMemberOptions(['OWNER', 'ADMIN', 'MANAGER', 'APPROVER']))
+// Membros que podem ser aprovadores (OWNER, MANAGER, APPROVER)
+const approverOptions = computed(() => createMemberOptions(['OWNER', 'MANAGER', 'APPROVER']))
 
 const typeOptions = [
   { label: 'Funcional', value: 'FUNCTIONAL' },

@@ -685,7 +685,7 @@ describe('ScenarioDetailsPage', () => {
 
       expect(mockNotify).toHaveBeenCalledWith({
         type: 'negative',
-        message: 'O testador e o aprovador devem ser pessoas diferentes'
+        message: 'O testador e o aprovador devem ser pessoas diferentes, exceto quando o testador é o dono do projeto'
       })
       expect(scenarioService.scenarioService.updateScenario).not.toHaveBeenCalled()
     })

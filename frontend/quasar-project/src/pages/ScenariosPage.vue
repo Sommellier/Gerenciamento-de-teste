@@ -15,6 +15,7 @@
             size="md"
             @click="goBack"
             class="back-btn"
+            data-cy="btn-back"
           >
             <q-tooltip>Voltar ao projeto</q-tooltip>
           </q-btn>
@@ -37,6 +38,7 @@
             label="Novo Cenário" 
             @click="createScenario"
             class="create-btn"
+            data-cy="btn-create-scenario"
           />
         </div>
       </div>
@@ -51,6 +53,7 @@
           @update:model-value="onSearch"
           @clear="onSearch"
           class="search-input"
+          data-cy="input-search-scenarios"
         >
           <template #prepend>
             <q-icon name="search" />
@@ -78,14 +81,16 @@
             class="q-mt-md"
             size="lg"
             icon="add"
+            data-cy="btn-create-first-scenario"
           />
         </div>
 
-        <div v-else class="scenarios-list">
+        <div v-else class="scenarios-list" data-cy="list-scenarios">
           <q-card 
             v-for="scenario in scenarios" 
             :key="scenario.id" 
             class="scenario-item"
+            :data-cy="`card-scenario-${scenario.id}`"
             @click="viewScenario(scenario)"
           >
             <q-card-section class="scenario-content">

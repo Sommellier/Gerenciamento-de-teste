@@ -93,7 +93,6 @@ export function getRoleColor(role: string): string {
     'OWNER': 'primary',
     'MANAGER': 'info',
     'TESTER': 'positive',
-    'ADMIN': 'warning',
     'APPROVER': 'teal'
   }
   return roleColors[role] || 'grey'

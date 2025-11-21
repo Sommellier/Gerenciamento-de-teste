@@ -14,7 +14,7 @@
       <header class="page-header">
         <div class="header-content">
           <div class="header-left">
-            <button class="back-button" @click="goBack" aria-label="Voltar ao dashboard">
+            <button class="back-button" data-cy="btn-back-dashboard" @click="goBack" aria-label="Voltar ao dashboard">
               <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
@@ -36,6 +36,7 @@
           <div class="header-actions">
             <button 
               class="create-button"
+              data-cy="btn-create-project"
               @click="createProject"
               aria-label="Criar novo projeto"
             >
@@ -50,6 +51,7 @@
             <div class="profile-icon-container">
               <button 
                 class="profile-icon-button"
+                data-cy="btn-go-to-profile"
                 @click="goToProfile"
                 aria-label="Ir para o perfil"
               >
@@ -75,12 +77,14 @@
               v-model="searchQuery"
               type="text"
               class="search-input"
+              data-cy="input-search-projects"
               placeholder="Buscar projetos..."
               @input="onSearch"
             />
             <button 
               v-if="searchQuery" 
               class="clear-search"
+              data-cy="btn-clear-search"
               @click="clearSearch"
               aria-label="Limpar busca"
             >
@@ -109,11 +113,12 @@
         </div>
 
         <!-- Grid de projetos -->
-        <div v-else-if="!loading && !isSearching" class="projects-grid">
+        <div v-else-if="!loading && !isSearching" class="projects-grid" data-cy="grid-projects">
           <div 
             v-for="project in projects" 
             :key="project.id"
             class="project-card"
+            :data-cy="`card-project-${project.id}`"
             @click="viewProject(project)"
           >
             <div class="project-header">
@@ -124,6 +129,7 @@
               </div>
               <button 
                 class="project-menu-button"
+                :data-cy="`btn-menu-project-${project.id}`"
                 @click.stop="showProjectMenu(project)"
                 aria-label="Ações do projeto"
               >
@@ -169,6 +175,7 @@
         <div class="pagination-container">
           <button 
             class="page-button"
+            data-cy="btn-pagination-prev"
             @click="goToPage(currentPage - 1)"
             :disabled="currentPage === 1"
             aria-label="Página anterior"
@@ -184,6 +191,7 @@
               :key="page"
               class="page-number"
               :class="{ active: page === currentPage }"
+              :data-cy="`btn-pagination-page-${page}`"
               @click="goToPage(page)"
             >
               {{ page }}
@@ -192,6 +200,7 @@
 
           <button 
             class="page-button"
+            data-cy="btn-pagination-next"
             @click="goToPage(currentPage + 1)"
             :disabled="currentPage === totalPages"
             aria-label="Próxima página"
@@ -205,11 +214,11 @@
     </main>
 
     <!-- Menu de ações do projeto -->
-    <div v-if="showMenu" class="menu-overlay" @click="closeMenu">
+    <div v-if="showMenu" class="menu-overlay" data-cy="dialog-project-menu" @click="closeMenu">
       <div class="menu-container" @click.stop>
         <div class="menu-header">
           <h3>Ações do Projeto</h3>
-          <button class="menu-close" @click="closeMenu">
+          <button class="menu-close" data-cy="btn-close-menu" @click="closeMenu">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -217,7 +226,7 @@
           </button>
         </div>
         <div class="menu-content">
-          <button class="menu-action" @click="selectedProject && editProject(selectedProject)">
+          <button class="menu-action" data-cy="btn-edit-project" @click="selectedProject && editProject(selectedProject)">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M11 4H4A2 2 0 0 0 2 6V20A2 2 0 0 0 4 22H18A2 2 0 0 0 20 20V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M18.5 2.5A2.121 2.121 0 0 1 21 5L12 14L8 15L9 11L18.5 2.5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -227,6 +236,7 @@
           <button 
             v-if="selectedProject && !isProjectOwner(selectedProject)"
             class="menu-action danger" 
+            data-cy="btn-leave-project"
             @click="selectedProject && leaveProject(selectedProject)"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -239,6 +249,7 @@
           <button 
             v-if="selectedProject && isProjectOwner(selectedProject)"
             class="menu-action danger" 
+            data-cy="btn-delete-project"
             @click="selectedProject && deleteProject(selectedProject)"
           >
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -252,7 +263,7 @@
     </div>
 
     <!-- Diálogo de confirmação de sair do projeto -->
-    <div v-if="leaveProjectDialog" class="dialog-overlay" @click="closeLeaveProjectDialog">
+    <div v-if="leaveProjectDialog" class="dialog-overlay" data-cy="dialog-leave-project" @click="closeLeaveProjectDialog">
       <div class="dialog-container error" @click.stop>
         <div class="dialog-header">
           <div class="dialog-icon error">
@@ -269,11 +280,12 @@
           <p class="text-grey-6">Você perderá acesso a este projeto e precisará ser convidado novamente para acessá-lo.</p>
         </div>
         <div class="dialog-actions">
-          <button class="cancel-button" @click="closeLeaveProjectDialog">
+          <button class="cancel-button" data-cy="btn-cancel-leave-project" @click="closeLeaveProjectDialog">
             Cancelar
           </button>
           <button 
             class="confirm-button error"
+            data-cy="btn-confirm-leave-project"
             @click="confirmLeaveProject"
             :disabled="leavingProject"
           >
@@ -285,7 +297,7 @@
     </div>
 
     <!-- Diálogo de confirmação de exclusão -->
-    <div v-if="deleteDialog" class="dialog-overlay" @click="closeDeleteDialog">
+    <div v-if="deleteDialog" class="dialog-overlay" data-cy="dialog-delete-project" @click="closeDeleteDialog">
       <div class="dialog-container error" @click.stop>
         <div class="dialog-header">
           <div class="dialog-icon error">
@@ -302,11 +314,12 @@
           <p class="text-grey-6">Esta ação não pode ser desfeita.</p>
         </div>
         <div class="dialog-actions">
-          <button class="cancel-button" @click="closeDeleteDialog">
+          <button class="cancel-button" data-cy="btn-cancel-delete-project" @click="closeDeleteDialog">
             Cancelar
           </button>
           <button 
             class="confirm-button error"
+            data-cy="btn-confirm-delete-project"
             @click="confirmDelete"
             :disabled="deleting"
           >

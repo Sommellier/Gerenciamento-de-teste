@@ -9,7 +9,6 @@ type AuthenticatedRequest = Request & {
 // Definir permissões por role
 const PERMISSIONS = {
   OWNER: ['*'], // Todas as permissões
-  ADMIN: ['*'], // Todas as permissões
   MANAGER: [
     'view_project',
     'create_package',

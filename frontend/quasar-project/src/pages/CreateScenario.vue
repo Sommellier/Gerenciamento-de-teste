@@ -18,6 +18,7 @@
             icon="arrow_back"
             @click="goBack"
             class="back-btn"
+            data-cy="btn-back"
             color="white"
           />
           <div class="header-info">
@@ -55,7 +56,7 @@
           </div>
 
           <div class="card-body">
-            <q-form @submit="createScenario" class="scenario-form">
+            <q-form @submit="createScenario" class="scenario-form" data-cy="form-create-scenario">
               <!-- Scenario Name -->
               <div class="form-group">
                 <label class="form-label">
@@ -68,6 +69,7 @@
                   outlined
                   :rules="nameRules"
                   class="form-input"
+                  data-cy="input-scenario-name"
                   hint="Ex: Login com credenciais válidas"
                 />
               </div>
@@ -193,11 +195,13 @@
                   label="Cancelar"
                   @click="goBack"
                   class="cancel-btn"
+                  data-cy="btn-cancel-create-scenario"
                 />
                 <q-btn
                   type="submit"
                   color="primary"
                   label="Criar Cenário"
+                  data-cy="btn-submit-create-scenario"
                   :loading="creatingScenario"
                   class="create-btn"
                 />

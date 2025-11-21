@@ -11,6 +11,7 @@
             icon="arrow_back"
             @click="goBack"
             class="back-btn"
+            data-cy="btn-back"
             color="white"
           />
           <div class="breadcrumb">
@@ -52,6 +53,7 @@
               label="Aprovar Pacote"
               @click="handleApprovePackageWhenAllScenariosApproved"
               class="action-btn"
+              data-cy="btn-approve-package"
               :loading="approving"
             />
             
@@ -63,6 +65,7 @@
               label="Editar"
               @click="editPackage"
               class="action-btn"
+              data-cy="btn-edit-package"
               :disable="packageData?.status === 'CONCLUIDO' || packageData?.status === 'APROVADO'"
             />
             <q-btn
@@ -72,6 +75,7 @@
               label="Excluir"
               @click="confirmDelete"
               class="action-btn"
+              data-cy="btn-delete-package"
               :disable="packageData?.status === 'CONCLUIDO' || packageData?.status === 'APROVADO'"
             />
           </div>
@@ -141,6 +145,7 @@
         @click="loadPackageDetails" 
         label="Tentar novamente"
         class="retry-btn"
+        data-cy="btn-retry-load-package"
       />
     </div>
 
@@ -220,6 +225,7 @@
                 label="Criar Cenário"
                 @click="goToCreateScenario"
                 class="create-btn"
+                data-cy="btn-create-scenario"
                 size="md"
               />
             </div>
@@ -235,14 +241,16 @@
                   label="Criar Primeiro Cenário"
                   @click="goToCreateScenario"
                   class="empty-action-btn"
+                  data-cy="btn-create-first-scenario"
                 />
               </div>
               
-              <div v-else class="scenarios-grid">
+              <div v-else class="scenarios-grid" data-cy="grid-scenarios">
                 <div
                   v-for="scenario in packageData.scenarios"
                   :key="scenario.id"
                   class="scenario-card clickable"
+                  :data-cy="`card-scenario-${scenario.id}`"
                   @click="viewScenario(scenario)"
                 >
                   <div class="scenario-header">
@@ -278,6 +286,7 @@
                       icon="play_arrow"
                       color="positive"
                       size="sm"
+                      :data-cy="`btn-execute-scenario-${scenario.id}`"
                       @click.stop="executeScenario(scenario)"
                     >
                       <q-tooltip>Executar cenário</q-tooltip>
@@ -287,6 +296,7 @@
                       icon="edit"
                       color="primary"
                       size="sm"
+                      :data-cy="`btn-edit-scenario-${scenario.id}`"
                       @click.stop="editScenario(scenario)"
                     >
                       <q-tooltip>Editar cenário</q-tooltip>
@@ -296,6 +306,7 @@
                       icon="content_copy"
                       color="info"
                       size="sm"
+                      :data-cy="`btn-duplicate-scenario-${scenario.id}`"
                       @click.stop="duplicateScenario(scenario)"
                     >
                       <q-tooltip>Duplicar cenário</q-tooltip>
@@ -305,6 +316,7 @@
                       icon="delete"
                       color="negative"
                       size="sm"
+                      :data-cy="`btn-delete-scenario-${scenario.id}`"
                       @click.stop="confirmDeleteScenario(scenario)"
                     >
                       <q-tooltip>Excluir cenário</q-tooltip>
@@ -592,25 +604,6 @@
             </div>
 
             <div class="form-row">
-              <q-select
-                v-model="editForm.status"
-                label="Status Atual do Pacote *"
-                outlined
-                :options="[
-                  { label: 'Criado', value: 'CREATED' },
-                  { label: 'Em Execução', value: 'EXECUTED' },
-                  { label: 'Aprovado', value: 'PASSED' },
-                  { label: 'Falhou', value: 'FAILED' }
-                ]"
-                emit-value
-                map-options
-                class="form-input"
-                hint="Status atual do pacote no processo de teste"
-                dense
-              />
-            </div>
-
-            <div class="form-row">
               <q-input
                 v-model="editForm.assigneeEmail"
                 label="Email do Responsável pelo Pacote"
@@ -769,21 +762,83 @@
             <q-select
               v-model="scenarioEditForm.testadorId"
               :options="testerOptions"
-              label="Testador Responsável"
+              label="Testador Responsável *"
               outlined
               emit-value
               map-options
+              :rules="[val => !!val || 'Testador é obrigatório']"
+              hint="Pessoa responsável por executar o teste"
               class="q-mb-md"
-            />
+              dense
+            >
+              <template v-slot:selected>
+                <template v-if="scenarioEditForm.testadorId">
+                  <q-item v-if="testerOptions.find(opt => opt.value === scenarioEditForm.testadorId)" dense>
+                    <q-item-section avatar>
+                      <q-avatar :color="getMemberColor(scenarioEditForm.testadorId)" text-color="white" size="24px">
+                        {{ getInitials(testerOptions.find(opt => opt.value === scenarioEditForm.testadorId)?.label || '') }}
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ testerOptions.find(opt => opt.value === scenarioEditForm.testadorId)?.label }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
+                      {{ getInitials(scope.opt.label) }}
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                    <q-item-label caption>{{ scope.opt.email }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
 
             <q-select
               v-model="scenarioEditForm.aprovadorId"
               :options="approverOptions"
-              label="Aprovador Responsável"
+              label="Aprovador Responsável *"
               outlined
               emit-value
               map-options
-            />
+              :rules="[val => !!val || 'Aprovador é obrigatório']"
+              hint="Pessoa responsável por aprovar o teste"
+              dense
+            >
+              <template v-slot:selected>
+                <template v-if="scenarioEditForm.aprovadorId">
+                  <q-item v-if="approverOptions.find(opt => opt.value === scenarioEditForm.aprovadorId)" dense>
+                    <q-item-section avatar>
+                      <q-avatar :color="getMemberColor(scenarioEditForm.aprovadorId)" text-color="white" size="24px">
+                        {{ getInitials(approverOptions.find(opt => opt.value === scenarioEditForm.aprovadorId)?.label || '') }}
+                      </q-avatar>
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>{{ approverOptions.find(opt => opt.value === scenarioEditForm.aprovadorId)?.label }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </template>
+              </template>
+              <template v-slot:option="scope">
+                <q-item v-bind="scope.itemProps">
+                  <q-item-section avatar>
+                    <q-avatar :color="getMemberColor(scope.opt.value)" text-color="white" size="32px">
+                      {{ getInitials(scope.opt.label) }}
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>{{ scope.opt.label }}</q-item-label>
+                    <q-item-label caption>{{ scope.opt.email }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </template>
+            </q-select>
           </q-form>
         </q-card-section>
 
@@ -1172,7 +1227,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Notify } from 'quasar'
 import VueApexCharts from 'vue3-apexcharts'
 import { packageService, type TestPackage, type TestScenario } from '../services/package.service'
-import { scenarioService } from '../services/scenario.service'
+import { scenarioService, type CreateScenarioData } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 import { executionService, type Bug, type StepAttachment } from '../services/execution.service'
 import api from '../services/api'
@@ -1215,6 +1270,17 @@ interface ExtendedBug extends Bug {
 interface ExtendedScenario extends TestScenario {
   testadorId?: number
   aprovadorId?: number
+  testador?: {
+    id: number
+    name: string
+    email: string
+  }
+  aprovador?: {
+    id: number
+    name: string
+    email: string
+  }
+  ownerUserId?: number
 }
 
 interface BugEditForm {
@@ -1264,7 +1330,6 @@ const editForm = ref({
   description: '',
   type: '',
   priority: '',
-  status: '',
   assigneeEmail: '',
   environment: ''
 })
@@ -1328,7 +1393,7 @@ const canCreateScenario = computed(() => {
   return packageData.value.status !== 'APROVADO' && packageData.value.status !== 'CONCLUIDO'
 })
 
-// Tester options - OWNER, ADMIN, MANAGER, TESTER
+// Tester options - OWNER, MANAGER, TESTER
 const testerOptions = computed(() => {
   if (!Array.isArray(members.value)) {
     return []
@@ -1336,7 +1401,7 @@ const testerOptions = computed(() => {
   return members.value
     .filter(member => {
       const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'TESTER'
+      return role === 'OWNER' || role === 'MANAGER' || role === 'TESTER'
     })
     .map(member => ({
       label: member.name || member.email,
@@ -1345,7 +1410,7 @@ const testerOptions = computed(() => {
     }))
 })
 
-// Approver options - OWNER, ADMIN, MANAGER, APPROVER
+// Approver options - OWNER, MANAGER, APPROVER
 const approverOptions = computed(() => {
   if (!Array.isArray(members.value)) {
     return []
@@ -1353,7 +1418,7 @@ const approverOptions = computed(() => {
   return members.value
     .filter(member => {
       const role = member.role
-      return role === 'OWNER' || role === 'ADMIN' || role === 'MANAGER' || role === 'APPROVER'
+      return role === 'OWNER' || role === 'MANAGER' || role === 'APPROVER'
     })
     .map(member => ({
       label: member.name || member.email,
@@ -1771,7 +1836,6 @@ const editPackage = () => {
     description: packageData.value?.description || '',
     type: packageData.value?.type || '',
     priority: packageData.value?.priority || '',
-    status: packageData.value?.status || '',
     assigneeEmail: packageData.value?.assigneeEmail || '',
     environment: packageData.value?.environment || ''
   }
@@ -1903,16 +1967,43 @@ const executeScenario = (scenario: ExtendedScenario | TestScenario) => {
   void router.push(`/projects/${projectId.value}/packages/${packageId.value}/scenarios/${scenario.id}`)
 }
 
-const editScenario = (scenario: ExtendedScenario) => {
+const editScenario = async (scenario: ExtendedScenario) => {
   selectedScenario.value = scenario
+  
+  // Garantir que os membros estejam carregados antes de abrir o diálogo
+  if (members.value.length === 0) {
+    await loadMembers()
+  }
+  
+  // Preencher o formulário com os dados do cenário
+  // Priorizar testadorId/aprovadorId diretos, depois os objetos relacionados
+  let testadorId = scenario.testadorId || scenario.testador?.id || scenario.ownerUserId || null
+  let aprovadorId = scenario.aprovadorId || scenario.aprovador?.id || null
+  
+  // Verificar se os IDs existem nas opções disponíveis
+  if (testadorId !== null) {
+    const testerExists = testerOptions.value.some(opt => opt.value === testadorId)
+    if (!testerExists) {
+      testadorId = scenario.ownerUserId || null
+    }
+  }
+  
+  if (aprovadorId !== null) {
+    const approverExists = approverOptions.value.some(opt => opt.value === aprovadorId)
+    if (!approverExists) {
+      aprovadorId = null
+    }
+  }
+  
   scenarioEditForm.value = {
     title: scenario.title,
     description: scenario.description || '',
     type: scenario.type,
     priority: scenario.priority,
-    testadorId: scenario.testadorId || null,
-    aprovadorId: scenario.aprovadorId || null
+    testadorId: testadorId,
+    aprovadorId: aprovadorId
   }
+  
   showEditScenarioDialog.value = true
 }
 
@@ -1920,12 +2011,23 @@ const saveScenarioEdits = async () => {
   if (!selectedScenario.value) return
 
   try {
-    await scenarioService.updateScenario(selectedScenario.value.id, {
+    // Preparar dados para atualização incluindo testadorId e aprovadorId
+    const updateData: Partial<CreateScenarioData> & { testadorId?: number; aprovadorId?: number } = {
       title: scenarioEditForm.value.title,
       description: scenarioEditForm.value.description,
       type: scenarioEditForm.value.type as 'FUNCTIONAL' | 'REGRESSION' | 'SMOKE' | 'E2E',
       priority: scenarioEditForm.value.priority as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
-    })
+    }
+    
+    // Adicionar testadorId e aprovadorId se fornecidos
+    if (scenarioEditForm.value.testadorId !== null && scenarioEditForm.value.testadorId !== undefined) {
+      updateData.testadorId = scenarioEditForm.value.testadorId
+    }
+    if (scenarioEditForm.value.aprovadorId !== null && scenarioEditForm.value.aprovadorId !== undefined) {
+      updateData.aprovadorId = scenarioEditForm.value.aprovadorId
+    }
+
+    await scenarioService.updateScenario(selectedScenario.value.id, updateData)
 
     showEditScenarioDialog.value = false
     
@@ -2353,6 +2455,11 @@ const getInitials = (name?: string) => {
   const lastChar = last[0]
   if (!lastChar) return firstChar.toUpperCase()
   return (firstChar + lastChar).toUpperCase()
+}
+
+const getMemberColor = (memberId: number) => {
+  const colors = ['primary', 'secondary', 'accent', 'positive', 'info', 'warning']
+  return colors[memberId % colors.length]
 }
 
 // Utility functions

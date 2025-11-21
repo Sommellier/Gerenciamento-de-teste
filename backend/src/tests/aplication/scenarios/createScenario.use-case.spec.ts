@@ -87,12 +87,6 @@ describe('createScenario', () => {
         type: 'FUNCTIONAL',
         priority: 'MEDIUM',
         tags: ['test', 'functional'],
-        // TODO: assigneeEmail não existe mais no schema
-        // assigneeEmail: null,
-        // TODO: environment não existe mais no schema
-        // environment: null,
-        // TODO: release não existe mais no schema
-        // release: '2024-01-15',
         projectId
       })
 
@@ -123,9 +117,6 @@ describe('createScenario', () => {
       }
 
       const result = await createScenario(scenarioData)
-
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result.assigneeEmail).toBe('assignee@example.com')
     })
 
     it('cria cenário com assigneeEmail', async () => {
@@ -142,9 +133,6 @@ describe('createScenario', () => {
       }
 
       const result = await createScenario(scenarioData)
-
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result.assigneeEmail).toBe('assignee@example.com')
     })
 
     it('faz parse de tags quando tags é null ou string vazia (linha 119)', async () => {
@@ -202,9 +190,6 @@ describe('createScenario', () => {
       }
 
       const result = await createScenario(scenarioData)
-
-      // TODO: environment não existe mais no schema
-      // expect(result.environment).toBe('PROD')
     })
 
     it('cria cenário com assigneeId como objeto', async () => {
@@ -221,9 +206,6 @@ describe('createScenario', () => {
       }
 
       const result = await createScenario(scenarioData)
-
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result.assigneeEmail).toBe('assignee@example.com')
     })
 
     it('cria cenário sem description', async () => {
@@ -519,8 +501,6 @@ describe('createScenario', () => {
         }
 
         const result = await createScenario(scenarioData)
-        // TODO: environment não existe mais no schema
-        // expect(result.environment).toBe(environment)
 
         // Limpar para próximo teste
         await prisma.testScenarioStep.deleteMany({
@@ -547,8 +527,6 @@ describe('createScenario', () => {
         }
 
         const result = await createScenario(scenarioData)
-        // TODO: release não existe mais no schema
-        // expect(result.release).toBe(release)
 
         // Limpar para próximo teste
         await prisma.testScenarioStep.deleteMany({
@@ -576,9 +554,6 @@ describe('createScenario', () => {
       }
 
       const result = await createScenario(scenarioData)
-
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result.assigneeEmail).toBe('assignee@example.com')
     })
 
     it('funciona com assigneeId como objeto sem email', async () => {
@@ -594,9 +569,6 @@ describe('createScenario', () => {
       }
 
       const result = await createScenario(scenarioData)
-
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result.assigneeEmail).toBe('assignee@example.com')
     })
 
     it('funciona com assigneeId como objeto com email diferente', async () => {
@@ -613,8 +585,6 @@ describe('createScenario', () => {
 
       const result = await createScenario(scenarioData)
 
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result.assigneeEmail).toBe('different@example.com')
     })
 
     it('funciona com título longo', async () => {
@@ -712,12 +682,6 @@ describe('createScenario', () => {
       expect(result).toHaveProperty('type')
       expect(result).toHaveProperty('priority')
       expect(result).toHaveProperty('tags')
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(result).toHaveProperty('assigneeEmail')
-      // TODO: environment não existe mais no schema
-      // expect(result).toHaveProperty('environment')
-      // TODO: release não existe mais no schema
-      // expect(result).toHaveProperty('release')
       expect(result).toHaveProperty('projectId')
       expect(result).toHaveProperty('createdAt')
       expect(result).toHaveProperty('updatedAt')
@@ -743,12 +707,6 @@ describe('createScenario', () => {
       expect(typeof result.type).toBe('string')
       expect(typeof result.priority).toBe('string')
       expect(Array.isArray(result.tags)).toBe(true)
-      // TODO: assigneeEmail não existe mais no schema
-      // expect(typeof result.assigneeEmail).toBe('object') // Pode ser null
-      // TODO: environment não existe mais no schema
-      // expect(typeof result.environment).toBe('object') // Pode ser null
-      // TODO: release não existe mais no schema
-      // expect(typeof result.release).toBe('string')
       expect(typeof result.projectId).toBe('number')
       expect(result.createdAt).toBeInstanceOf(Date)
       expect(result.updatedAt).toBeInstanceOf(Date)

@@ -1,24 +1,25 @@
 <template>
-  <q-dialog v-model="show" persistent max-width="800px">
+  <q-dialog v-model="show" persistent max-width="800px" data-cy="dialog-execution">
     <q-card style="width: 100%; max-width: 800px">
       <q-card-section class="row items-center q-pb-none">
         <div class="text-h6">
           Executar Cenário: {{ scenario?.title }}
         </div>
         <q-space />
-        <q-btn icon="close" flat round dense v-close-popup />
+        <q-btn icon="close" flat round dense v-close-popup data-cy="btn-close-execution-dialog" />
       </q-card-section>
 
       <q-card-section>
         <div class="q-mb-md">
           <div class="text-subtitle2 q-mb-sm">Passos do Cenário</div>
-          <q-list bordered separator>
+          <q-list bordered separator data-cy="list-scenario-steps">
             <q-expansion-item
               v-for="(step, index) in scenario?.steps"
               :key="index"
               :label="`Passo ${step.order ?? (index + 1)}: ${step.action}`"
               :default-opened="true"
               class="q-mb-sm"
+              :data-cy="`expansion-step-${index + 1}`"
             >
               <q-card flat bordered>
                 <q-card-section>
@@ -49,6 +50,7 @@
                     v-model="stepResults[index]"
                     :label="`Passo ${step.order ?? (index + 1)} executado com sucesso`"
                     color="green"
+                    :data-cy="`checkbox-step-${index + 1}-executed`"
                   />
                   
                   <!-- Nota específica do passo -->
@@ -58,6 +60,7 @@
                     type="textarea"
                     rows="2"
                     class="q-mt-sm"
+                    :data-cy="`input-step-${index + 1}-note`"
                   />
                 </q-card-section>
               </q-card>
@@ -76,6 +79,7 @@
             map-options
             :rules="[val => !!val || 'Status é obrigatório']"
             filled
+            data-cy="select-execution-status"
           />
         </div>
 
@@ -87,6 +91,7 @@
             type="textarea"
             rows="4"
             filled
+            data-cy="input-execution-notes"
             placeholder="Descreva o resultado da execução, problemas encontrados, etc."
           />
         </div>
@@ -121,13 +126,14 @@
       </q-card-section>
 
       <q-card-actions align="right">
-        <q-btn flat label="Cancelar" v-close-popup />
+        <q-btn flat label="Cancelar" v-close-popup data-cy="btn-cancel-execution" />
         <q-btn
           color="primary"
           label="Registrar Execução"
           @click="onExecute"
           :loading="loading"
           :disable="!executionResult.status"
+          data-cy="btn-submit-execution"
         />
       </q-card-actions>
     </q-card>

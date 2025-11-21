@@ -132,7 +132,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       if (allowedOrigins.length === 0) {
         // Se não configurado, permitir temporariamente com aviso
         if (process.env.NODE_ENV === 'production') {
-          console.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
+          logger.warn(`[CORS] ALLOWED_ORIGINS não configurado. Permitindo ${origin} temporariamente.`)
         }
         isAllowed = true
       } else {
