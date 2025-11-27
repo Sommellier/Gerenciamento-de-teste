@@ -95,7 +95,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          printf "Host target\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n" \
+          printf "Host target\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n  ServerAliveInterval 60\n  ServerAliveCountMax 30\n  TCPKeepAlive yes\n" \
             "${{ secrets.EC2_HOST }}" "${{ secrets.EC2_USER }}" > ~/.ssh/config
 
       - name: Debug SSH reachability
@@ -107,7 +107,12 @@ jobs:
         run: pm2 deploy ecosystem.config.js production setup || true
 
       - name: PM2 deploy release
-        run: pm2 deploy ecosystem.config.js production
+        timeout-minutes: 15
+        run: |
+          # Configurar SSH para manter conexão viva
+          ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=yes target "echo 'SSH connection test'" || true
+          # Executar deploy com timeout aumentado
+          pm2 deploy ecosystem.config.js production --force
 
   deploy-legacy:
     name: Deploy to EC2 (Legacy)
