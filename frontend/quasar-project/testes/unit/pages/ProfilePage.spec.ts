@@ -496,14 +496,14 @@ describe('ProfilePage', () => {
       wrapper.vm.profile = { ...mockProfile }
       wrapper.vm.deleteConfirmed = true
       vi.mocked(api.delete).mockResolvedValueOnce(undefined as any)
-      const localStorageClearSpy = vi.spyOn(Storage.prototype, 'clear')
+      const sessionStorageClearSpy = vi.spyOn(sessionStorage, 'clear')
 
       await wrapper.vm.deleteAccount()
       await wrapper.vm.$nextTick()
       await new Promise(resolve => setTimeout(resolve, 2100))
 
       expect(api.delete).toHaveBeenCalledWith('/users/1')
-      expect(localStorageClearSpy).toHaveBeenCalled()
+      expect(sessionStorageClearSpy).toHaveBeenCalled()
       expect(mockNotify).toHaveBeenCalled()
       expect(mockPush).toHaveBeenCalledWith('/login')
     })

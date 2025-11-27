@@ -1,7 +1,13 @@
 import 'dotenv/config'
 import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
-import { auth } from '../../infrastructure/auth'
+import { auth, authWithRateLimit } from '../../infrastructure/auth'
+import { userLimiter } from '../../infrastructure/rateLimiter'
+
+// Mock do rate limiter
+jest.mock('../../infrastructure/rateLimiter', () => ({
+  userLimiter: jest.fn((req, res, next) => next())
+}))
 
 // Mock do console.log para evitar logs durante os testes
 const originalConsoleLog = console.log
@@ -251,6 +257,82 @@ describe('auth middleware', () => {
       expect(mockRes.status).toHaveBeenCalledWith(401)
       expect(mockRes.json).toHaveBeenCalledWith({ message: 'Token inválido' })
       expect(mockNext).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('token type validation', () => {
+    it('deve rejeitar token com type diferente de access', () => {
+      const secret = process.env.JWT_SECRET || 'test-secret'
+      const token = jwt.sign({ userId: 123, type: 'refresh' }, secret, { expiresIn: '1h' })
+      
+      mockReq.headers = { authorization: `Bearer ${token}` }
+
+      auth(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockRes.status).toHaveBeenCalledWith(401)
+      expect(mockRes.json).toHaveBeenCalledWith({ message: 'Tipo de token inválido' })
+      expect(mockNext).not.toHaveBeenCalled()
+    })
+
+    it('deve aceitar token com type access', () => {
+      const secret = process.env.JWT_SECRET || 'test-secret'
+      const token = jwt.sign({ userId: 123, type: 'access' }, secret, { expiresIn: '1h' })
+      
+      mockReq.headers = { authorization: `Bearer ${token}` }
+
+      auth(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockNext).toHaveBeenCalled()
+      expect((mockReq as any).user).toEqual({ id: 123 })
+    })
+
+    it('deve aceitar token sem type (compatibilidade)', () => {
+      const secret = process.env.JWT_SECRET || 'test-secret'
+      const token = jwt.sign({ userId: 123 }, secret, { expiresIn: '1h' })
+      
+      mockReq.headers = { authorization: `Bearer ${token}` }
+
+      auth(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockNext).toHaveBeenCalled()
+      expect((mockReq as any).user).toEqual({ id: 123 })
+    })
+  })
+
+  describe('authWithRateLimit', () => {
+    it('deve autenticar e aplicar rate limit quando token é válido', () => {
+      const secret = process.env.JWT_SECRET || 'test-secret'
+      const token = jwt.sign({ userId: 123 }, secret, { expiresIn: '1h' })
+      
+      mockReq.headers = { authorization: `Bearer ${token}` }
+
+      authWithRateLimit(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockNext).toHaveBeenCalled()
+      expect((mockReq as any).user).toEqual({ id: 123 })
+      expect(userLimiter).toHaveBeenCalled()
+    })
+
+    it('deve rejeitar e não aplicar rate limit quando token é inválido', () => {
+      mockReq.headers = { authorization: 'Bearer invalid-token' }
+
+      authWithRateLimit(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockRes.status).toHaveBeenCalledWith(401)
+      expect(mockRes.json).toHaveBeenCalledWith({ message: 'Token inválido' })
+      expect(mockNext).not.toHaveBeenCalled()
+      expect(userLimiter).not.toHaveBeenCalled()
+    })
+
+    it('deve rejeitar e não aplicar rate limit quando não há token', () => {
+      mockReq.headers = {}
+
+      authWithRateLimit(mockReq as Request, mockRes as Response, mockNext)
+
+      expect(mockRes.status).toHaveBeenCalledWith(401)
+      expect(mockRes.json).toHaveBeenCalledWith({ message: 'Não autenticado' })
+      expect(mockNext).not.toHaveBeenCalled()
+      expect(userLimiter).not.toHaveBeenCalled()
     })
   })
 })
