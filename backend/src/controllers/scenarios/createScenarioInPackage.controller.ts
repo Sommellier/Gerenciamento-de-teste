@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { createScenarioInPackage } from '../../application/use-cases/scenarios/createScenarioInPackage.use-case'
 import { AppError } from '../../utils/AppError'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -38,11 +39,31 @@ export const createScenarioInPackageController = async (
       throw new AppError('Campos obrigatórios: title, priority', 400)
     }
 
-    // Validação dos IDs
-    const parsedPackageId = Number(packageId)
-    const parsedProjectId = Number(projectId)
+    // Validação dos IDs - sempre usar mensagem genérica "IDs inválidos" para compatibilidade com testes
+    let parsedPackageId: number | undefined
+    let parsedProjectId: number | undefined
+    let packageIdError: AppError | null = null
+    let projectIdError: AppError | null = null
     
-    if (isNaN(parsedPackageId) || isNaN(parsedProjectId)) {
+    try {
+      parsedPackageId = validateId(packageId, 'ID do pacote')
+    } catch (err: any) {
+      packageIdError = err
+    }
+    
+    try {
+      parsedProjectId = validateId(projectId, 'ID do projeto')
+    } catch (err: any) {
+      projectIdError = err
+    }
+    
+    // Se qualquer ID é inválido, lançar mensagem genérica (compatibilidade com testes)
+    if (packageIdError || projectIdError) {
+      throw new AppError('IDs inválidos', 400)
+    }
+    
+    // Garantir que ambos foram validados (TypeScript)
+    if (parsedPackageId === undefined || parsedProjectId === undefined) {
       throw new AppError('IDs inválidos', 400)
     }
 
@@ -64,8 +85,8 @@ export const createScenarioInPackageController = async (
       assigneeId,
       assigneeEmail: finalAssigneeEmail,
       environment,
-      testadorId: testadorId ? Number(testadorId) : undefined,
-      aprovadorId: aprovadorId ? Number(aprovadorId) : undefined
+      testadorId: testadorId ? validateId(testadorId, 'ID do testador') : undefined,
+      aprovadorId: aprovadorId ? validateId(aprovadorId, 'ID do aprovador') : undefined
     })
 
     res.status(201).json({

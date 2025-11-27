@@ -399,7 +399,11 @@ describe('API - Integração: Fluxo Completo', () => {
           throw new Error(`Falha ao criar pacote. Status: ${packageResponse?.status}`)
         }
         
-        packageId = packageResponse.body.testPackage.id
+        packageId = packageResponse.body.testPackage?.id || packageResponse.body.package?.id
+        if (!packageId) {
+          cy.log(`Erro: ID do pacote não encontrado na resposta. Body: ${JSON.stringify(packageResponse?.body)}`)
+          throw new Error('Falha ao criar pacote: ID não encontrado na resposta')
+        }
         testPackage.id = packageId
         cy.log(`Pacote criado com ID: ${packageId}`)
 
@@ -423,7 +427,11 @@ describe('API - Integração: Fluxo Completo', () => {
           throw new Error(`Falha ao criar cenário. Status: ${scenarioResponse?.status}`)
         }
         
-        scenarioId = scenarioResponse.body.scenario.id
+        scenarioId = scenarioResponse.body.scenario?.id
+        if (!scenarioId) {
+          cy.log(`Erro: ID do cenário não encontrado na resposta. Body: ${JSON.stringify(scenarioResponse?.body)}`)
+          throw new Error('Falha ao criar cenário: ID não encontrado na resposta')
+        }
         testScenario.id = scenarioId
         cy.log(`Cenário criado com ID: ${scenarioId}`)
         

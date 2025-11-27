@@ -172,6 +172,24 @@ async function handleRegister() {
   isLoading.value = true
 
   try {
+    // Garantir que temos um CSRF token antes de fazer o registro
+    let csrfToken = sessionStorage.getItem('csrfToken')
+    if (!csrfToken) {
+      try {
+        const response = await api.get<{ csrfToken: string }>('/csrf-token')
+        if (response.data && typeof response.data === 'object' && 'csrfToken' in response.data) {
+          csrfToken = response.data.csrfToken
+          if (csrfToken && typeof csrfToken === 'string') {
+            sessionStorage.setItem('csrfToken', csrfToken)
+          }
+        }
+      } catch (csrfError) {
+        // Se falhar ao obter CSRF token, continuar mesmo assim
+        // O interceptor pode tentar novamente
+        console.warn('Não foi possível obter CSRF token:', csrfError)
+      }
+    }
+
     await api.post('/register', {
       name: name.value,
       email: email.value,
@@ -194,13 +212,30 @@ async function handleRegister() {
 
   } catch (error: unknown) {
     isError.value = true
+    
+    // Tratar diferentes tipos de erros
     if (typeof error === 'object' && error !== null && 'response' in error) {
       const err = error as {
-        response?: { data?: { message?: string } }
+        response?: { 
+          data?: { message?: string }
+          status?: number
+        }
         message?: string
       }
 
-      message.value = err.response?.data?.message || err.message || 'Erro ao registrar'
+      // Verificar status HTTP para mensagens mais específicas
+      const status = err.response?.status
+      if (status === 403) {
+        message.value = 'Erro de segurança. Por favor, recarregue a página e tente novamente.'
+      } else if (status === 409) {
+        message.value = 'Este e-mail já está cadastrado. Tente fazer login ou use outro e-mail.'
+      } else if (status === 429) {
+        message.value = 'Muitas tentativas. Por favor, aguarde alguns instantes e tente novamente.'
+      } else {
+        message.value = err.response?.data?.message || err.message || 'Erro ao registrar'
+      }
+    } else if (error instanceof Error) {
+      message.value = error.message || 'Erro ao registrar'
     } else {
       message.value = 'Erro desconhecido ao registrar'
     }

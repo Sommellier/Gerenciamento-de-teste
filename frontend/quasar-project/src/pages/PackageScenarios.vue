@@ -273,7 +273,7 @@ import { Notify } from 'quasar'
 import { scenarioService, type CreateScenarioData } from '../services/scenario.service'
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 import { TYPE_OPTIONS, PRIORITY_OPTIONS } from '../utils/constants'
-import { createRequiredRule } from '../utils/helpers'
+import { createRequiredRule, validateRouteId } from '../utils/helpers'
 import MemberOptionItem from '../components/scenarios/MemberOptionItem.vue'
 import logger from '../utils/logger'
 
@@ -302,7 +302,7 @@ const scenarioForm = ref({
 const members = ref<ProjectMember[]>([])
 
 // Computed
-const packageId = computed(() => parseInt(route.params.packageId as string))
+const packageId = computed(() => validateRouteId(route.params.packageId))
 
 // Helper para criar opções de membros baseado nos roles permitidos
 const createMemberOptions = (allowedRoles: string[]) => {
@@ -342,7 +342,12 @@ const priorityRules = createRequiredRule('Prioridade do cenário')
 
 // Methods
 function goBack() {
-  const projectId = String(route.params.projectId ?? '')
+  const projectId = validateRouteId(route.params.projectId)
+  if (isNaN(projectId)) {
+    Notify.create({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+    void router.push('/dashboard')
+    return
+  }
   void router.push(`/projects/${projectId}/packages/${packageId.value}`)
 }
 
@@ -352,7 +357,11 @@ function goBack() {
 async function loadMembers() {
   try {
     loadingMembers.value = true
-    const projectId = Number(route.params.projectId)
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      Notify.create({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+      return
+    }
     if (projectId) {
       const projectMembers = await getProjectMembers(projectId)
       
@@ -405,9 +414,8 @@ async function createScenario() {
       }
     }
 
-    const projectId = Number(route.params.projectId)
-    
-    if (!projectId || isNaN(projectId)) {
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId) || !projectId) {
       errorMessage.value = 'ID do projeto inválido'
       showErrorDialog.value = true
       return

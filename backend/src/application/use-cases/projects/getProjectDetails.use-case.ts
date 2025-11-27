@@ -6,11 +6,12 @@ import { logger } from '../../../utils/logger'
 interface GetProjectDetailsInput {
   projectId: number
   release?: string
+  requesterId?: number
 }
 
-export async function getProjectDetails({ projectId, release }: GetProjectDetailsInput) {
+export async function getProjectDetails({ projectId, release, requesterId }: GetProjectDetailsInput) {
   try {
-    logger.log('getProjectDetails chamado com:', { projectId, release })
+    logger.debug('getProjectDetails chamado com:', { projectId, release, requesterId })
     
     // Verificar se o projeto existe
     const project = await prisma.project.findUnique({
@@ -28,11 +29,29 @@ export async function getProjectDetails({ projectId, release }: GetProjectDetail
     })
 
     if (!project) {
-      logger.log('Projeto não encontrado:', projectId)
+      logger.debug('Projeto não encontrado:', projectId)
       throw new AppError('Projeto não encontrado', 404)
     }
 
-    logger.log('Projeto encontrado:', project.name)
+    // Verificar permissões de acesso ao projeto (se requesterId foi fornecido)
+    if (requesterId !== undefined) {
+      const isOwner = project.ownerId === requesterId
+
+      if (!isOwner) {
+        const userOnProject = await prisma.userOnProject.findFirst({
+          where: {
+            userId: requesterId,
+            projectId: projectId
+          }
+        })
+
+        if (!userOnProject) {
+          throw new AppError('Acesso negado ao projeto', 403)
+        }
+      }
+    }
+
+    logger.debug('Projeto encontrado:', project.name)
 
     // Buscar membros do projeto
     const members = await prisma.userOnProject.findMany({

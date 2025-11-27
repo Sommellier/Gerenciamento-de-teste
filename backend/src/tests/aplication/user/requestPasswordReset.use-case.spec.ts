@@ -147,7 +147,7 @@ describe('requestPasswordReset', () => {
         where: { userId: user.id }
       })
 
-      const expectedLink = `${process.env.FRONTEND_URL}/reset-password?token=${tokenRecord?.token}`
+      const expectedLink = `${process.env.FRONTEND_URL}/reset-password#token=${tokenRecord?.token}`
 
       expect(mockedSendEmail).toHaveBeenCalledWith(
         'test@example.com',

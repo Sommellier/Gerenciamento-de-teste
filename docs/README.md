@@ -36,7 +36,9 @@ Objetivos Específicos
 ## Documentação adicional
 
 > [!Note]
-> ## FAQ
-> [Documentação do projeto](https://github.com/Sommellier/Gerenciamento-de-teste/wiki)
 
+> ## FAQ
+
+> [Documentação do projeto](https://github.com/Sommellier/Gerenciamento-de-teste/wiki)
+> [Guia do usuário](https://github.com/Sommellier/Gerenciamento-de-teste/wiki/5.-Guia-do-Usuário)
 > [Poster do banner](https://docs.google.com/presentation/d/1tVJHllSdgppw_Z4TQ26IVjpDLDtyZNf3/edit?usp=sharing&ouid=103022152162777964160&rtpof=true&sd=true)

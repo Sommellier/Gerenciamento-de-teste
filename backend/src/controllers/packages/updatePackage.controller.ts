@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { updatePackage } from '../../application/use-cases/packages/updatePackage.use-case'
 import { AppError } from '../../utils/AppError'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -32,14 +33,8 @@ export async function updatePackageController(
     }
 
     // Validação dos IDs
-    const parsedProjectId = Number(projectId)
-    const parsedPackageId = Number(packageId)
-    if (isNaN(parsedProjectId)) {
-      throw new AppError('ID do projeto inválido', 400)
-    }
-    if (isNaN(parsedPackageId)) {
-      throw new AppError('ID do pacote inválido', 400)
-    }
+    const parsedProjectId = validateId(projectId, 'ID do projeto')
+    const parsedPackageId = validateId(packageId, 'ID do pacote')
 
     const testPackage = await updatePackage({
       packageId: parsedPackageId,

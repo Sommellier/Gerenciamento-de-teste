@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { createProject } from '../../application/use-cases/projects/createProject.use-case'
+import { validateId } from '../../utils/validation'
 
 export const createProjectController = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -18,7 +19,7 @@ export const createProjectController = async (req: Request, res: Response, next:
     }
 
     const project = await createProject({
-      ownerId: Number(ownerId), // Garantir que seja number
+      ownerId: validateId(ownerId, 'ID do proprietário'),
       name: String(name),
       description: description == null ? undefined : String(description),
     })

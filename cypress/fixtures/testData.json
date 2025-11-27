@@ -1,12 +1,12 @@
 {
   "credentials": {
     "email": "Luizteste@gmail.com",
-    "senha": "Segredo123"
+    "senha": "Segredo123_"
   },
   "testUser": {
     "nome": "Luiz Quase Lucas Teste",
     "emailBase": "Luizteste@gmail.com",
-    "senha": "Segredo123"
+    "senha": "Segredo123_"
   },
   "project": {
     "baseName": "Meu projeto",

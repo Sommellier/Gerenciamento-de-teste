@@ -202,7 +202,7 @@
                 <q-icon name="play_circle" size="24px" color="primary" />
                 <h3>Ação</h3>
               </div>
-              <div class="section-content" v-html="currentStep.action"></div>
+              <div class="section-content" v-html="sanitizedAction"></div>
             </q-card-section>
           </q-card>
 
@@ -213,7 +213,7 @@
                 <q-icon name="check_circle" size="24px" color="positive" />
                 <h3>Resultado Esperado</h3>
               </div>
-              <div class="section-content" v-html="currentStep.expected || ''"></div>
+              <div class="section-content" v-html="sanitizedExpected"></div>
             </q-card-section>
           </q-card>
 
@@ -518,6 +518,8 @@ import { scenarioService, type TestScenario, type ScenarioStep, type CreateScena
 import { getProjectMembers, type ProjectMember } from '../services/project-details.service'
 import { executionService, type Bug, type ExecutionHistory, type StepComment, type StepAttachment } from '../services/execution.service'
 import logger from '../utils/logger'
+import { sanitizeHTMLSync } from '../utils/sanitize'
+import { isValidUrl, sanitizeFileName, validateRouteId, sanitizeErrorMessage } from '../utils/helpers'
 
 const route = useRoute()
 const router = useRouter()
@@ -603,6 +605,17 @@ const filteredMembers = computed(() => {
   )
 })
 
+// Sanitizar HTML para renderização segura
+const sanitizedAction = computed(() => {
+  if (!currentStep.value?.action) return ''
+  return sanitizeHTMLSync(currentStep.value.action)
+})
+
+const sanitizedExpected = computed(() => {
+  if (!currentStep.value?.expected) return ''
+  return sanitizeHTMLSync(currentStep.value.expected)
+})
+
 // Methods
 function goBack() {
   const projectId = String(route.params.projectId ?? '')
@@ -621,8 +634,12 @@ function goBackToPackage() {
 async function loadScenario() {
   try {
     loading.value = true
-    const scenarioId = Number(route.params.scenarioId)
-    const projectId = Number(route.params.projectId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    const projectId = validateRouteId(route.params.projectId)
+    
+    if (isNaN(scenarioId) || isNaN(projectId)) {
+      throw new Error('IDs inválidos na URL')
+    }
     
     // Carregar cenário, membros, bugs e histórico em paralelo
     const [scenarioResponse, membersData, bugsData, historyData] = await Promise.all([
@@ -748,7 +765,11 @@ async function loadStepData(stepId: number, stepIndex: number) {
 async function startExecution() {
   try {
     loading.value = true
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      Notify.create({ type: 'negative', message: 'ID do cenário inválido', position: 'top' })
+      return
+    }
     
     // Atualizar status local PRIMEIRO para feedback imediato ao usuário
     executionStatus.value = 'IN_PROGRESS'
@@ -823,7 +844,11 @@ async function finishExecution() {
       return
     }
     
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      Notify.create({ type: 'negative', message: 'ID do cenário inválido', position: 'top' })
+      return
+    }
     
     // Se todas as etapas estão bloqueadas, não atualizar o status (já está BLOQUEADO)
     // O backend já atualiza automaticamente quando todas as etapas são bloqueadas
@@ -930,7 +955,11 @@ function previousStep() {
 async function restartExecution() {
   try {
     loading.value = true
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      Notify.create({ type: 'negative', message: 'ID do cenário inválido', position: 'top' })
+      return
+    }
     
     // Confirmar com o usuário se deseja reexecutar
     const confirmed = await new Promise<boolean>((resolve) => {
@@ -1021,7 +1050,11 @@ async function setStepStatus(status: string) {
     currentStep.value.status = status as 'PENDING' | 'PASSED' | 'FAILED' | 'BLOCKED'
     
     try {
-      const scenarioId = Number(route.params.scenarioId)
+      const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      Notify.create({ type: 'negative', message: 'ID do cenário inválido', position: 'top' })
+      return
+    }
       
       // Salvar status da etapa no backend
       await executionService.updateStepStatus(
@@ -1353,7 +1386,11 @@ async function createBug() {
   creatingBug.value = true
   
   try {
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      Notify.create({ type: 'negative', message: 'ID do cenário inválido', position: 'top' })
+      return
+    }
     
     // Criar bug primeiro
     const bugData: {
@@ -1419,9 +1456,10 @@ async function createBug() {
     const axiosError = err && typeof err === 'object' && ('response' in err || 'message' in err)
       ? err as AxiosError
       : undefined
+    const errorMsg = axiosError?.response?.data?.message || axiosError?.message || 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: `Erro ao criar bug: ${axiosError?.response?.data?.message || axiosError?.message || 'Erro desconhecido'}`
+      message: `Erro ao criar bug: ${sanitizeErrorMessage(errorMsg)}`
     })
   } finally {
     creatingBug.value = false
@@ -1429,14 +1467,37 @@ async function createBug() {
 }
 
 function viewAttachment(attachment: StepAttachment) {
+  // Validar URL antes de abrir para prevenir abertura de sites maliciosos
+  if (!isValidUrl(attachment.url)) {
+    Notify.create({
+      type: 'negative',
+      message: 'URL inválida ou não permitida',
+      position: 'top'
+    })
+    return
+  }
+  
   // Lightbox para visualização de evidências - implementação futura
   window.open(attachment.url, '_blank')
 }
 
 function downloadAttachment(attachment: StepAttachment) {
+  // Validar URL antes de fazer download
+  if (!isValidUrl(attachment.url)) {
+    Notify.create({
+      type: 'negative',
+      message: 'URL inválida ou não permitida',
+      position: 'top'
+    })
+    return
+  }
+  
+  // Sanitizar nome do arquivo para prevenir nomes maliciosos
+  const safeFilename = sanitizeFileName(attachment.filename)
+  
   const link = document.createElement('a')
   link.href = attachment.url
-  link.download = attachment.filename
+  link.download = safeFilename
   link.click()
 }
 

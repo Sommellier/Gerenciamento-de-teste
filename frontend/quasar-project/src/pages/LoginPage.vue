@@ -129,6 +129,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
 import api from 'src/services/api'
+import { isValidRedirect } from 'src/utils/helpers'
 
 const email = ref('')
 const password = ref('')
@@ -171,11 +172,24 @@ async function handleLogin() {
     })
 
     const { accessToken, refreshToken, user } = response.data
-    localStorage.setItem('token', accessToken) // Usar accessToken como token principal
+    // Usar sessionStorage ao invés de localStorage para maior segurança
+    // sessionStorage é limpo quando a aba é fechada, reduzindo risco de XSS
+    sessionStorage.setItem('token', accessToken) // Usar accessToken como token principal
     if (refreshToken) {
-      localStorage.setItem('refreshToken', refreshToken)
+      sessionStorage.setItem('refreshToken', refreshToken)
     }
-    localStorage.setItem('user', JSON.stringify(user))
+    sessionStorage.setItem('user', JSON.stringify(user))
+    
+    // Obter CSRF token após login bem-sucedido
+    try {
+      const csrfResponse = await api.get<{ csrfToken: string }>('/csrf-token')
+      if (csrfResponse.data.csrfToken) {
+        sessionStorage.setItem('csrfToken', csrfResponse.data.csrfToken)
+      }
+    } catch {
+      // Se falhar ao obter CSRF token, não bloquear o login
+      // O token será obtido na próxima requisição que precisar
+    }
 
     $q.notify({
       type: 'positive',
@@ -183,9 +197,13 @@ async function handleLogin() {
       position: 'top'
     })
 
-    // 👇 pegue o destino da query (?redirect=...)
+    // 👇 pegue o destino da query (?redirect=...) e valide para prevenir Open Redirect
     const redirect = router.currentRoute.value.query.redirect as string | undefined
-    await router.replace(redirect ?? { name: 'dashboard' })
+    if (redirect && isValidRedirect(redirect)) {
+      await router.replace(redirect)
+    } else {
+      await router.replace({ name: 'dashboard' })
+    }
 
   } catch (error: unknown) {
     const errorMessage = error && typeof error === 'object' && 'response' in error

@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { hashPassword } from '../../../utils/hash.util'
+import { sanitizeTextOnly, validatePasswordComplexity } from '../../../utils/validation'
 
 interface UpdateUserInput {
   name?: string
@@ -24,7 +25,7 @@ export async function updateUser(userId: string, data: UpdateUserInput) {
   const updates: any = {}
 
   if (data.name) {
-    const name = data.name.trim()
+    const name = sanitizeTextOnly(data.name.trim())
     if (name.length < 2 || !/^[A-Za-zÀ-ÖØ-öø-ÿ\s-]+$/.test(name)) {
       throw new AppError('Invalid name', 400)
     }
@@ -49,8 +50,19 @@ export async function updateUser(userId: string, data: UpdateUserInput) {
   }
 
   if (data.password) {
+    // Validação básica de comprimento
     if (data.password.length < 8) {
       throw new AppError('Password must be at least 8 characters long', 400)
+    }
+
+    // Validação de complexidade (opcional, mas recomendado)
+    // Em modo não-estrito, apenas valida mas não bloqueia
+    // Pode ser ativado em modo estrito alterando o segundo parâmetro para true
+    const complexityWarning = validatePasswordComplexity(data.password, false)
+    if (complexityWarning) {
+      // Log do aviso, mas não bloqueia a atualização
+      // Em produção, pode-se considerar tornar isso obrigatório (strict: true)
+      console.warn(`[Password Complexity] ${complexityWarning}`)
     }
 
     updates.password = await hashPassword(data.password)

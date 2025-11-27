@@ -40,38 +40,79 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
 import api from 'src/services/api'
 
 const password = ref('')
 const confirmPassword = ref('')
 const token = ref('')
 const router = useRouter()
-const route = useRoute()
+const $q = useQuasar()
 
 onMounted(() => {
-  token.value = route.query.token as string
+  // Usar hash (#) na URL ao invés de query string para não expor token em logs/referrers
+  // O hash não é enviado ao servidor, então é mais seguro
+  const hash = window.location.hash
+  if (hash && hash.startsWith('#token=')) {
+    token.value = hash.substring(7) // Remove '#token='
+  }
+  
   if (!token.value) {
-    alert('Token de redefinição inválido.')
-    void router.push('/login') // corrigido com void
+    $q.notify({
+      type: 'negative',
+      message: 'Token de redefinição inválido.',
+      position: 'top'
+    })
+    void router.push('/login')
   }
 })
 
 async function handleResetPassword() {
+  if (!password.value || password.value.length < 8) {
+    $q.notify({
+      type: 'negative',
+      message: 'A senha deve ter pelo menos 8 caracteres',
+      position: 'top'
+    })
+    return
+  }
+
+  if (password.value !== confirmPassword.value) {
+    $q.notify({
+      type: 'negative',
+      message: 'As senhas não coincidem',
+      position: 'top'
+    })
+    return
+  }
+
   try {
     await api.post('/reset-password', {
       token: token.value,
       newPassword: password.value
     })
 
-    alert('Senha redefinida com sucesso!')
+    $q.notify({
+      type: 'positive',
+      message: 'Senha redefinida com sucesso!',
+      position: 'top'
+    })
     await router.push('/login')
   } catch (error: unknown) {
     if (error instanceof Error && 'response' in error) {
       const axiosError = error as { response?: { data?: { error?: string } } }
-      alert(axiosError.response?.data?.error || 'Erro ao redefinir a senha')
+      $q.notify({
+        type: 'negative',
+        message: axiosError.response?.data?.error || 'Erro ao redefinir a senha',
+        position: 'top'
+      })
     } else {
-      alert('Erro desconhecido')
+      $q.notify({
+        type: 'negative',
+        message: 'Erro desconhecido',
+        position: 'top'
+      })
     }
   }
 }

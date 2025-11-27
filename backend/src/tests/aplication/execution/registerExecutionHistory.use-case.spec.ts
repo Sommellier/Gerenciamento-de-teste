@@ -262,10 +262,12 @@ describe('registerExecutionHistory', () => {
     })
 
     it('registra históricos com diferentes usuários', async () => {
+      // Usar email único com timestamp para evitar conflitos
+      const uniqueEmail = `user2-${Date.now()}@example.com`
       const user2 = await prisma.user.create({
         data: {
           name: 'User 2',
-          email: 'user2@example.com',
+          email: uniqueEmail,
           password: 'password123'
         }
       })

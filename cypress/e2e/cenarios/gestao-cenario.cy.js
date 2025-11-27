@@ -65,12 +65,8 @@ describe('Gestão de Cenário - Validações e Operações @regressao', () => {
       senha: testData.testUser.senha
     });
 
-    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }).should('be.visible');
-
-    // Fazer login
-    cy.visit('/login');
+    // Fazer login (já estamos na página de login após criarConta)
     cy.login({ email: uniqueEmail, senha: testData.testUser.senha });
-    cy.url().should('include', '/dashboard');
 
     // Criar projeto
     cy.criarProjeto(nomeProjeto, descricaoProjeto);

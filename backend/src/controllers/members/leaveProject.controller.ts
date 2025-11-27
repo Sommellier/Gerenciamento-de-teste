@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { AppError } from '../../utils/AppError'
 import { leaveProject } from '../../application/use-cases/members/leaveProject.use-case'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -14,10 +15,15 @@ export async function leaveProjectController(
   try {
     if (!req.user?.id) throw new AppError('Não autenticado', 401)
 
-    const projectId = Number(req.params.projectId)
-
-    if (!Number.isInteger(projectId) || projectId <= 0) {
-      throw new AppError('projectId inválido', 400)
+    let projectId: number
+    try {
+      projectId = validateId(req.params.projectId, 'ID do projeto')
+    } catch (err: any) {
+      // Testes esperam mensagem específica
+      if (err instanceof AppError && err.statusCode === 400) {
+        throw new AppError('projectId inválido', 400)
+      }
+      throw err
     }
 
     const deleted = await leaveProject({

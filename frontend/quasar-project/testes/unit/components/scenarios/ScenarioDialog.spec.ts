@@ -8,6 +8,7 @@ import { getProjectMembers } from 'src/services/project.service'
 import { Notify } from 'quasar'
 import type { TestScenario } from 'src/services/scenario.service'
 import { getInitials, getMemberColor } from 'src/utils/helpers'
+import api from 'src/services/api'
 
 // Mock do useRoute
 const mockRoute = {
@@ -40,6 +41,16 @@ vi.mock('src/services/project.service', () => ({
   getProjectMembers: vi.fn(),
 }))
 
+// Mock do api service
+vi.mock('src/services/api', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+  },
+}))
+
 // Mock do Quasar
 vi.mock('quasar', () => ({
   Notify: {
@@ -59,8 +70,7 @@ Object.defineProperty(window, 'localStorage', {
   writable: true,
 })
 
-// Mock do fetch
-global.fetch = vi.fn()
+// Mock do fetch removido - agora usamos api service
 
 const router = createRouter({
   history: createWebHistory(),
@@ -187,6 +197,7 @@ describe('ScenarioDialog', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks()
+    vi.mocked(api.post).mockClear()
     await router.push('/projects/1/packages/1')
     await new Promise(resolve => setTimeout(resolve, 50))
     vi.mocked(getProjectMembers).mockResolvedValueOnce(mockMembers)
@@ -246,10 +257,9 @@ describe('ScenarioDialog', () => {
 
   describe('Criação de Cenário', () => {
     it('deve criar cenário com sucesso', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ message: 'Success', scenario: mockScenario }),
-      } as any)
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: { message: 'Success', scenario: mockScenario },
+      })
 
       wrapper = createWrapper({ modelValue: false })
       await wrapper.vm.$nextTick()
@@ -268,7 +278,7 @@ describe('ScenarioDialog', () => {
       await wrapper.vm.onSubmit()
       await wrapper.vm.$nextTick()
 
-      expect(fetch).toHaveBeenCalled()
+      expect(api.post).toHaveBeenCalled()
       expect(Notify.create).toHaveBeenCalledWith({
         type: 'positive',
         message: 'Cenário criado com sucesso',
@@ -323,10 +333,9 @@ describe('ScenarioDialog', () => {
     })
 
     it('deve permitir mesmo testador e aprovador se for OWNER', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ message: 'Success', scenario: mockScenario }),
-      } as any)
+      vi.mocked(api.post).mockResolvedValueOnce({
+        data: { message: 'Success', scenario: mockScenario },
+      })
 
       wrapper = createWrapper({ modelValue: false })
       await wrapper.vm.$nextTick()
@@ -345,7 +354,7 @@ describe('ScenarioDialog', () => {
       await wrapper.vm.onSubmit()
       await wrapper.vm.$nextTick()
 
-      expect(fetch).toHaveBeenCalled()
+      expect(api.post).toHaveBeenCalled()
     })
   })
 
@@ -382,10 +391,13 @@ describe('ScenarioDialog', () => {
 
   describe('Criação de Cenário - Tratamento de Erros', () => {
     it('deve tratar erro quando response.ok é false', async () => {
-      vi.mocked(fetch).mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ message: 'Erro ao criar cenário' }),
-      } as any)
+      const errorResponse = {
+        response: {
+          status: 400,
+          data: { message: 'Erro ao criar cenário' },
+        },
+      }
+      vi.mocked(api.post).mockRejectedValueOnce(errorResponse)
 
       wrapper = createWrapper({ modelValue: false })
       await wrapper.vm.$nextTick()
@@ -411,7 +423,7 @@ describe('ScenarioDialog', () => {
     })
 
     it('deve tratar erro genérico ao criar cenário', async () => {
-      vi.mocked(fetch).mockRejectedValueOnce(new Error('Network error'))
+      vi.mocked(api.post).mockRejectedValueOnce(new Error('Network error'))
 
       wrapper = createWrapper({ modelValue: false })
       await wrapper.vm.$nextTick()

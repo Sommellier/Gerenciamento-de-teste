@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { Role } from '@prisma/client'
 import { AppError } from '../../utils/AppError'
 import { createInvite } from '../../application/use-cases/invitations/createInvite.use-case'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -27,9 +28,15 @@ export async function createInviteController(
     }
 
     // validação dos params
-    const projectId = Number(req.params.projectId)
-    if (!Number.isInteger(projectId) || projectId <= 0) {
-      throw new AppError('projectId inválido', 400)
+    let projectId: number
+    try {
+      projectId = validateId(req.params.projectId, 'ID do projeto')
+    } catch (err: any) {
+      // Testes esperam mensagem específica
+      if (err instanceof AppError && err.statusCode === 400) {
+        throw new AppError('projectId inválido', 400)
+      }
+      throw err
     }
 
     // validação do body (sem depender de libs)

@@ -29,7 +29,9 @@ export async function requestPasswordReset(email: string) {
     }
   })
 
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${token}`
+  // Usar hash (#) na URL ao invés de query string para não expor token em logs/referrers
+  // O hash não é enviado ao servidor, então é mais seguro
+  const resetLink = `${process.env.FRONTEND_URL}/reset-password#token=${token}`
 
   const subject = 'Redefinição de Senha'
   const body = `

@@ -2,16 +2,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createRouter, createWebHistory } from 'vue-router'
 import createRouterInstance from 'src/router/index'
 
-// Mock do localStorage
-const localStorageMock = {
+// Mock do sessionStorage (migrado de localStorage para maior segurança)
+const sessionStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
 }
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
   writable: true,
 })
 
@@ -21,7 +21,7 @@ const originalEnv = process.env
 describe('Router Index', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorageMock.getItem.mockReturnValue(null)
+    sessionStorageMock.getItem.mockReturnValue(null)
     process.env = { ...originalEnv }
   })
 
@@ -86,7 +86,7 @@ describe('Router Index', () => {
     })
 
     it('deve redirecionar para login quando não autenticado e acessa rota protegida', async () => {
-      localStorageMock.getItem.mockReturnValue(null) // Não autenticado
+      sessionStorageMock.getItem.mockReturnValue(null) // Não autenticado
 
       const router = createRouterInstance()
       await router.push('/dashboard')
@@ -96,7 +96,7 @@ describe('Router Index', () => {
     })
 
     it('deve permitir acesso a rota protegida quando autenticado', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123') // Autenticado
+      sessionStorageMock.getItem.mockReturnValue('token-123') // Autenticado
 
       const router = createRouterInstance()
       await router.push('/dashboard')
@@ -105,7 +105,7 @@ describe('Router Index', () => {
     })
 
     it('deve redirecionar para dashboard quando autenticado tenta acessar login', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123') // Autenticado
+      sessionStorageMock.getItem.mockReturnValue('token-123') // Autenticado
 
       const router = createRouterInstance()
       await router.push('/login')
@@ -114,7 +114,7 @@ describe('Router Index', () => {
     })
 
     it('deve redirecionar para dashboard quando autenticado tenta acessar register', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123') // Autenticado
+      sessionStorageMock.getItem.mockReturnValue('token-123') // Autenticado
 
       const router = createRouterInstance()
       await router.push('/register')
@@ -123,7 +123,7 @@ describe('Router Index', () => {
     })
 
     it('deve redirecionar para dashboard quando autenticado tenta acessar forgot-password', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123') // Autenticado
+      sessionStorageMock.getItem.mockReturnValue('token-123') // Autenticado
 
       const router = createRouterInstance()
       await router.push('/forgot-password')
@@ -132,7 +132,7 @@ describe('Router Index', () => {
     })
 
     it('deve redirecionar para dashboard quando autenticado tenta acessar reset-password', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123') // Autenticado
+      sessionStorageMock.getItem.mockReturnValue('token-123') // Autenticado
 
       const router = createRouterInstance()
       await router.push('/reset-password')
@@ -141,7 +141,7 @@ describe('Router Index', () => {
     })
 
     it('deve permitir acesso a rotas públicas quando não autenticado', async () => {
-      localStorageMock.getItem.mockReturnValue(null) // Não autenticado
+      sessionStorageMock.getItem.mockReturnValue(null) // Não autenticado
 
       const router = createRouterInstance()
       await router.push('/login')
@@ -150,7 +150,7 @@ describe('Router Index', () => {
     })
 
     it('deve preservar query params no redirecionamento', async () => {
-      localStorageMock.getItem.mockReturnValue(null) // Não autenticado
+      sessionStorageMock.getItem.mockReturnValue(null) // Não autenticado
 
       const router = createRouterInstance()
       await router.push({ path: '/dashboard', query: { tab: 'settings' } })
@@ -160,7 +160,7 @@ describe('Router Index', () => {
     })
 
     it('deve permitir acesso a rota protegida com query params quando autenticado', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123') // Autenticado
+      sessionStorageMock.getItem.mockReturnValue('token-123') // Autenticado
 
       const router = createRouterInstance()
       await router.push({ path: '/projects/1', query: { tab: 'packages' } })
@@ -172,36 +172,36 @@ describe('Router Index', () => {
   })
 
   describe('Função isLoggedIn', () => {
-    it('deve retornar true quando token existe no localStorage', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123')
+    it('deve retornar true quando token existe no sessionStorage', async () => {
+      sessionStorageMock.getItem.mockReturnValue('token-123')
 
       const router = createRouterInstance()
       // A função isLoggedIn é chamada durante a navegação
       await router.push('/dashboard')
 
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('token')
+      expect(sessionStorageMock.getItem).toHaveBeenCalledWith('token')
       expect(router.currentRoute.value.name).toBe('dashboard')
     })
 
-    it('deve retornar false quando token não existe no localStorage', async () => {
-      localStorageMock.getItem.mockReturnValue(null)
+    it('deve retornar false quando token não existe no sessionStorage', async () => {
+      sessionStorageMock.getItem.mockReturnValue(null)
 
       const router = createRouterInstance()
       // Quando não há token, o router redireciona para login
       await router.push('/dashboard')
 
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('token')
+      expect(sessionStorageMock.getItem).toHaveBeenCalledWith('token')
       expect(router.currentRoute.value.name).toBe('login')
     })
 
     it('deve retornar false quando token é string vazia', async () => {
-      localStorageMock.getItem.mockReturnValue('')
+      sessionStorageMock.getItem.mockReturnValue('')
 
       const router = createRouterInstance()
       // String vazia deve ser tratada como não autenticado
       await router.push('/dashboard')
 
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('token')
+      expect(sessionStorageMock.getItem).toHaveBeenCalledWith('token')
       expect(router.currentRoute.value.name).toBe('login')
     })
   })
@@ -239,7 +239,7 @@ describe('Router Index', () => {
     })
 
     it('deve redirecionar rota raiz para login', async () => {
-      localStorageMock.getItem.mockReturnValue(null)
+      sessionStorageMock.getItem.mockReturnValue(null)
 
       const router = createRouterInstance()
       await router.push('/')

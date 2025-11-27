@@ -50,6 +50,11 @@ export const inviteLimiter = rateLimit({
   message: 'Limite de criação de convites excedido. Tente novamente mais tarde.',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      message: 'Limite de criação de convites excedido. Tente novamente mais tarde.'
+    })
+  },
 })
 
 // Rate limiter para requisições sem autenticação

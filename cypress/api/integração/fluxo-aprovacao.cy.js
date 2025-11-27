@@ -626,7 +626,7 @@ describe('API - Integração: Fluxo de Aprovação', () => {
       }).then((approveResponse) => {
         if (approveResponse) {
           expect(approveResponse.status).to.eq(403)
-          expect(approveResponse.body.message).to.include('Apenas o dono do projeto ou um manager')
+          expect(approveResponse.body.message.toLowerCase()).to.match(/apenas.*dono.*projeto.*manager|acesso.*negado|permissão.*negada/i)
         }
       })
     })

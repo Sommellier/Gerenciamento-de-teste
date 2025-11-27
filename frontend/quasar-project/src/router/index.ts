@@ -3,7 +3,7 @@ import { createMemoryHistory, createRouter, createWebHashHistory, createWebHisto
 import routes from './routes'
 
 function isLoggedIn(): boolean {
-  return !!localStorage.getItem('token') // << mudou aqui
+  return !!sessionStorage.getItem('token') // Usar sessionStorage para maior segurança
 }
 
 export default function () {

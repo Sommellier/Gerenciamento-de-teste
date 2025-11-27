@@ -410,6 +410,11 @@ describe('API - Integração: Fluxo de Convites', () => {
           throw new Error(`Falha ao criar pacote. Status: ${packageResponse?.status}`)
         }
         
+        if (!packageResponse.body.testPackage?.id && !packageResponse.body.package?.id) {
+          cy.log(`Erro: ID do pacote não encontrado na resposta. Body: ${JSON.stringify(packageResponse?.body)}`)
+          throw new Error('Falha ao criar pacote: ID não encontrado na resposta')
+        }
+        
         cy.log('Manager conseguiu criar pacote - permissões verificadas')
         cy.log('Fluxo completo executado com sucesso: convite → aceite → verificação de permissões')
       })

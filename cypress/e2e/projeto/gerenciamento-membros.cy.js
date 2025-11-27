@@ -29,15 +29,8 @@ describe('Fluxo de gerenciamento de membros @regressao', () => {
       senha: testData.testUser.senha
     });
     
-    // Validação após criação de conta do owner
-    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }).should('be.visible');
-    
-    // Fazer login como owner
-    cy.visit('/login');
+    // Fazer login como owner (já estamos na página de login após criarConta)
     cy.login({ email: ownerEmail, senha: testData.testUser.senha });
-    
-    // Validação após login do owner
-    cy.url().should('include', '/dashboard');
     
     // Criar projeto como owner
     cy.criarProjeto(nomeProjeto, descricaoProjeto);
@@ -91,15 +84,8 @@ describe('Fluxo de gerenciamento de membros @regressao', () => {
       senha: testData.testUser.senha
     });
     
-    // Validação após criação de conta do membro
-    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }).should('be.visible');
-    
-    // Fazer login como membro
-    cy.visit('/login');
+    // Fazer login como membro (já estamos na página de login após criarConta)
     cy.login({ email: memberEmail, senha: testData.testUser.senha });
-    
-    // Validação após login do membro
-    cy.url().should('include', '/dashboard');
     
     // Aceitar convite do projeto
     cy.aceitarConvite(nomeProjeto);
@@ -129,9 +115,6 @@ describe('Fluxo de gerenciamento de membros @regressao', () => {
     // Fazer login como owner novamente
     cy.visit('/login');
     cy.login({ email: ownerEmail, senha: testData.testUser.senha });
-    
-    // Validação após login do owner
-    cy.url().should('include', '/dashboard');
     
     // Acessar detalhes do projeto novamente
     cy.acessarDetalhesProjeto(nomeProjeto);

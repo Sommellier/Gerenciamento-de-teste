@@ -39,9 +39,15 @@ const router = createRouter({
 router.push = mockPush
 router.back = mockBack
 
-// Mock do localStorage
-Object.defineProperty(window, 'localStorage', {
-  value: mockLocalStorage,
+// Mock do sessionStorage (migrado de localStorage para maior segurança)
+const mockSessionStorage = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+}
+Object.defineProperty(window, 'sessionStorage', {
+  value: mockSessionStorage,
   writable: true,
 })
 
@@ -219,7 +225,10 @@ describe('DashboardPage', () => {
         onOkCallback()
         await wrapper.vm.$nextTick()
         
-        expect(mockLocalStorage.removeItem).toHaveBeenCalledWith('token')
+        expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('token')
+        expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('refreshToken')
+        expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('user')
+        expect(mockSessionStorage.removeItem).toHaveBeenCalledWith('csrfToken')
         expect(mockPush).toHaveBeenCalledWith('/login')
         expect(mockNotify).toHaveBeenCalledWith({
           type: 'positive',

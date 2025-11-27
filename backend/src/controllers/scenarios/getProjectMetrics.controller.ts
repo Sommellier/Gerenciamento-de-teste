@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getProjectMetrics } from '../../application/use-cases/scenarios/getProjectMetrics.use-case'
 import { AppError } from '../../utils/AppError'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -19,8 +20,21 @@ export async function getProjectMetricsController(
       throw new AppError('Não autenticado', 401)
     }
 
+    // Para IDs inválidos (como "invalid"), passar NaN para use-case que retorna 404
+    let parsedProjectId: number
+    try {
+      parsedProjectId = validateId(projectId, 'ID do projeto')
+    } catch (err: any) {
+      if (err instanceof AppError && err.statusCode === 400) {
+        const numId = Number(projectId)
+        parsedProjectId = isNaN(numId) ? numId : 0 // Passar NaN para use-case retornar 404
+      } else {
+        throw err
+      }
+    }
+
     const metrics = await getProjectMetrics({
-      projectId: Number(projectId),
+      projectId: parsedProjectId,
       release: release as string
     })
 

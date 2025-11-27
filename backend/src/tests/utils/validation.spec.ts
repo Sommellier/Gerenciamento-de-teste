@@ -201,9 +201,14 @@ describe('validation utils', () => {
       expect(result).toEqual({ page: 5, pageSize: 10 })
     })
 
-    it('deve lançar erro para pageSize maior que 100', () => {
-      expect(() => validatePagination('1', '101')).toThrow(AppError)
-      expect(() => validatePagination('1', '101')).toThrow('pageSize não pode ser maior que 100')
+    it('deve lançar erro para pageSize maior que 1000', () => {
+      expect(() => validatePagination('1', '1001')).toThrow(AppError)
+      expect(() => validatePagination('1', '1001')).toThrow('pageSize não pode ser maior que 1000')
+    })
+
+    it('deve aceitar pageSize exatamente 1000', () => {
+      const result = validatePagination('1', '1000')
+      expect(result).toEqual({ page: 1, pageSize: 1000 })
     })
 
     it('deve aceitar pageSize exatamente 100', () => {

@@ -198,3 +198,163 @@ export function getOptionValue(val: unknown): string {
   return typeof val === 'string' ? val : ''
 }
 
+/**
+ * Valida se uma URL é segura (mesmo domínio ou relativa)
+ * @param url - URL a ser validada
+ * @param allowedDomains - Lista opcional de domínios permitidos (padrão: apenas mesmo domínio)
+ * @returns true se a URL é segura, false caso contrário
+ */
+export function isValidUrl(url: string, allowedDomains?: string[]): boolean {
+  if (!url || typeof url !== 'string') return false
+  
+  try {
+    // URLs relativas são sempre seguras
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      return true
+    }
+    
+    // Tentar criar objeto URL
+    const urlObj = new URL(url, window.location.origin)
+    
+    // Se não há domínios permitidos especificados, apenas permitir mesmo domínio
+    if (!allowedDomains || allowedDomains.length === 0) {
+      return urlObj.origin === window.location.origin
+    }
+    
+    // Verificar se o domínio está na lista de permitidos
+    return allowedDomains.some(domain => urlObj.origin === domain || urlObj.hostname === domain)
+  } catch {
+    // Se não conseguir criar URL, considerar inválida
+    return false
+  }
+}
+
+/**
+ * Sanitiza nome de arquivo removendo caracteres perigosos
+ * @param filename - Nome do arquivo a ser sanitizado
+ * @returns Nome do arquivo sanitizado
+ */
+export function sanitizeFileName(filename: string): string {
+  if (!filename || typeof filename !== 'string') return 'file'
+  
+  // Remover caracteres perigosos: / \ : * ? " < > |
+  let sanitized = filename
+    .replace(/[/\\:*?"<>|]/g, '')
+    .trim()
+  
+  // Limitar tamanho (255 caracteres é o máximo em muitos sistemas de arquivos)
+  if (sanitized.length > 255) {
+    const ext = sanitized.substring(sanitized.lastIndexOf('.'))
+    const nameWithoutExt = sanitized.substring(0, sanitized.lastIndexOf('.'))
+    sanitized = nameWithoutExt.substring(0, 255 - ext.length) + ext
+  }
+  
+  // Se ficou vazio, usar nome padrão
+  if (sanitized.length === 0) {
+    sanitized = 'file'
+  }
+  
+  return sanitized
+}
+
+/**
+ * Valida se um redirect é seguro (relativo ou mesmo domínio)
+ * @param redirect - URL de redirect a ser validada
+ * @returns true se o redirect é seguro, false caso contrário
+ */
+export function isValidRedirect(redirect: string): boolean {
+  if (!redirect || typeof redirect !== 'string') return false
+  
+  // Apenas permitir caminhos relativos (começam com / mas não com //)
+  if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+    // Verificar se não contém caracteres perigosos
+    if (redirect.includes('javascript:') || redirect.includes('data:') || redirect.includes('vbscript:')) {
+      return false
+    }
+    return true
+  }
+  
+  // Não permitir URLs absolutas externas
+  return false
+}
+
+/**
+ * Valida e converte um ID de route param para número
+ * Similar à função validateId() do backend
+ * Aceita tipos do Vue Router (LocationQueryValue) além de tipos básicos
+ * @param id - ID a ser validado (pode ser string, string[], number, null ou undefined)
+ * @returns Número válido ou NaN se inválido
+ */
+export function validateRouteId(id: string | string[] | (string | null)[] | number | null | undefined): number {
+  // Se já é um número válido
+  if (typeof id === 'number') {
+    if (isNaN(id) || id <= 0 || !Number.isInteger(id)) {
+      return NaN
+    }
+    return id
+  }
+  
+  // Se é null ou undefined, retornar NaN
+  if (id === null || id === undefined) {
+    return NaN
+  }
+  
+  // Se é array, pegar o primeiro elemento
+  if (Array.isArray(id)) {
+    if (id.length === 0) {
+      return NaN
+    }
+    // Converter array de LocationQueryValue para string, tratando null
+    const first = id[0]
+    if (first === null || first === undefined) {
+      return NaN
+    }
+    id = first
+  }
+  
+  // Se é string, tentar converter
+  if (typeof id === 'string') {
+    if (id.trim() === '') {
+      return NaN
+    }
+    const parsed = Number(id)
+    if (isNaN(parsed) || parsed <= 0 || !Number.isInteger(parsed)) {
+      return NaN
+    }
+    return parsed
+  }
+  
+  // Se chegou aqui, é um tipo não esperado
+  return NaN
+}
+
+/**
+ * Sanitiza mensagens de erro removendo informações sensíveis
+ * @param errorMessage - Mensagem de erro a ser sanitizada
+ * @returns Mensagem sanitizada
+ */
+export function sanitizeErrorMessage(errorMessage: string): string {
+  if (!errorMessage || typeof errorMessage !== 'string') {
+    return 'Erro desconhecido'
+  }
+  
+  // Remover informações sensíveis comuns
+  let sanitized = errorMessage
+    // Remover caminhos de arquivo
+    .replace(/\/[^\s]+\.(js|ts|vue|tsx|jsx)/gi, '[arquivo]')
+    // Remover endereços IP
+    .replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[ip]')
+    // Remover tokens/secrets longos
+    .replace(/\b[a-zA-Z0-9]{32,}\b/g, '[token]')
+    // Remover stack traces
+    .replace(/at\s+[^\n]+/gi, '')
+    .replace(/Error:\s*/gi, '')
+  
+  // Limitar tamanho
+  if (sanitized.length > 200) {
+    sanitized = sanitized.substring(0, 197) + '...'
+  }
+  
+  return sanitized.trim() || 'Erro desconhecido'
+}
+

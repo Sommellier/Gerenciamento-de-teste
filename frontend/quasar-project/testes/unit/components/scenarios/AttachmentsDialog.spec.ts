@@ -21,6 +21,15 @@ vi.mock('quasar', () => ({
   },
 }))
 
+// Mock das funções de validação de URL e sanitização
+vi.mock('src/utils/helpers', () => ({
+  isValidUrl: vi.fn((url: string) => {
+    // Permitir URLs do mesmo domínio ou relativas para os testes
+    return url.startsWith('/') || url.startsWith('http://localhost') || url.startsWith('http://example.com')
+  }),
+  sanitizeFileName: vi.fn((filename: string) => filename), // Retornar filename sem alteração nos testes
+}))
+
 // Mock do window.open
 const mockOpen = vi.fn()
 Object.defineProperty(window, 'open', {

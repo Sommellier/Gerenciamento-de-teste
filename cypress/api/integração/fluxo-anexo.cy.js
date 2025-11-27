@@ -195,6 +195,18 @@ describe('API - Integração: Fluxo de Comentários e Anexos', () => {
     })
   }
 
+  // Função auxiliar para buscar cenário por ID
+  const getScenarioById = (token, scenarioId) => {
+    return cy.request({
+      method: 'GET',
+      url: `${API_BASE_URL}/scenarios/${scenarioId}`,
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      failOnStatusCode: false
+    })
+  }
+
   // Função auxiliar para adicionar comentário
   const addComment = (token, stepId, text, mentions = null) => {
     const body = { text }
@@ -382,8 +394,15 @@ describe('API - Integração: Fluxo de Comentários e Anexos', () => {
         })
       })
     }).then((packageResponse) => {
-      if (packageResponse && packageResponse.status === 201 && packageResponse.body.testPackage) {
+      if (packageResponse && packageResponse.status === 201 && packageResponse.body.testPackage?.id) {
         testPackage.id = packageResponse.body.testPackage.id
+      } else if (packageResponse && packageResponse.status === 201 && packageResponse.body.package?.id) {
+        // Tentar formato alternativo da resposta
+        testPackage.id = packageResponse.body.package.id
+      }
+      if (!testPackage.id) {
+        cy.log(`Erro: Pacote não foi criado corretamente. Status: ${packageResponse?.status}, Body: ${JSON.stringify(packageResponse?.body)}`)
+        throw new Error('Setup incompleto: pacote não foi criado corretamente')
       }
     }).then(() => {
       // Criar cenário com etapas
@@ -414,10 +433,28 @@ describe('API - Integração: Fluxo de Comentários e Anexos', () => {
         testScenario.id = scenarioResponse.body.scenario.id
         testScenario.steps = scenarioResponse.body.scenario.steps || []
         
+        // Se os steps não vieram na resposta inicial, buscar o cenário novamente para garantir que os steps estão lá
+        if (testScenario.steps.length === 0) {
+          return ensureToken(testUsers.owner).then((ownerToken) => {
+            return getScenarioById(ownerToken, testScenario.id).then((fetchedScenarioResponse) => {
+              if (fetchedScenarioResponse && fetchedScenarioResponse.status === 200 && fetchedScenarioResponse.body) {
+                testScenario.steps = fetchedScenarioResponse.body.steps || []
+              }
+            })
+          })
+        }
+        
         // Pegar o primeiro step para os testes
         if (testScenario.steps.length > 0) {
           testStep.id = testScenario.steps[0].id
         }
+      } else {
+        cy.log('Erro: Cenário não foi criado corretamente')
+        throw new Error('Setup incompleto: cenário não foi criado corretamente')
+      }
+      if (!testScenario.id) {
+        cy.log('Erro: ID do cenário não foi definido')
+        throw new Error('Setup incompleto: ID do cenário não foi definido')
       }
     })
   })

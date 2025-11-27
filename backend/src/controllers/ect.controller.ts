@@ -4,6 +4,7 @@ import { AppError } from '../utils/AppError'
 import { approveReport } from '../application/use-cases/reports/approveReport.use-case'
 import { rejectReport } from '../application/use-cases/reports/rejectReport.use-case'
 import { logger } from '../utils/logger'
+import { validateId } from '../utils/validation'
 
 const ectService = new ECTService()
 
@@ -15,12 +16,8 @@ export class ECTController {
   // POST /api/scenarios/:id/ect
   async generateECT(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
-
-      if (isNaN(scenarioId)) {
-        throw new AppError('ID do cenário inválido', 400)
-      }
 
       if (!userId) {
         throw new AppError('Usuário não autenticado', 401)
@@ -46,12 +43,8 @@ export class ECTController {
   // GET /api/reports/:id/download
   async downloadReport(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const reportId = parseInt(req.params.id)
+      const reportId = validateId(req.params.id, 'ID do relatório')
       const userId = (req as any).user?.id
-
-      if (isNaN(reportId)) {
-        throw new AppError('ID do relatório inválido', 400)
-      }
 
       if (!userId) {
         throw new AppError('Usuário não autenticado', 401)
@@ -78,13 +71,9 @@ export class ECTController {
   // POST /api/reports/:id/approve
   async approveReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const reportId = parseInt(req.params.id)
+      const reportId = validateId(req.params.id, 'ID do relatório')
       const userId = req.user?.id
       const { comment } = req.body
-
-      if (isNaN(reportId)) {
-        throw new AppError('ID do relatório inválido', 400)
-      }
 
       if (!userId) {
         throw new AppError('Usuário não autenticado', 401)
@@ -113,13 +102,9 @@ export class ECTController {
   // POST /api/reports/:id/reject
   async rejectReport(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
     try {
-      const reportId = parseInt(req.params.id)
+      const reportId = validateId(req.params.id, 'ID do relatório')
       const userId = req.user?.id
       const { comment } = req.body
-
-      if (isNaN(reportId)) {
-        throw new AppError('ID do relatório inválido', 400)
-      }
 
       if (!userId) {
         throw new AppError('Usuário não autenticado', 401)

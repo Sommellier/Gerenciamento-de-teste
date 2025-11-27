@@ -11,6 +11,7 @@ import {
 } from '../../schemas/scenario.schema'
 import { AppError } from '../../utils/AppError'
 import { logger } from '../../utils/logger'
+import { validateId, validatePagination } from '../../utils/validation'
 
 const scenarioService = new ScenarioService()
 
@@ -18,18 +19,19 @@ export class ScenarioController {
   // GET /packages/:packageId/scenarios
   async getPackageScenarios(req: Request, res: Response) {
     try {
-      const packageId = parseInt(req.params.packageId)
+      const packageId = validateId(req.params.packageId, 'ID do pacote')
       const userId = (req as any).user?.id
       
       if (!userId) {
         return res.status(401).json({ message: 'Não autenticado' })
       }
 
-      // Validar filtros
+      // Validar filtros e paginação
+      const { page, pageSize } = validatePagination(req.query.page, req.query.pageSize, true)
       const filters = validateScenarioFilters({
         ...req.query,
-        page: req.query.page ? parseInt(req.query.page as string) : 1,
-        pageSize: req.query.pageSize ? parseInt(req.query.pageSize as string) : 20
+        page,
+        pageSize
       })
 
       const result = await scenarioService.getPackageScenarios(packageId, filters, userId)
@@ -50,7 +52,7 @@ export class ScenarioController {
   // POST /packages/:packageId/scenarios
   async createScenario(req: Request, res: Response) {
     try {
-      const packageId = parseInt(req.params.packageId)
+      const packageId = validateId(req.params.packageId, 'ID do pacote')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -81,7 +83,7 @@ export class ScenarioController {
   // GET /scenarios/:id
   async getScenarioById(req: Request, res: Response) {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -106,7 +108,7 @@ export class ScenarioController {
   // PUT /scenarios/:id
   async updateScenario(req: Request, res: Response) {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -147,7 +149,7 @@ export class ScenarioController {
   // DELETE /scenarios/:id
   async deleteScenario(req: Request, res: Response) {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -169,7 +171,7 @@ export class ScenarioController {
   // POST /scenarios/:id/executions
   async executeScenario(req: Request, res: Response) {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -200,7 +202,7 @@ export class ScenarioController {
   // POST /scenarios/:id/duplicate
   async duplicateScenario(req: Request, res: Response) {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -225,7 +227,7 @@ export class ScenarioController {
   // POST /scenarios/:id/evidences
   async uploadEvidence(req: Request, res: Response) {
     try {
-      const scenarioId = parseInt(req.params.id)
+      const scenarioId = validateId(req.params.id, 'ID do cenário')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -254,7 +256,7 @@ export class ScenarioController {
   // GET /packages/:packageId/scenarios/export.csv
   async exportScenariosToCSV(req: Request, res: Response) {
     try {
-      const packageId = parseInt(req.params.packageId)
+      const packageId = validateId(req.params.packageId, 'ID do pacote')
       const userId = (req as any).user?.id
       
       if (!userId) {
@@ -278,7 +280,7 @@ export class ScenarioController {
   // GET /packages/:packageId/scenarios/report.pdf
   async generateScenarioReport(req: Request, res: Response) {
     try {
-      const packageId = parseInt(req.params.packageId)
+      const packageId = validateId(req.params.packageId, 'ID do pacote')
       const userId = (req as any).user?.id
       
       if (!userId) {

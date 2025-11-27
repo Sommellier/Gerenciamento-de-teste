@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
 import { ScenarioStatus } from '@prisma/client'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface UpdateScenarioInPackageInput {
   scenarioId: number
@@ -90,8 +91,14 @@ export async function updateScenarioInPackage({
     // Preparar dados para atualização
     const updateData: any = {}
     
-    if (title !== undefined) updateData.title = title
-    if (description !== undefined) updateData.description = description
+    if (title !== undefined) updateData.title = sanitizeTextOnly(title)
+    if (description !== undefined) {
+      if (description === null || description === '') {
+        updateData.description = description === '' ? '' : null
+      } else {
+        updateData.description = sanitizeString(description)
+      }
+    }
     if (type !== undefined) updateData.type = type
     if (priority !== undefined) updateData.priority = priority
     if (tags !== undefined) updateData.tags = JSON.stringify(tags) // Converter array para JSON string
@@ -139,8 +146,8 @@ export async function updateScenarioInPackage({
       await prisma.testScenarioStep.createMany({
         data: steps.map((step, index) => ({
           scenarioId: scenarioId,
-          action: step.action,
-          expected: step.expected,
+          action: sanitizeString(step.action),
+          expected: sanitizeString(step.expected),
           stepOrder: index + 1
         }))
       })

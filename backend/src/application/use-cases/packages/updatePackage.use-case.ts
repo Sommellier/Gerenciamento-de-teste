@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface UpdatePackageInput {
   packageId: number
@@ -101,8 +102,8 @@ export async function updatePackage({
     // Preparar dados para atualização
     const updateData: any = {}
     
-    if (title !== undefined) updateData.title = title
-    if (description !== undefined) updateData.description = description
+    if (title !== undefined) updateData.title = sanitizeTextOnly(title)
+    if (description !== undefined) updateData.description = description ? sanitizeString(description) : null
     if (type !== undefined) updateData.type = type
     if (priority !== undefined) updateData.priority = priority
     if (tags !== undefined) updateData.tags = JSON.stringify(tags) // Converter array para JSON string
@@ -133,8 +134,8 @@ export async function updatePackage({
       await prisma.testPackageStep.createMany({
         data: steps.map((step, index) => ({
           packageId: packageId,
-          action: step.action,
-          expected: step.expected,
+          action: sanitizeString(step.action),
+          expected: sanitizeString(step.expected),
           stepOrder: index + 1
         }))
       })

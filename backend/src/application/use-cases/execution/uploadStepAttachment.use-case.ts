@@ -30,22 +30,12 @@ export async function uploadStepAttachment({
       throw new AppError('Etapa não encontrada', 404)
     }
 
-    // Validar tipo de arquivo
-    const allowedMimeTypes = [
-      'image/jpeg',
-      'image/jpg',
-      'image/png',
-      'application/pdf'
-    ]
-
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new AppError('Tipo de arquivo não permitido', 400)
-    }
-
-    // Validar tamanho (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      throw new AppError('Arquivo muito grande. Máximo 5MB', 400)
-    }
+    // Validar arquivo usando magic bytes e outras verificações
+    const { validateEvidenceFile } = await import('../../../utils/fileValidation')
+    await validateEvidenceFile(file)
+    
+    // Não sanitizar originalname - manter como está para preservar o nome original do usuário
+    // A sanitização do filename será feita pelo multer se necessário
 
     // Construir URL relativa
     const url = `/uploads/evidences/${file.filename}`

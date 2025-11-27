@@ -175,6 +175,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { Notify } from 'quasar'
 import { scenarioService, type TestScenario, type ScenarioEvidence, type ScenarioExecution } from '../../services/scenario.service'
 import logger from '../../utils/logger'
+import { isValidUrl, sanitizeFileName } from '../../utils/helpers'
 
 interface Props {
   modelValue: boolean
@@ -254,14 +255,37 @@ const onFileRejected = (rejectedEntries: RejectedEntry[]) => {
 }
 
 const previewFile = (evidence: ScenarioEvidence) => {
+  // Validar URL antes de abrir para prevenir abertura de sites maliciosos
+  if (!isValidUrl(evidence.storageUrl)) {
+    Notify.create({
+      type: 'negative',
+      message: 'URL inválida ou não permitida',
+      position: 'top'
+    })
+    return
+  }
+  
   // Abrir arquivo em nova aba
   window.open(evidence.storageUrl, '_blank')
 }
 
 const downloadFile = (evidence: ScenarioEvidence) => {
+  // Validar URL antes de fazer download
+  if (!isValidUrl(evidence.storageUrl)) {
+    Notify.create({
+      type: 'negative',
+      message: 'URL inválida ou não permitida',
+      position: 'top'
+    })
+    return
+  }
+  
+  // Sanitizar nome do arquivo para prevenir nomes maliciosos
+  const safeFilename = sanitizeFileName(evidence.originalName)
+  
   const link = document.createElement('a')
   link.href = evidence.storageUrl
-  link.download = evidence.originalName
+  link.download = safeFilename
   link.click()
 }
 

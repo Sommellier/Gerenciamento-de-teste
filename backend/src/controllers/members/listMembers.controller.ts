@@ -3,6 +3,7 @@ import { AppError } from '../../utils/AppError'
 import { listMembers } from '../../application/use-cases/members/listMembers.use-case'
 import type { Role } from '@prisma/client'
 import { logger } from '../../utils/logger'
+import { validateId, validatePagination } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -25,12 +26,11 @@ export async function listMembersController(
   try {
     if (!req.user?.id) throw new AppError('Não autenticado', 401)
 
-    const projectId = Number(req.params.projectId)
+    const projectId = validateId(req.params.projectId, 'ID do projeto')
     const requesterId = req.user.id
     const roles = parseRolesParam(req.query.roles)
     const q = typeof req.query.q === 'string' ? req.query.q : undefined
-    const page = req.query.page ? Number(req.query.page) : undefined
-    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined
+    const { page, pageSize } = validatePagination(req.query.page, req.query.pageSize, true) // normalizeInvalid=true
 
     const orderByParam = String(req.query.orderBy ?? '')
     const orderBy =

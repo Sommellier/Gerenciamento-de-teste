@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import type { Role } from '@prisma/client'
 import { AppError } from '../../utils/AppError'
 import { addMemberByEmail } from '../../application/use-cases/members/addMemberByEmail.use-case'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -19,12 +20,17 @@ export async function addMemberByEmailController(
   try {
     if (!req.user?.id) throw new AppError('Não autenticado', 401)
 
-    const projectId = Number(req.params.projectId)
-    const { email, role } = req.body ?? {}
-
-    if (!Number.isInteger(projectId) || projectId <= 0) {
-      throw new AppError('projectId inválido', 400)
+    let projectId: number
+    try {
+      projectId = validateId(req.params.projectId, 'ID do projeto')
+    } catch (err: any) {
+      // Testes esperam mensagem específica
+      if (err instanceof AppError && err.statusCode === 400) {
+        throw new AppError('projectId inválido', 400)
+      }
+      throw err
     }
+    const { email, role } = req.body ?? {}
     if (typeof email !== 'string' || !email.includes('@')) {
       throw new AppError('E-mail inválido', 400)
     }

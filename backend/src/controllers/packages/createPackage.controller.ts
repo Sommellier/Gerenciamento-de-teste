@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { createPackage } from '../../application/use-cases/packages/createPackage.use-case'
 import { AppError } from '../../utils/AppError'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -26,20 +27,13 @@ export async function createPackageController(
       release
     } = req.body
 
-    // Para rota de debug, usar um usuário padrão
+    // Verificar autenticação
     if (!req.user?.id) {
-      if (req.path.includes('debug')) {
-        req.user = { id: 19399, email: 'richardriedo87@gmail.com' }
-      } else {
-        throw new AppError('Não autenticado', 401)
-      }
+      throw new AppError('Não autenticado', 401)
     }
 
-    // Validação do projectId
-    const parsedProjectId = Number(projectId)
-    if (isNaN(parsedProjectId)) {
-      throw new AppError('ID do projeto inválido', 400)
-    }
+    // Validação do projectId usando função centralizada
+    const parsedProjectId = validateId(projectId, 'projectId')
 
     // Validações básicas
     if (!title || !type || !priority || !release) {

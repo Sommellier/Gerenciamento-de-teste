@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface CreateBugInput {
   scenarioId: number
@@ -35,8 +36,8 @@ export async function createBug({
     // Criar bug
     const bug = await prisma.bug.create({
       data: {
-        title,
-        description,
+        title: sanitizeTextOnly(title),
+        description: description ? sanitizeString(description) : null,
         severity,
         scenarioId,
         relatedStepId,

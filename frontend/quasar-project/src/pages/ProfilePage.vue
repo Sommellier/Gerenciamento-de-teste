@@ -827,7 +827,7 @@ async function deleteAccount() {
     await api.delete(`/users/${profile.value.id}`)
     
     // Limpar dados locais
-    localStorage.clear()
+    sessionStorage.clear()
     
     // Mostrar notificação de sucesso
     $q.notify({

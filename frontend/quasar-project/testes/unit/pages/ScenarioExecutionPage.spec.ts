@@ -46,6 +46,19 @@ vi.mock('quasar', () => ({
   }),
 }))
 
+// Mock das funções de validação de URL e sanitização
+vi.mock('src/utils/helpers', async () => {
+  const actual = await vi.importActual('src/utils/helpers')
+  return {
+    ...actual,
+    isValidUrl: vi.fn((url: string) => {
+      // Permitir URLs do mesmo domínio ou relativas para os testes
+      return url.startsWith('/') || url.startsWith('http://localhost') || url.startsWith('https://example.com')
+    }),
+    sanitizeFileName: vi.fn((filename: string) => filename), // Retornar filename sem alteração nos testes
+  }
+})
+
 // Mock do useRoute
 const mockRoute = {
   params: { projectId: '1', packageId: '1', scenarioId: '1' },

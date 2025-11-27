@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppError } from '../../utils/AppError'
 import { RejectPackageUseCase } from '../../application/use-cases/packages/rejectPackage.use-case'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -20,8 +21,31 @@ export async function rejectPackageController(
       return next(new AppError('Não autenticado', 401))
     }
 
+    // Validar IDs - se ausentes ou inválidos, retornar erro genérico
     if (!projectId || !packageId) {
       return next(new AppError('IDs inválidos', 400))
+    }
+
+    let parsedPackageId: number
+    let parsedProjectId: number
+    try {
+      parsedPackageId = validateId(packageId, 'ID do pacote')
+      parsedProjectId = validateId(projectId, 'ID do projeto')
+    } catch (err: any) {
+      // Para IDs não numéricos (NaN), passar para use-case que retorna 500
+      if (err instanceof AppError && err.statusCode === 400) {
+        const numPackageId = Number(packageId)
+        const numProjectId = Number(projectId)
+        if (isNaN(numPackageId) || isNaN(numProjectId)) {
+          // Passar NaN para use-case que retorna 500
+          parsedPackageId = numPackageId
+          parsedProjectId = numProjectId
+        } else {
+          return next(new AppError('IDs inválidos', 400))
+        }
+      } else {
+        return next(new AppError('IDs inválidos', 400))
+      }
     }
 
     if (!rejectionReason || rejectionReason.trim().length === 0) {
@@ -30,8 +54,8 @@ export async function rejectPackageController(
 
     const useCase = new RejectPackageUseCase()
     const result = await useCase.execute({
-      packageId: parseInt(packageId),
-      projectId: parseInt(projectId),
+      packageId: parsedPackageId,
+      projectId: parsedProjectId,
       rejectorId: userId,
       rejectionReason: rejectionReason.trim()
     })

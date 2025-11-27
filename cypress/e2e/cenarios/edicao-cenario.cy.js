@@ -100,13 +100,8 @@ describe('Scenario editing flow @regressao', () => {
       senha: testData.testUser.senha
     });
 
-    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }).should('be.visible');
-
-    // Login
-    cy.visit('/login');
+    // Login (já estamos na página de login após criarConta)
     cy.login({ email: uniqueEmail, senha: testData.testUser.senha });
-
-    cy.url().should('include', '/dashboard');
 
     // Create project
     cy.criarProjeto(projectName, projectDescription);

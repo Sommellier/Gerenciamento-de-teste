@@ -23,16 +23,16 @@ vi.mock('axios', async () => {
   }
 })
 
-// Mock do localStorage
-const localStorageMock = {
+// Mock do sessionStorage (migrado de localStorage para maior segurança)
+const sessionStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
 }
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
   writable: true,
 })
 
@@ -50,7 +50,7 @@ Object.defineProperty(window, 'location', {
 describe('API Service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    localStorageMock.getItem.mockReturnValue(null)
+    sessionStorageMock.getItem.mockReturnValue(null)
     mockLocation.pathname = '/dashboard'
     mockLocation.href = ''
     // Resetar import.meta.env
@@ -92,7 +92,7 @@ describe('API Service', () => {
 
   describe('Interceptor de Request', () => {
     it('deve adicionar token de autorização quando token existe', async () => {
-      localStorageMock.getItem.mockReturnValue('token-123')
+      sessionStorageMock.getItem.mockReturnValue('token-123')
 
       // Criar uma nova instância do axios mockado para testar o interceptor
       const mockAxiosInstance = {
@@ -139,13 +139,15 @@ describe('API Service', () => {
     })
 
     it('deve criar headers quando config.headers é undefined (linhas 23-25)', async () => {
+      sessionStorageMock.getItem.mockReturnValue('token-123')
+      
       const mockAxiosInstance = {
         interceptors: {
           request: {
-            use: vi.fn((onFulfilled) => {
-              // Simular o comportamento do interceptor
-              const config = { data: {} }
-              const result = onFulfilled(config)
+            use: vi.fn(async (onFulfilled) => {
+              // Simular o comportamento do interceptor (agora é async)
+              const config = { data: {}, method: 'GET' }
+              const result = await onFulfilled(config)
               expect(result.headers).toBeDefined()
             }),
           },
@@ -157,8 +159,6 @@ describe('API Service', () => {
         delete: vi.fn(),
       }
 
-      localStorageMock.getItem.mockReturnValue('token-123')
-
       vi.mocked(axios.create).mockReturnValue(mockAxiosInstance as any)
 
       await vi.resetModules()
@@ -169,13 +169,15 @@ describe('API Service', () => {
     })
 
     it('deve criar headers quando config.data não é FormData e config.headers é undefined (linhas 32-33)', async () => {
+      sessionStorageMock.getItem.mockReturnValue('token-123')
+      
       const mockAxiosInstance = {
         interceptors: {
           request: {
-            use: vi.fn((onFulfilled) => {
-              // Simular o comportamento do interceptor quando data não é FormData e headers é undefined
-              const config = { data: { test: 'data' }, headers: undefined }
-              const result = onFulfilled(config)
+            use: vi.fn(async (onFulfilled) => {
+              // Simular o comportamento do interceptor quando data não é FormData e headers é undefined (agora é async)
+              const config = { data: { test: 'data' }, headers: undefined, method: 'POST' }
+              const result = await onFulfilled(config)
               // Deve criar headers e definir Content-Type
               expect(result.headers).toBeDefined()
               expect(result.headers['Content-Type']).toBe('application/json')
@@ -189,8 +191,6 @@ describe('API Service', () => {
         delete: vi.fn(),
       }
 
-      localStorageMock.getItem.mockReturnValue('token-123')
-
       vi.mocked(axios.create).mockReturnValue(mockAxiosInstance as any)
 
       await vi.resetModules()
@@ -201,15 +201,18 @@ describe('API Service', () => {
     })
 
     it('deve não definir Content-Type quando data é FormData (linha 30)', async () => {
+      sessionStorageMock.getItem.mockReturnValue('token-123')
+      
       const mockAxiosInstance = {
         interceptors: {
           request: {
-            use: vi.fn((onFulfilled) => {
-              // Simular o comportamento do interceptor com FormData
+            use: vi.fn(async (onFulfilled) => {
+              // Simular o comportamento do interceptor com FormData (agora é async)
               const formData = new FormData()
-              const config = { data: formData, headers: {} }
-              const result = onFulfilled(config)
+              const config = { data: formData, headers: {}, method: 'POST' }
+              const result = await onFulfilled(config)
               // Quando é FormData, não deve definir Content-Type
+              expect(result.headers).toBeDefined()
               expect(result.headers['Content-Type']).toBeUndefined()
             }),
           },
@@ -220,8 +223,6 @@ describe('API Service', () => {
         put: vi.fn(),
         delete: vi.fn(),
       }
-
-      localStorageMock.getItem.mockReturnValue('token-123')
 
       vi.mocked(axios.create).mockReturnValue(mockAxiosInstance as any)
 
@@ -351,8 +352,8 @@ describe('API Service', () => {
     })
 
     it('deve tentar refresh token quando recebe 401', async () => {
-      localStorageMock.getItem.mockReturnValueOnce('token-123') // Para refreshToken
-      localStorageMock.getItem.mockReturnValueOnce('refresh-token-456') // Para refreshToken
+      sessionStorageMock.getItem.mockReturnValueOnce('token-123') // Para refreshToken
+      sessionStorageMock.getItem.mockReturnValueOnce('refresh-token-456') // Para refreshToken
 
       const error = {
         response: {
@@ -400,7 +401,7 @@ describe('API Service', () => {
     })
 
     it('deve redirecionar para login quando refresh token falha', async () => {
-      localStorageMock.getItem.mockReturnValue('refresh-token-456')
+      sessionStorageMock.getItem.mockReturnValue('refresh-token-456')
 
       const error = {
         response: {
@@ -440,7 +441,7 @@ describe('API Service', () => {
     })
 
     it('deve redirecionar para login quando não há refresh token', async () => {
-      localStorageMock.getItem.mockReturnValue(null)
+      sessionStorageMock.getItem.mockReturnValue(null)
 
       const error = {
         response: {
@@ -479,7 +480,7 @@ describe('API Service', () => {
 
     it('deve não redirecionar quando já está na página de login', async () => {
       mockLocation.pathname = '/login'
-      localStorageMock.getItem.mockReturnValue(null)
+      sessionStorageMock.getItem.mockReturnValue(null)
 
       const error = {
         response: {

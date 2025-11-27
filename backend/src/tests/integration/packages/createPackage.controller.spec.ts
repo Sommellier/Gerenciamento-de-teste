@@ -352,8 +352,8 @@ describe('createPackageController', () => {
       createPackageSpy.mockRestore()
     })
 
-    it('funciona em modo debug sem autenticação', async () => {
-      // Criar uma nova app para teste de debug
+    it('rejeita requisições sem autenticação mesmo em rotas com debug no path', async () => {
+      // Criar uma nova app para teste sem middleware de autenticação
       const debugApp = express()
       debugApp.use(express.json())
       debugApp.post('/projects/:projectId/packages/debug', createPackageController)
@@ -366,13 +366,12 @@ describe('createPackageController', () => {
         release: '2024-01-15'
       }
 
-      const response = await request(debugApp)
+      // Agora deve rejeitar por falta de autenticação
+      await request(debugApp)
         .post(`/projects/${projectId}/packages/debug`)
         .send(packageData)
-        .expect(201)
-
-      expect(response.body).toHaveProperty('message', 'Pacote criado com sucesso')
-      expect(response.body).toHaveProperty('testPackage')
+        .expect(401)
+        .expect({ message: 'Não autenticado' })
     })
 
     it('trata assigneeEmail como objeto com propriedade value', async () => {
@@ -472,7 +471,7 @@ describe('createPackageController', () => {
         .set('Authorization', `Bearer ${token}`)
         .send(packageData)
         .expect(400)
-        .expect({ message: 'ID do projeto inválido' })
+        .expect({ message: 'projectId inválido' })
     })
 
     it('rejeita quando projectId é NaN', async () => {
@@ -489,10 +488,10 @@ describe('createPackageController', () => {
         .set('Authorization', `Bearer ${token}`)
         .send(packageData)
         .expect(400)
-        .expect({ message: 'ID do projeto inválido' })
+        .expect({ message: 'projectId inválido' })
     })
 
-    it('testa controller diretamente sem autenticação (não debug)', async () => {
+    it('testa controller diretamente sem autenticação (rejeita sempre)', async () => {
       const req = {
         params: { projectId: projectId.toString() },
         body: {
@@ -501,7 +500,7 @@ describe('createPackageController', () => {
           priority: 'HIGH',
           release: '2024-01-15'
         },
-        path: '/projects/123/packages', // Não contém 'debug'
+        path: '/projects/123/packages',
         user: undefined
       } as any
 

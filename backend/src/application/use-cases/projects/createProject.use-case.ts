@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { Prisma, Role } from '@prisma/client'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface CreateProjectInput {
   ownerId: number
@@ -24,9 +25,9 @@ export async function createProject({
     throw new AppError('Project name is required', 400)
   }
 
-  const normalizedName = name.trim()
+  const normalizedName = sanitizeTextOnly(name.trim())
   const normalizedDescription =
-    typeof description === 'string' ? (description.trim() || null) : description ?? null
+    typeof description === 'string' ? (description ? sanitizeString(description.trim()) : null) : description ?? null
 
   if (normalizedName.length < 2) {
     throw new AppError('Project name must be at least 2 characters long', 400)
