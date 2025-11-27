@@ -1,4 +1,4 @@
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
+import rateLimit from 'express-rate-limit'
 import type { Request, Response } from 'express'
 
 // Verificar se está em desenvolvimento
@@ -73,14 +73,16 @@ export const userLimiter = rateLimit({
   message: 'Muitas requisições. Tente novamente em alguns instantes.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Desabilitar validação IPv6 para keyGenerator customizado
   keyGenerator: (req: Request): string => {
     // Extrair userId do objeto user adicionado pelo middleware de autenticação
     const user = (req as any).user
     if (user?.id) {
       return `user:${user.id}`
     }
-    // Fallback para IP usando helper para suportar IPv6 corretamente
-    return ipKeyGenerator(req) || 'unknown'
+    // Fallback para IP - usar req.ip que já é normalizado pelo Express
+    // O Express com trust proxy já normaliza IPv6 corretamente
+    return req.ip || 'unknown'
   },
   skipSuccessfulRequests: false, // Conta todas as requisições, bem-sucedidas ou não
 })
@@ -93,14 +95,16 @@ export const passwordResetLimiter = rateLimit({
   message: 'Muitas tentativas de recuperação de senha. Tente novamente em 1 hora.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: false, // Desabilitar validação IPv6 para keyGenerator customizado
   keyGenerator: (req: Request): string => {
     // Usar email do body como chave, normalizado para lowercase
     const email = req.body?.email
     if (email && typeof email === 'string') {
       return `password-reset:${email.trim().toLowerCase()}`
     }
-    // Fallback para IP usando helper para suportar IPv6 corretamente
-    return `password-reset:ip:${ipKeyGenerator(req) || 'unknown'}`
+    // Fallback para IP - usar req.ip que já é normalizado pelo Express
+    // O Express com trust proxy já normaliza IPv6 corretamente
+    return `password-reset:ip:${req.ip || 'unknown'}`
   },
   skipSuccessfulRequests: false, // Conta todas as requisições para prevenir abuso
 })

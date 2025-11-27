@@ -72,5 +72,4 @@ export const listProjects: RequestHandler = async (req, res, next) => {
     logger.error('Error in listProjects:', err)
     next(err as any)
   }
-  
 }
