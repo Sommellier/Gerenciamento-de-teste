@@ -101,7 +101,16 @@ jobs:
       - name: Debug SSH reachability
         run: |
           set -x
-          ssh -o ConnectTimeout=10 target "echo SSH_OK" || exit 1
+          echo "Testing SSH connection to ${{ secrets.EC2_HOST }}..."
+          ssh -v -o ConnectTimeout=30 -o ServerAliveInterval=10 target "echo SSH_OK" || {
+            echo "❌ SSH connection failed"
+            echo "Possible issues:"
+            echo "1. Security Group not allowing SSH from GitHub Actions IPs"
+            echo "2. EC2 instance might be stopped"
+            echo "3. IP address might have changed"
+            echo "4. Firewall blocking connection"
+            exit 1
+          }
 
       - name: PM2 deploy setup
         run: pm2 deploy ecosystem.config.js production setup || true

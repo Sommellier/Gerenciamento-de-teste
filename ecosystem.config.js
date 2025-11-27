@@ -13,7 +13,9 @@ module.exports = {
   deploy: {
     production: {
       user: "ubuntu",
-      host: "3.140.242.76",
+      // ATENÇÃO: Se reiniciar a instância EC2, o IP público muda!
+      // Atualize este IP ou use hostname/Elastic IP
+      host: "18.222.125.6", // IP público atualizado após reiniciar instância
       ref: "origin/main",
       repo: "git@github.com:Sommellier/Gerenciamento-de-teste.git",
       path: "/var/www/api-backend",
