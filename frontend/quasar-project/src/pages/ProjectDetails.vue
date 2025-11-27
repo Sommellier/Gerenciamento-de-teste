@@ -616,6 +616,7 @@ import {
 } from '../services/project-details.service'
 import api from '../services/api'
 import logger from '../utils/logger'
+import { validateRouteId } from '../utils/helpers'
 
 // Composables
 const route = useRoute()
@@ -664,7 +665,7 @@ const roleOptionsForChange = [
 ]
 
 // Computed
-const projectId = computed(() => Number(route.params.projectId))
+const projectId = computed(() => validateRouteId(route.params.projectId))
 
 const metrics = computed(() => {
   const result = project.value?.metrics || {

@@ -36,6 +36,10 @@ jest.mock('../../controllers/members/removeMember.controller', () => ({
 jest.mock('../../infrastructure/auth', () => ({
   auth: (_req: any, _res: any, next: any) => next(),
 }))
+// Mock do requireProjectAccess
+jest.mock('../../infrastructure/permissions', () => ({
+  requireProjectAccess: (_req: any, _res: any, next: any) => next(),
+}))
 
 // Mock do prisma
 jest.mock('../../infrastructure/prisma', () => ({

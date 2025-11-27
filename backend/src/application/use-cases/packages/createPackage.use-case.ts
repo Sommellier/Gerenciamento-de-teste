@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface CreatePackageInput {
   projectId: number
@@ -78,8 +79,8 @@ export async function createPackage({
     // Criar o pacote
     const testPackage = await prisma.testPackage.create({
       data: {
-        title,
-        description: description || null,
+        title: sanitizeTextOnly(title),
+        description: description ? sanitizeString(description) : null,
         type: type as any,
         priority: priority as any,
         tags: JSON.stringify(tags), // Converter array para JSON string

@@ -1,5 +1,6 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 type Input = {
   projectId: number
@@ -20,7 +21,7 @@ export async function updateProject({ projectId, requesterId, name, description 
   const data: { name?: string; description?: string | null } = {}
 
   if (name !== undefined) {
-    const trimmed = String(name).trim()
+    const trimmed = sanitizeTextOnly(String(name).trim())
     if (!trimmed) throw new AppError('Nome do projeto não pode ser vazio', 400)
     data.name = trimmed
 
@@ -39,7 +40,7 @@ export async function updateProject({ projectId, requesterId, name, description 
     if (description === null) {
       data.description = null
     } else {
-      const trimmedDesc = String(description).trim()
+      const trimmedDesc = sanitizeString(String(description).trim())
       data.description = trimmedDesc === '' ? null : trimmedDesc
     }
   }

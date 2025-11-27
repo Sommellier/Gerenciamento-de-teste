@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express'
 import { prisma } from '../../infrastructure/prisma'
 import { logger } from '../../utils/logger'
+import { validatePagination } from '../../utils/validation'
 
 type Input = {
   requesterId: number
@@ -62,8 +63,7 @@ export const listProjects: RequestHandler = async (req, res, next) => {
     }
 
     const q = typeof req.query.q === 'string' ? req.query.q : undefined
-    const page = req.query.page ? Number(req.query.page) : 1
-    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : 10
+    const { page, pageSize } = validatePagination(req.query.page, req.query.pageSize, true) // normalizeInvalid=true
 
     const result = await listProjectsQuery({ requesterId, q, page, pageSize })
     

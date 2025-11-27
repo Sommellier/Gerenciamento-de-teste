@@ -1232,6 +1232,7 @@ import { getProjectMembers, type ProjectMember } from '../services/project-detai
 import { executionService, type Bug, type StepAttachment } from '../services/execution.service'
 import api from '../services/api'
 import logger from '../utils/logger'
+import { validateRouteId } from '../utils/helpers'
 
 // Interfaces
 interface CurrentUser {
@@ -1351,8 +1352,8 @@ const scenarioEditForm = ref({
 const approving = ref(false)
 
 // Computed
-const projectId = computed(() => parseInt(route.params.projectId as string))
-const packageId = computed(() => parseInt(route.params.packageId as string))
+const projectId = computed(() => validateRouteId(route.params.projectId))
+const packageId = computed(() => validateRouteId(route.params.packageId))
 
 // Verificar se usuário é owner ou manager
 const canApprovePackage = computed(() => {
@@ -2305,21 +2306,18 @@ const downloadBugAttachment = async (attachment: StepAttachment) => {
         : `${cleanBaseURL}/${fileUrl}`
     }
     
-    // Obter token do localStorage
-    const token = localStorage.getItem('token')
-    
-    // Fazer download do arquivo
-    const response = await fetch(fileUrl, {
-      headers: {
-        'Authorization': token ? `Bearer ${token}` : ''
-      }
+    // Usar api service para garantir consistência e tratamento de erros
+    // Para download de arquivo, usar axios com responseType: 'blob'
+    const response = await api.get(fileUrl, {
+      responseType: 'blob'
     })
     
-    if (!response.ok) {
+    if (!response.data) {
       throw new Error('Erro ao baixar arquivo')
     }
     
-    const blob = await response.blob()
+    // response.data já é um Blob quando responseType: 'blob'
+    const blob = response.data as Blob
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url

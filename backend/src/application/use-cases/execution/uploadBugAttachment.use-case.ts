@@ -32,25 +32,12 @@ export async function uploadBugAttachment({
       throw new AppError('Bug não encontrado', 404)
     }
 
-    // Validar tipo de arquivo (PDF, Word, PowerPoint, Excel)
-    const allowedMimeTypes = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-      'application/vnd.ms-powerpoint',
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // .pptx
-      'application/vnd.ms-excel', // .xls
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // .xlsx
-    ]
-
-    if (!allowedMimeTypes.includes(file.mimetype)) {
-      throw new AppError('Tipo de arquivo não permitido. Use PDF, Word, PowerPoint ou Excel', 400)
-    }
-
-    // Validar tamanho (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      throw new AppError('Arquivo muito grande. Máximo 10MB', 400)
-    }
+    // Validar arquivo usando magic bytes e outras verificações
+    const { validateBugAttachmentFile } = await import('../../../utils/fileValidation')
+    await validateBugAttachmentFile(file)
+    
+    // Não sanitizar originalname - manter como está para preservar o nome original do usuário
+    // A sanitização do filename será feita pelo multer se necessário
 
     // Construir URL relativa
     const url = `/uploads/bug-attachments/${file.filename}`

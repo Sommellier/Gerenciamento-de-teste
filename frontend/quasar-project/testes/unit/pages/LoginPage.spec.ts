@@ -19,15 +19,15 @@ vi.mock('quasar', () => ({
   }),
 }))
 
-// Mock do localStorage
-const localStorageMock = {
+// Mock do sessionStorage (migrado de localStorage para maior segurança)
+const sessionStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
   clear: vi.fn(),
 }
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
+Object.defineProperty(window, 'sessionStorage', {
+  value: sessionStorageMock,
 })
 
 // Criar router mock
@@ -55,8 +55,8 @@ describe('LoginPage', () => {
     mockNotify.mockClear()
     mockPush.mockClear()
     mockReplace.mockClear()
-    localStorageMock.setItem.mockClear()
-    localStorageMock.getItem.mockClear()
+    sessionStorageMock.setItem.mockClear()
+    sessionStorageMock.getItem.mockClear()
   })
 
   afterEach(() => {
@@ -339,9 +339,9 @@ describe('LoginPage', () => {
         await wrapper.vm.$nextTick()
         await new Promise(resolve => setTimeout(resolve, 100))
         
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('token', 'token123')
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('refreshToken', 'refresh123')
-        expect(localStorageMock.setItem).toHaveBeenCalledWith('user', JSON.stringify(userData))
+        expect(sessionStorageMock.setItem).toHaveBeenCalledWith('token', 'token123')
+        expect(sessionStorageMock.setItem).toHaveBeenCalledWith('refreshToken', 'refresh123')
+        expect(sessionStorageMock.setItem).toHaveBeenCalledWith('user', JSON.stringify(userData))
       }
     })
 

@@ -604,6 +604,7 @@ import { ectService } from '../services/ect.service'
 import { getProjectMembers, type ProjectMember } from '../services/project.service'
 import api from '../services/api'
 import logger from '../utils/logger'
+import { isValidUrl, validateRouteId } from '../utils/helpers'
 
 // Interfaces
 interface CurrentUser {
@@ -737,8 +738,13 @@ const editForm = ref({
 
 // Methods
 function goBack() {
-  const projectId = String(route.params.projectId)
-  const packageId = String(route.params.packageId)
+  const projectId = validateRouteId(route.params.projectId)
+  const packageId = validateRouteId(route.params.packageId)
+  if (isNaN(projectId) || isNaN(packageId)) {
+    Notify.create({ type: 'negative', message: 'IDs inválidos na URL', position: 'top' })
+    void router.push('/dashboard')
+    return
+  }
   void router.push(`/projects/${projectId}/packages/${packageId}`)
 }
 
@@ -756,7 +762,11 @@ async function loadScenario() {
     loading.value = true
     error.value = ''
     
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      error.value = 'ID do cenário inválido'
+      return
+    }
     const response = await scenarioService.getScenarioById(scenarioId)
     
     // Atualizar o valor do cenário de forma reativa
@@ -832,10 +842,27 @@ async function editScenario() {
 }
 
 function executeScenario() {
-  const projectId = String(route.params.projectId)
-  const packageId = String(route.params.packageId)
-  const scenarioId = String(route.params.scenarioId)
+  const projectId = validateRouteId(route.params.projectId)
+  const packageId = validateRouteId(route.params.packageId)
+  const scenarioId = validateRouteId(route.params.scenarioId)
+  
+  if (isNaN(projectId) || isNaN(packageId) || isNaN(scenarioId)) {
+    Notify.create({ type: 'negative', message: 'IDs inválidos na URL', position: 'top' })
+    return
+  }
+  
   const url = router.resolve(`/projects/${projectId}/packages/${packageId}/scenarios/${scenarioId}/execute`).href
+  
+  // Validar URL antes de abrir (URLs geradas pelo router são sempre seguras, mas validar por segurança)
+  if (!isValidUrl(url)) {
+    Notify.create({
+      type: 'negative',
+      message: 'URL inválida ou não permitida',
+      position: 'top'
+    })
+    return
+  }
+  
   window.open(url, '_blank')
 }
 
@@ -848,7 +875,11 @@ async function generateECT() {
   try {
     generatingECT.value = true
     
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      error.value = 'ID do cenário inválido'
+      return
+    }
     
     // Mostrar notificação de início
     Notify.create({
@@ -1092,7 +1123,11 @@ async function saveStep() {
     }
     
     // Atualizar o cenário na API
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      error.value = 'ID do cenário inválido'
+      return
+    }
     await scenarioService.updateScenario(scenarioId, {
       steps: updatedSteps
     })
@@ -1149,7 +1184,11 @@ async function deleteStep(stepId: number) {
     const updatedSteps = scenario.value.steps.filter((s) => s.id !== stepId)
     
     // Atualizar o cenário na API
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      error.value = 'ID do cenário inválido'
+      return
+    }
     await scenarioService.updateScenario(scenarioId, {
       steps: updatedSteps
     })
@@ -1231,7 +1270,11 @@ const approverOptions = computed(() => {
 // Carregar membros do projeto
 async function loadMembers() {
   try {
-    const projectId = Number(route.params.projectId)
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      error.value = 'ID do projeto inválido'
+      return
+    }
     if (projectId) {
       members.value = await getProjectMembers(projectId)
     }
@@ -1269,7 +1312,11 @@ async function saveScenarioEdit() {
   try {
     savingScenario.value = true
     
-    const scenarioId = Number(route.params.scenarioId)
+    const scenarioId = validateRouteId(route.params.scenarioId)
+    if (isNaN(scenarioId)) {
+      error.value = 'ID do cenário inválido'
+      return
+    }
     
     // Preparar dados para atualização incluindo testadorId e aprovadorId
     const updateData: Partial<CreateScenarioData> & { testadorId?: number; aprovadorId?: number } = {

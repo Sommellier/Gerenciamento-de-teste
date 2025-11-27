@@ -27,14 +27,8 @@ describe('Fluxo de criação de projeto @regressao', () => {
       senha: testData.testUser.senha
     });
     
-    // Validação após criação de conta
-    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }).should('be.visible');
-    
-    // Fazer login
-    cy.visit('/login');
+    // Fazer login (já estamos na página de login após criarConta)
     cy.login({ email: uniqueEmail, senha: testData.testUser.senha });
-    // Validação após login
-    cy.url().should('include', '/dashboard');
     
     cy.criarProjeto(nomeProjeto, descricaoProjeto);
     cy.validarCriacaoProjeto(nomeProjeto, descricaoProjeto);

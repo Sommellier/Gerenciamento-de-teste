@@ -97,19 +97,7 @@ describe('ExecutionController', () => {
       expect(next).toHaveBeenCalledWith(expect.any(AppError))
     })
 
-    it('deve usar fallback quando usuário não está autenticado', async () => {
-      const user = await prisma.user.create({
-        data: {
-          name: 'Test User',
-          email: unique('test') + '@example.com',
-          password: 'secret'
-        }
-      })
-
-      const { addStepComment } = require('../../../application/use-cases/execution/addStepComment.use-case')
-      const mockComment = { id: 1, text: 'Test comment', stepId: 1, userId: user.id }
-      addStepComment.mockResolvedValue(mockComment)
-
+    it('deve rejeitar quando usuário não está autenticado', async () => {
       const req = {
         params: { stepId: '1' },
         user: undefined,
@@ -125,12 +113,10 @@ describe('ExecutionController', () => {
 
       await controller.addComment(req, res, next)
 
-      expect(addStepComment).toHaveBeenCalledWith({
-        stepId: 1,
-        text: 'Test comment',
-        mentions: [],
-        userId: user.id
-      })
+      // Deve rejeitar com erro de autenticação
+      expect(next).toHaveBeenCalledWith(expect.any(AppError))
+      expect(next.mock.calls[0][0].message).toBe('Não autenticado')
+      expect(next.mock.calls[0][0].statusCode).toBe(401)
     })
   })
 
@@ -613,10 +599,7 @@ describe('ExecutionController', () => {
   })
 
   describe('Casos de erro para cobertura', () => {
-    it('deve tratar erro quando não há usuários no sistema', async () => {
-      // Limpar todos os usuários para simular o cenário
-      await prisma.user.deleteMany()
-
+    it('deve tratar erro quando usuário não está autenticado', async () => {
       const req = {
         params: { stepId: '1' },
         user: undefined,
@@ -633,7 +616,8 @@ describe('ExecutionController', () => {
       await controller.addComment(req, res, next)
 
       expect(next).toHaveBeenCalledWith(expect.any(AppError))
-      expect(next.mock.calls[0][0].message).toBe('Nenhum usuário encontrado no sistema')
+      expect(next.mock.calls[0][0].message).toBe('Não autenticado')
+      expect(next.mock.calls[0][0].statusCode).toBe(401)
     })
 
     it('deve tratar erro no uploadAttachment', async () => {

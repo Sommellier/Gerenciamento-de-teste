@@ -35,6 +35,9 @@ jest.mock('../../infrastructure/auth', () => ({
   __esModule: true,
   default: (_req: any, _res: any, next: any) => next(),
 }))
+jest.mock('../../infrastructure/permissions', () => ({
+  requireProjectAccess: (_req: any, _res: any, next: any) => next(),
+}))
 
 // Helpers para acessar as funções mockadas
 import { createProjectController } from '../../controllers/project/createProject.controller'

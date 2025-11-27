@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface UpdateBugInput {
   bugId: number
@@ -31,8 +32,8 @@ export async function updateBug({
 
     // Preparar dados de atualização
     const updateData: any = {}
-    if (title !== undefined) updateData.title = title
-    if (description !== undefined) updateData.description = description
+    if (title !== undefined) updateData.title = sanitizeTextOnly(title)
+    if (description !== undefined) updateData.description = description ? sanitizeString(description) : null
     if (severity !== undefined) updateData.severity = severity
     if (status !== undefined) updateData.status = status
 

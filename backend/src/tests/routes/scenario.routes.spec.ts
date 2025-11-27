@@ -73,7 +73,20 @@ jest.mock('multer', () => {
 // Mock do auth
 jest.mock('../../infrastructure/auth', () => ({
   __esModule: true,
-  default: (_req: any, _res: any, next: any) => next(),
+  default: (_req: any, _res: any, next: any) => {
+    // Adicionar user mockado ao request
+    _req.user = { id: 1 }
+    next()
+  },
+}))
+
+// Mock dos middlewares de permissão
+jest.mock('../../infrastructure/permissions', () => ({
+  requirePermission: jest.fn((_permission: any) => (_req: any, _res: any, next: any) => next()),
+  requireAnyPermission: jest.fn((_permissions: any) => (_req: any, _res: any, next: any) => next()),
+  requireProjectAccess: jest.fn(async (_req: any, _res: any, next: any) => next()),
+  requireProjectAccessFromPackage: jest.fn(async (_req: any, _res: any, next: any) => next()),
+  requireProjectAccessFromScenario: jest.fn(async (_req: any, _res: any, next: any) => next()),
 }))
 
 import scenarioRouter from '../../routes/scenario.routes'

@@ -215,7 +215,8 @@ describe('CreatePackage', () => {
       
       expect(mockNotify).toHaveBeenCalledWith({
         type: 'negative',
-        message: 'Erro ao carregar dados do projeto',
+        message: 'ID do projeto inválido',
+        position: 'top',
       })
       
       // Resetar para não afetar outros testes

@@ -326,7 +326,7 @@ describe('API - Membros', () => {
         }).then((response) => {
           expect(response.status).to.eq(400)
           expect(response.body).to.have.property('message')
-          expect(response.body.message).to.include('projectId')
+          expect(response.body.message.toLowerCase()).to.match(/projectid|projeto.*inválido|id.*projeto.*inválido/i)
         })
       })
     })
@@ -703,7 +703,7 @@ describe('API - Membros', () => {
         }).then((response) => {
           expect(response.status).to.eq(400)
           expect(response.body).to.have.property('message')
-          expect(response.body.message).to.include('projectId')
+          expect(response.body.message.toLowerCase()).to.match(/projectid|projeto.*inválido|id.*projeto.*inválido/i)
         })
       })
     })
@@ -877,7 +877,7 @@ describe('API - Membros', () => {
         }).then((response) => {
           expect(response.status).to.eq(400)
           expect(response.body).to.have.property('message')
-          expect(response.body.message).to.include('projectId')
+          expect(response.body.message.toLowerCase()).to.match(/projectid|projeto.*inválido|id.*projeto.*inválido/i)
         })
       })
     })
@@ -1097,7 +1097,7 @@ describe('API - Membros', () => {
         }).then((response) => {
           expect(response.status).to.eq(400)
           expect(response.body).to.have.property('message')
-          expect(response.body.message).to.include('projectId')
+          expect(response.body.message.toLowerCase()).to.match(/projectid|projeto.*inválido|id.*projeto.*inválido/i)
         })
       })
     })

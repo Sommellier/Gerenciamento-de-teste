@@ -269,6 +269,7 @@ import {
   type ProjectMember
 } from '../services/project.service'
 import logger from '../utils/logger'
+import { validateRouteId } from '../utils/helpers'
 
 // Composables
 const route = useRoute()
@@ -292,7 +293,7 @@ const scenarioForm = ref({
 })
 
 // Computed
-const projectId = computed(() => Number(route.params.projectId))
+const projectId = computed(() => validateRouteId(route.params.projectId))
 
 const memberOptions = computed(() => {
   return members.value.map(member => ({

@@ -181,6 +181,7 @@ import {
 } from '../services/project-details.service'
 import { getPackageDetails, updatePackage } from '../services/package.service'
 import logger from '../utils/logger'
+import { validateRouteId } from '../utils/helpers'
 
 // Composables
 const route = useRoute()
@@ -230,8 +231,8 @@ const environmentOptions = [
 ]
 
 // Computed
-const projectId = computed(() => Number(route.params.projectId))
-const packageId = computed(() => Number(route.params.packageId))
+const projectId = computed(() => validateRouteId(route.params.projectId))
+const packageId = computed(() => validateRouteId(route.params.packageId))
 
 const memberOptions = computed(() => {
   return members.value.map(member => ({

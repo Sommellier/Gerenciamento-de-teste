@@ -257,7 +257,7 @@ import { useQuasar } from 'quasar'
 import { createPackage } from '../services/package.service'
 import { getProjectReleases, getProjectMembers, addRelease } from '../services/project.service'
 import { TYPE_OPTIONS, PRIORITY_OPTIONS, ENVIRONMENT_OPTIONS } from '../utils/constants'
-import { createRequiredRule, getOptionValue } from '../utils/helpers'
+import { createRequiredRule, getOptionValue, validateRouteId } from '../utils/helpers'
 import logger from '../utils/logger'
 
 const router = useRouter()
@@ -324,7 +324,11 @@ const loadProjectData = async () => {
   try {
     loadingData.value = true
     logger.debug('Route params:', route.params)
-    const projectId = Number(route.params.projectId)
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      $q.notify({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+      return
+    }
     logger.debug('ProjectId:', projectId)
     
     if (!projectId || isNaN(projectId)) {
@@ -437,7 +441,11 @@ const onSubmit = async () => {
   try {
     loading.value = true
 
-    const projectId = route.params.projectId as string
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      $q.notify({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+      return
+    }
     logger.debug('onSubmit - projectId:', projectId)
     
     // Converter objetos para valores antes de enviar (getOptionValue importado de utils/helpers)

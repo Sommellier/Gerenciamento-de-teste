@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { hashPassword } from '../../../utils/hash.util'
 import { AppError } from '../../../utils/AppError'
+import { sanitizeTextOnly, validatePasswordComplexity } from '../../../utils/validation'
 import 'dotenv/config'
 
 interface CreateUserInput {
@@ -16,7 +17,7 @@ export async function createUser({ name, email, password }: CreateUserInput): Pr
     throw new AppError('All fields (name, email, password) are required', 400)
   }
 
-  const normalizedName = name.trim()
+  const normalizedName = sanitizeTextOnly(name.trim())
   const normalizedEmail = email.trim().toLowerCase()
 
   if (normalizedName.length < 2) {
@@ -33,8 +34,19 @@ export async function createUser({ name, email, password }: CreateUserInput): Pr
     throw new AppError('Invalid email format', 400)
   }
 
+  // Validação básica de comprimento
   if (password.length < 8) {
     throw new AppError('Password must be at least 8 characters long', 400)
+  }
+
+  // Validação de complexidade (opcional, mas recomendado)
+  // Em modo não-estrito, apenas valida mas não bloqueia
+  // Pode ser ativado em modo estrito alterando o segundo parâmetro para true
+  const complexityWarning = validatePasswordComplexity(password, false)
+  if (complexityWarning) {
+    // Log do aviso, mas não bloqueia o registro
+    // Em produção, pode-se considerar tornar isso obrigatório (strict: true)
+    console.warn(`[Password Complexity] ${complexityWarning}`)
   }
 
   const userExists = await prisma.user.findUnique({ where: { email: normalizedEmail } })

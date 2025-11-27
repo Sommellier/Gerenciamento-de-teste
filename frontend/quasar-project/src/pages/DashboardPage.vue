@@ -152,8 +152,11 @@ const handleLogout = () => {
       flat: true
     }
   }).onOk(() => {
-    // Remover token do localStorage
-    localStorage.removeItem('token')
+    // Remover token do sessionStorage
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('refreshToken')
+    sessionStorage.removeItem('user')
+    sessionStorage.removeItem('csrfToken')
     
     // Redirecionar para login
     void router.push('/login')

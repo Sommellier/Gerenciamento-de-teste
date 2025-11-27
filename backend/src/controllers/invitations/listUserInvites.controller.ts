@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import { AppError } from '../../utils/AppError'
 import { prisma } from '../../infrastructure/prisma'
 import type { InviteStatus } from '@prisma/client'
+import { validatePagination } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -23,7 +24,7 @@ type UserInviteRow = {
   email: string
   role: string
   status: InviteStatus
-  token: string
+  // token: string // Removido por segurança - não deve ser exposto na API
   createdAt: Date
   expiresAt: Date
   acceptedAt: Date | null
@@ -114,7 +115,7 @@ export async function listUserInvites({
         email: true,
         role: true,
         status: true,
-        token: true,
+        // token: false, // NÃO expor token por segurança - deve ser enviado apenas por email
         createdAt: true,
         expiresAt: true,
         acceptedAt: true,
@@ -167,8 +168,7 @@ export async function listUserInvitesController(
 
     const status = parseStatusParam(req.query.status)
     const q = typeof req.query.q === 'string' ? req.query.q : undefined
-    const page = req.query.page ? Number(req.query.page) : undefined
-    const pageSize = req.query.pageSize ? Number(req.query.pageSize) : undefined
+    const { page, pageSize } = validatePagination(req.query.page, req.query.pageSize, true)
     const orderBy =
       req.query.orderBy === 'createdAt' ||
       req.query.orderBy === 'expiresAt' ||

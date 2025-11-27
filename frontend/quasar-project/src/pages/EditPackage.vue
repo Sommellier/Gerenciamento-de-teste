@@ -248,13 +248,22 @@ import { useQuasar } from 'quasar'
 import { getPackageDetails, updatePackage } from '../services/package.service'
 import { getProjectReleases, getProjectMembers, addRelease } from '../services/project.service'
 import logger from '../utils/logger'
+import { validateRouteId } from '../utils/helpers'
 
 const router = useRouter()
 const route = useRoute()
 const $q = useQuasar()
 
-const packageId = computed(() => Number(route.params.id))
-const projectId = computed(() => Number(route.query.projectId))
+const packageId = computed(() => validateRouteId(route.params.id))
+// Validar projectId para prevenir uso de ID inválido ou manipulado
+const projectId = computed(() => {
+  // Converter LocationQueryValue para string antes de validar
+  const projectIdParam = route.query.projectId
+  if (Array.isArray(projectIdParam)) {
+    return validateRouteId(projectIdParam[0] ?? null)
+  }
+  return validateRouteId(projectIdParam ?? null)
+})
 const loading = ref(true)
 const saving = ref(false)
 const loadingData = ref(false)

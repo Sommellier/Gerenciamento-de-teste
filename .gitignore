@@ -8,6 +8,7 @@ backend/coverage/
 .DS_Store
 node_modules/
 cypress/videos/
+cypress/screenshots/*
 package.json
 package-lock.json
 cypress.config.js 

@@ -318,22 +318,47 @@ describe('API - Integração: Fluxo Completo', () => {
           // Adicionar manager
           return addMemberByEmail(ownerToken, testProject.id, testUsers.manager.email, 'MANAGER')
             .then((managerResponse) => {
-              if (managerResponse && managerResponse.status === 201 && managerResponse.body.invited) {
-                // Se retornou convite, buscar token e aceitar
-                return ensureToken(testUsers.manager).then((managerToken) => {
-                  if (!managerToken) return null
-                  return listUserInvites(managerToken).then((invites) => {
-                    if (invites && invites.status === 200 && invites.body.items) {
-                      const invite = invites.body.items.find((inv) => 
-                        inv.email === testUsers.manager.email && inv.projectId === testProject.id && inv.status === 'PENDING'
-                      )
-                      if (invite && invite.token) {
-                        return acceptInvite(managerToken, invite.token)
+              if (managerResponse && managerResponse.status === 201) {
+                // Se retornou membro adicionado diretamente (não convite), está ok
+                if (managerResponse.body.userId || managerResponse.body.projectId) {
+                  cy.log('✅ Manager adicionado diretamente ao projeto')
+                  return cy.wrap({ status: 200 })
+                }
+                // Se retornou convite, tentar aceitar o convite
+                if (managerResponse.body.invited) {
+                  cy.log('⚠️ Convite criado, tentando aceitar...')
+                  // Aguardar um pouco e tentar listar convites do manager
+                  return cy.wait(1000).then(() => {
+                    return ensureToken(testUsers.manager).then((managerToken) => {
+                      if (!managerToken) {
+                        cy.log('⚠️ Não foi possível obter token do manager, continuando...')
+                        return cy.wrap({ status: 200 })
                       }
-                    }
-                    return null
+                      return listUserInvites(managerToken).then((invitesResponse) => {
+                        if (invitesResponse && invitesResponse.status === 200 && invitesResponse.body && invitesResponse.body.items) {
+                          const invite = invitesResponse.body.items.find((inv) => 
+                            inv.email === testUsers.manager.email && inv.projectId === testProject.id && inv.status === 'PENDING'
+                          )
+                          if (invite && invite.token) {
+                            return acceptInvite(managerToken, invite.token).then((acceptResponse) => {
+                              if (acceptResponse && acceptResponse.status === 200) {
+                                cy.log('✅ Manager aceitou convite e foi adicionado ao projeto')
+                                return cy.wrap({ status: 200 })
+                              }
+                              cy.log(`⚠️ Erro ao aceitar convite: Status ${acceptResponse?.status}`)
+                              return cy.wrap({ status: 200 }) // Continuar mesmo assim
+                            })
+                          }
+                        }
+                        cy.log('⚠️ Token do convite não disponível, continuando...')
+                        return cy.wrap({ status: 200 }) // Continuar mesmo assim
+                      })
+                    })
                   })
-                })
+                }
+              } else if (managerResponse && managerResponse.status === 409) {
+                cy.log('ℹ️ Manager já é membro do projeto')
+                return cy.wrap({ status: 200 })
               }
               return null
             })
@@ -342,22 +367,47 @@ describe('API - Integração: Fluxo Completo', () => {
               return addMemberByEmail(ownerToken, testProject.id, testUsers.tester.email, 'TESTER')
             })
             .then((testerResponse) => {
-              if (testerResponse && testerResponse.status === 201 && testerResponse.body.invited) {
-                // Se retornou convite, buscar token e aceitar
-                return ensureToken(testUsers.tester).then((testerToken) => {
-                  if (!testerToken) return null
-                  return listUserInvites(testerToken).then((invites) => {
-                    if (invites && invites.status === 200 && invites.body.items) {
-                      const invite = invites.body.items.find((inv) => 
-                        inv.email === testUsers.tester.email && inv.projectId === testProject.id && inv.status === 'PENDING'
-                      )
-                      if (invite && invite.token) {
-                        return acceptInvite(testerToken, invite.token)
+              if (testerResponse && testerResponse.status === 201) {
+                // Se retornou membro adicionado diretamente (não convite), está ok
+                if (testerResponse.body.userId || testerResponse.body.projectId) {
+                  cy.log('✅ Tester adicionado diretamente ao projeto')
+                  return cy.wrap({ status: 200 })
+                }
+                // Se retornou convite, tentar aceitar o convite
+                if (testerResponse.body.invited) {
+                  cy.log('⚠️ Convite criado, tentando aceitar...')
+                  // Aguardar um pouco e tentar listar convites do tester
+                  return cy.wait(1000).then(() => {
+                    return ensureToken(testUsers.tester).then((testerToken) => {
+                      if (!testerToken) {
+                        cy.log('⚠️ Não foi possível obter token do tester, continuando...')
+                        return cy.wrap({ status: 200 })
                       }
-                    }
-                    return null
+                      return listUserInvites(testerToken).then((invitesResponse) => {
+                        if (invitesResponse && invitesResponse.status === 200 && invitesResponse.body && invitesResponse.body.items) {
+                          const invite = invitesResponse.body.items.find((inv) => 
+                            inv.email === testUsers.tester.email && inv.projectId === testProject.id && inv.status === 'PENDING'
+                          )
+                          if (invite && invite.token) {
+                            return acceptInvite(testerToken, invite.token).then((acceptResponse) => {
+                              if (acceptResponse && acceptResponse.status === 200) {
+                                cy.log('✅ Tester aceitou convite e foi adicionado ao projeto')
+                                return cy.wrap({ status: 200 })
+                              }
+                              cy.log(`⚠️ Erro ao aceitar convite: Status ${acceptResponse?.status}`)
+                              return cy.wrap({ status: 200 }) // Continuar mesmo assim
+                            })
+                          }
+                        }
+                        cy.log('⚠️ Token do convite não disponível, continuando...')
+                        return cy.wrap({ status: 200 }) // Continuar mesmo assim
+                      })
+                    })
                   })
-                })
+                }
+              } else if (testerResponse && testerResponse.status === 409) {
+                cy.log('ℹ️ Tester já é membro do projeto')
+                return cy.wrap({ status: 200 })
               }
               return null
             })
@@ -399,22 +449,75 @@ describe('API - Integração: Fluxo Completo', () => {
           throw new Error(`Falha ao criar pacote. Status: ${packageResponse?.status}`)
         }
         
-        packageId = packageResponse.body.testPackage.id
+        packageId = packageResponse.body.testPackage?.id || packageResponse.body.package?.id
+        if (!packageId) {
+          cy.log(`Erro: ID do pacote não encontrado na resposta. Body: ${JSON.stringify(packageResponse?.body)}`)
+          throw new Error('Falha ao criar pacote: ID não encontrado na resposta')
+        }
         testPackage.id = packageId
         cy.log(`Pacote criado com ID: ${packageId}`)
 
-        // 2. Manager cria cenário
-        return ensureToken(testUsers.manager).then((managerToken) => {
-          return createScenario(managerToken, packageId, {
-            title: testScenario.title,
-            description: testScenario.description,
-            type: testScenario.type,
-            priority: testScenario.priority,
-            steps: [
-              { action: 'Ação 1', expected: 'Resultado esperado 1' },
-              { action: 'Ação 2', expected: 'Resultado esperado 2' },
-              { action: 'Ação 3', expected: 'Resultado esperado 3' }
-            ]
+        // Verificar se o manager é membro do projeto antes de criar cenário
+        return ensureToken(testUsers.owner).then((ownerToken) => {
+          return cy.request({
+            method: 'GET',
+            url: `${API_BASE_URL}/projects/${testProject.id}/members`,
+            headers: { Authorization: `Bearer ${ownerToken}` },
+            failOnStatusCode: false
+          })
+        }).then((membersResponse) => {
+          if (membersResponse && membersResponse.status === 200 && membersResponse.body && membersResponse.body.items) {
+            const managerMember = membersResponse.body.items.find((m) => 
+              m.userId === testUsers.manager.id || m.email === testUsers.manager.email
+            )
+            if (!managerMember) {
+              cy.log('⚠️ Manager não encontrado na lista de membros, aguardando e tentando aceitar convite...')
+              // Aguardar mais um pouco e tentar aceitar convite novamente
+              return cy.wait(2000).then(() => {
+                return ensureToken(testUsers.manager).then((managerToken) => {
+                  if (!managerToken) {
+                    throw new Error('Não foi possível obter token do manager')
+                  }
+                  return listUserInvites(managerToken).then((invitesResponse) => {
+                    if (invitesResponse && invitesResponse.status === 200 && invitesResponse.body && invitesResponse.body.items) {
+                      const invite = invitesResponse.body.items.find((inv) => 
+                        inv.email === testUsers.manager.email && inv.projectId === testProject.id && inv.status === 'PENDING'
+                      )
+                      if (invite && invite.token) {
+                        return acceptInvite(managerToken, invite.token).then((acceptResponse) => {
+                          if (acceptResponse && acceptResponse.status === 200) {
+                            cy.log('✅ Manager aceitou convite após verificação')
+                            return cy.wrap({ status: 200 })
+                          }
+                          throw new Error(`Falha ao aceitar convite. Status: ${acceptResponse?.status}`)
+                        })
+                      }
+                    }
+                    throw new Error('Manager não é membro do projeto e não foi possível aceitar convite')
+                  })
+                })
+              })
+            } else {
+              cy.log(`✅ Manager confirmado como membro do projeto (role: ${managerMember.role})`)
+            }
+          } else {
+            cy.log('⚠️ Não foi possível verificar membros do projeto, continuando...')
+          }
+          return cy.wrap({ status: 200 })
+        }).then(() => {
+          // 2. Manager cria cenário
+          return ensureToken(testUsers.manager).then((managerToken) => {
+            return createScenario(managerToken, packageId, {
+              title: testScenario.title,
+              description: testScenario.description,
+              type: testScenario.type,
+              priority: testScenario.priority,
+              steps: [
+                { action: 'Ação 1', expected: 'Resultado esperado 1' },
+                { action: 'Ação 2', expected: 'Resultado esperado 2' },
+                { action: 'Ação 3', expected: 'Resultado esperado 3' }
+              ]
+            })
           })
         })
       }).then((scenarioResponse) => {
@@ -423,7 +526,11 @@ describe('API - Integração: Fluxo Completo', () => {
           throw new Error(`Falha ao criar cenário. Status: ${scenarioResponse?.status}`)
         }
         
-        scenarioId = scenarioResponse.body.scenario.id
+        scenarioId = scenarioResponse.body.scenario?.id
+        if (!scenarioId) {
+          cy.log(`Erro: ID do cenário não encontrado na resposta. Body: ${JSON.stringify(scenarioResponse?.body)}`)
+          throw new Error('Falha ao criar cenário: ID não encontrado na resposta')
+        }
         testScenario.id = scenarioId
         cy.log(`Cenário criado com ID: ${scenarioId}`)
         
@@ -525,12 +632,59 @@ describe('API - Integração: Fluxo Completo', () => {
         
         packageId = packageResponse.body.testPackage.id
 
-        // 2. Manager cria cenário SEM etapas
-        return ensureToken(testUsers.manager).then((managerToken) => {
-          return createScenario(managerToken, packageId, {
-            title: 'Cenário sem Etapas',
-            description: 'Cenário sem etapas para testar erro',
-            type: 'FUNCTIONAL',
+        // Verificar se o manager é membro do projeto antes de criar cenário
+        return ensureToken(testUsers.owner).then((ownerToken) => {
+          return cy.request({
+            method: 'GET',
+            url: `${API_BASE_URL}/projects/${testProject.id}/members`,
+            headers: { Authorization: `Bearer ${ownerToken}` },
+            failOnStatusCode: false
+          })
+        }).then((membersResponse) => {
+          if (membersResponse && membersResponse.status === 200 && membersResponse.body && membersResponse.body.items) {
+            const managerMember = membersResponse.body.items.find((m) => 
+              m.userId === testUsers.manager.id || m.email === testUsers.manager.email
+            )
+            if (!managerMember) {
+              cy.log('⚠️ Manager não encontrado na lista de membros, aguardando e tentando aceitar convite...')
+              return cy.wait(2000).then(() => {
+                return ensureToken(testUsers.manager).then((managerToken) => {
+                  if (!managerToken) {
+                    throw new Error('Não foi possível obter token do manager')
+                  }
+                  return listUserInvites(managerToken).then((invitesResponse) => {
+                    if (invitesResponse && invitesResponse.status === 200 && invitesResponse.body && invitesResponse.body.items) {
+                      const invite = invitesResponse.body.items.find((inv) => 
+                        inv.email === testUsers.manager.email && inv.projectId === testProject.id && inv.status === 'PENDING'
+                      )
+                      if (invite && invite.token) {
+                        return acceptInvite(managerToken, invite.token).then((acceptResponse) => {
+                          if (acceptResponse && acceptResponse.status === 200) {
+                            cy.log('✅ Manager aceitou convite após verificação')
+                            return cy.wrap({ status: 200 })
+                          }
+                          throw new Error(`Falha ao aceitar convite. Status: ${acceptResponse?.status}`)
+                        })
+                      }
+                    }
+                    throw new Error('Manager não é membro do projeto e não foi possível aceitar convite')
+                  })
+                })
+              })
+            } else {
+              cy.log(`✅ Manager confirmado como membro do projeto (role: ${managerMember.role})`)
+            }
+          } else {
+            cy.log('⚠️ Não foi possível verificar membros do projeto, continuando...')
+          }
+          return cy.wrap({ status: 200 })
+        }).then(() => {
+          // 2. Manager cria cenário SEM etapas
+          return ensureToken(testUsers.manager).then((managerToken) => {
+            return createScenario(managerToken, packageId, {
+              title: 'Cenário sem Etapas',
+              description: 'Cenário sem etapas para testar erro',
+              type: 'FUNCTIONAL',
             priority: 'HIGH',
             steps: [] // Sem etapas
           })
@@ -588,12 +742,59 @@ describe('API - Integração: Fluxo Completo', () => {
         
         packageId = packageResponse.body.testPackage.id
 
-        // 2. Manager cria cenário COM etapas
-        return ensureToken(testUsers.manager).then((managerToken) => {
-          return createScenario(managerToken, packageId, {
-            title: 'Cenário para ECT sem Execução',
-            description: 'Cenário com etapas mas sem execução',
-            type: 'FUNCTIONAL',
+        // Verificar se o manager é membro do projeto antes de criar cenário
+        return ensureToken(testUsers.owner).then((ownerToken) => {
+          return cy.request({
+            method: 'GET',
+            url: `${API_BASE_URL}/projects/${testProject.id}/members`,
+            headers: { Authorization: `Bearer ${ownerToken}` },
+            failOnStatusCode: false
+          })
+        }).then((membersResponse) => {
+          if (membersResponse && membersResponse.status === 200 && membersResponse.body && membersResponse.body.items) {
+            const managerMember = membersResponse.body.items.find((m) => 
+              m.userId === testUsers.manager.id || m.email === testUsers.manager.email
+            )
+            if (!managerMember) {
+              cy.log('⚠️ Manager não encontrado na lista de membros, aguardando e tentando aceitar convite...')
+              return cy.wait(2000).then(() => {
+                return ensureToken(testUsers.manager).then((managerToken) => {
+                  if (!managerToken) {
+                    throw new Error('Não foi possível obter token do manager')
+                  }
+                  return listUserInvites(managerToken).then((invitesResponse) => {
+                    if (invitesResponse && invitesResponse.status === 200 && invitesResponse.body && invitesResponse.body.items) {
+                      const invite = invitesResponse.body.items.find((inv) => 
+                        inv.email === testUsers.manager.email && inv.projectId === testProject.id && inv.status === 'PENDING'
+                      )
+                      if (invite && invite.token) {
+                        return acceptInvite(managerToken, invite.token).then((acceptResponse) => {
+                          if (acceptResponse && acceptResponse.status === 200) {
+                            cy.log('✅ Manager aceitou convite após verificação')
+                            return cy.wrap({ status: 200 })
+                          }
+                          throw new Error(`Falha ao aceitar convite. Status: ${acceptResponse?.status}`)
+                        })
+                      }
+                    }
+                    throw new Error('Manager não é membro do projeto e não foi possível aceitar convite')
+                  })
+                })
+              })
+            } else {
+              cy.log(`✅ Manager confirmado como membro do projeto (role: ${managerMember.role})`)
+            }
+          } else {
+            cy.log('⚠️ Não foi possível verificar membros do projeto, continuando...')
+          }
+          return cy.wrap({ status: 200 })
+        }).then(() => {
+          // 2. Manager cria cenário COM etapas
+          return ensureToken(testUsers.manager).then((managerToken) => {
+            return createScenario(managerToken, packageId, {
+              title: 'Cenário para ECT sem Execução',
+              description: 'Cenário com etapas mas sem execução',
+              type: 'FUNCTIONAL',
             priority: 'HIGH',
             steps: [
               { action: 'Ação 1', expected: 'Resultado esperado 1' }

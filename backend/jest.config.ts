@@ -19,7 +19,15 @@ const config: Config = {
   setupFilesAfterEnv: ["<rootDir>/jest.setup.js"],
   testTimeout: 30000,
   silent: true,
-  verbose: false
+  verbose: false,
+  transformIgnorePatterns: [
+    "node_modules/(?!(jsdom|dompurify|file-type|parse5)/)"
+  ],
+  moduleNameMapper: {
+    "^dompurify$": "<rootDir>/node_modules/dompurify/dist/purify.cjs",
+    "^jsdom$": "<rootDir>/node_modules/jsdom/lib/api.js"
+  },
+  extensionsToTreatAsEsm: []
 };
 
 export default config;

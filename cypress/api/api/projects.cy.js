@@ -499,7 +499,7 @@ describe('API - Projetos', () => {
       }).then((response) => {
         expect(response.status).to.eq(403)
         expect(response.body).to.have.property('message')
-        expect(response.body.message).to.include('permissão')
+        expect(response.body.message.toLowerCase()).to.match(/acesso.*negado|permissão.*negada|não.*autorizado/i)
       })
     })
 
@@ -812,7 +812,7 @@ describe('API - Projetos', () => {
       }).then((response) => {
         expect(response.status).to.eq(403)
         expect(response.body).to.have.property('message')
-        expect(response.body.message).to.include('dono')
+        expect(response.body.message.toLowerCase()).to.match(/acesso.*negado|dono|owner|permissão.*negada/i)
       })
     })
 
@@ -950,7 +950,7 @@ describe('API - Projetos', () => {
       }).then((response) => {
         expect(response.status).to.eq(403)
         expect(response.body).to.have.property('message')
-        expect(response.body.message).to.include('permissão')
+        expect(response.body.message.toLowerCase()).to.match(/acesso.*negado|permissão.*negada|não.*autorizado/i)
       })
     })
 

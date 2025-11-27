@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { getProjectPackages } from '../../application/use-cases/packages/getProjectPackages.use-case'
 import { AppError } from '../../utils/AppError'
+import { validateId } from '../../utils/validation'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -20,10 +21,7 @@ export async function getProjectPackagesController(
     }
 
     // Validação do projectId
-    const parsedProjectId = Number(projectId)
-    if (isNaN(parsedProjectId)) {
-      throw new AppError('ID do projeto inválido', 400)
-    }
+    const parsedProjectId = validateId(projectId, 'ID do projeto')
 
     const testPackages = await getProjectPackages({
       projectId: parsedProjectId,

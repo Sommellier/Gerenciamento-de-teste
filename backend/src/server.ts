@@ -3,6 +3,9 @@ import cors from 'cors'
 import helmet from 'helmet'
 import morgan from 'morgan'
 import path from 'path'
+import swaggerUi from 'swagger-ui-express'
+import { swaggerSpec } from './config/swagger'
+import { swaggerBasicAuth } from './infrastructure/swaggerAuth'
 import { publicLimiter } from './infrastructure/rateLimiter'
 import { logger } from './utils/logger'
 
@@ -110,7 +113,9 @@ const corsOptions: cors.CorsOptions = {
     'Accept',
     'Origin',
     'Cache-Control',
-    'Pragma'
+    'Pragma',
+    'x-csrf-token',
+    'X-CSRF-Token'
   ]
 }
 
@@ -145,7 +150,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, x-csrf-token, X-CSRF-Token')
       res.setHeader('Access-Control-Max-Age', '86400') // 24 horas
       res.status(200).end()
       return
@@ -154,14 +159,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Access-Control-Allow-Credentials', 'true')
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, x-csrf-token, X-CSRF-Token')
       res.setHeader('Access-Control-Max-Age', '86400')
       res.status(200).end()
       return
     } else if (isProd && origin && !isAllowed) {
       // Em produção, se não permitido E ALLOWED_ORIGINS está configurado, retornar 403
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma')
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Cache-Control, Pragma, x-csrf-token, X-CSRF-Token')
       res.status(403).json({
         error: 'CORS: Origin não permitida',
         message: 'A origem da requisição não está na lista de origens permitidas'
@@ -208,6 +213,13 @@ app.use(
   cors(corsOptions),
   express.static(path.join(process.cwd(), 'uploads'))
 )
+
+// Swagger Documentation (protegido com Basic Auth)
+app.use('/api-docs', swaggerBasicAuth, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'API - Gerenciamento de Testes',
+  customfavIcon: '/favicon.ico'
+}))
 
 // Rotas API (prefixo /api)
 app.use('/api', userRoutes)

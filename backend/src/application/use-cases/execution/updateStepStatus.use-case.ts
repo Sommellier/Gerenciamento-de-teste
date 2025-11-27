@@ -2,6 +2,7 @@ import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { PackageStatus, ScenarioStatus } from '@prisma/client'
 import { logger } from '../../../utils/logger'
+import { sanitizeString } from '../../../utils/validation'
 
 interface UpdateStepStatusInput {
   stepId: number
@@ -125,7 +126,7 @@ export async function updateStepStatus({
       where: { id: stepId },
       data: {
         status,
-        actualResult: actualResult || step.actualResult
+        actualResult: actualResult ? sanitizeString(actualResult) : step.actualResult
       }
     })
 
@@ -155,14 +156,14 @@ export async function updateStepStatus({
           where: { id: step.scenario.id },
           data: { status: 'BLOQUEADO' as ScenarioStatus }
         })
-        logger.log(`[updateStepStatus] Cenário ${step.scenario.id} atualizado para BLOQUEADO`)
+        logger.debug(`[updateStepStatus] Cenário ${step.scenario.id} atualizado para BLOQUEADO`)
       } else if (!scenarioBlocked && String(currentScenarioStatus) === 'BLOQUEADO') {
         // Se não está mais bloqueado, reverter para EXECUTED
         await prisma.testScenario.update({
           where: { id: step.scenario.id },
           data: { status: ScenarioStatus.EXECUTED }
         })
-        logger.log(`[updateStepStatus] Cenário ${step.scenario.id} atualizado de BLOQUEADO para EXECUTED`)
+        logger.debug(`[updateStepStatus] Cenário ${step.scenario.id} atualizado de BLOQUEADO para EXECUTED`)
       }
     }
 

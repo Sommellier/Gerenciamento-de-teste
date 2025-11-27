@@ -191,6 +191,8 @@ import { packageService } from '../../services/package.service'
 import { useRoute } from 'vue-router'
 import MemberOptionItem from './MemberOptionItem.vue'
 import logger from '../../utils/logger'
+import { validateRouteId } from '../../utils/helpers'
+import api from '../../services/api'
 
 interface Props {
   modelValue: boolean
@@ -316,7 +318,11 @@ const loadScenarioData = () => {
 
 const loadMembers = async () => {
   try {
-    const projectId = Number(route.params.projectId)
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      Notify.create({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+      return
+    }
     if (projectId) {
       // Buscar membros reais do projeto
       const projectMembers = await getProjectMembers(projectId)
@@ -340,7 +346,11 @@ const loadMembers = async () => {
 
 const loadPackageType = async () => {
   try {
-    const projectId = Number(route.params.projectId)
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      Notify.create({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+      return
+    }
     if (projectId && props.packageId) {
       // Buscar tipo do pacote para herdar automaticamente
       const packageDetails = await packageService.getPackageDetails(projectId, props.packageId)
@@ -383,7 +393,11 @@ const onSubmit = async () => {
       }
     }
 
-    const projectId = Number(route.params.projectId)
+    const projectId = validateRouteId(route.params.projectId)
+    if (isNaN(projectId)) {
+      Notify.create({ type: 'negative', message: 'ID do projeto inválido', position: 'top' })
+      return
+    }
     
     // Preparar dados para a API
     const scenarioData = {
@@ -414,23 +428,13 @@ const onSubmit = async () => {
         message: 'Cenário atualizado com sucesso'
       })
     } else {
-      // Usar a rota nova que aceita projectId e packageId
-      const token = localStorage.getItem('token')
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-      const baseUrl = apiUrl.replace(/\/$/, '')
-      const response = await fetch(`${baseUrl}/api/projects/${projectId}/packages/${props.packageId}/scenarios`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(scenarioData)
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Erro ao criar cenário')
+      // Usar api service ao invés de fetch() para garantir CSRF token e tratamento de erros
+      const validatedPackageId = validateRouteId(props.packageId)
+      if (isNaN(validatedPackageId)) {
+        throw new Error('ID do pacote inválido')
       }
+      
+      await api.post(`/projects/${projectId}/packages/${validatedPackageId}/scenarios`, scenarioData)
 
       Notify.create({
         type: 'positive',

@@ -8,7 +8,17 @@ Cypress.Commands.add('criarConta', ({ nome, email, senha }) => {
         .should('be.visible')
         .and('not.be.disabled')
         .click()
-    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }).should('be.visible')
+    
+    // Aguardar a mensagem de sucesso aparecer (indica que o registro foi bem-sucedido)
+    cy.get('[data-cy="banner-register-message"]', { timeout: 10000 })
+        .should('be.visible')
+        .should('contain.text', 'sucesso')
+    
+    // Aguardar o redirecionamento para a página de login (a página de registro redireciona após 2 segundos)
+    cy.url({ timeout: 15000 }).should('include', '/login')
+    
+    // Aguardar a página de login carregar completamente
+    cy.findByRole('heading', { name: /Bem-vindo de volta!/i }, { timeout: 10000 }).should('be.visible')
 })
 
 // Função para o fluxo "Login"
@@ -19,6 +29,9 @@ Cypress.Commands.add('login', ({ email, senha }) => {
         .should('be.visible')
         .and('not.be.disabled')
         .click()
+    
+    // Aguardar o redirecionamento para o dashboard após login bem-sucedido
+    cy.url({ timeout: 10000 }).should('include', '/dashboard')
 })
 
 // Função para o fluxo "Deleção de conta"
@@ -41,8 +54,6 @@ Cypress.Commands.add('deleçãoDeConta', () => {
             cy.wait(3000); // Aguardar para garantir que elementos renderizaram
             
             // Tentar encontrar o menu de perfil diretamente
-            // Se não encontrar após timeout, o comando vai falhar, mas isso é aceitável
-            // pois indica que a página não carregou ou o usuário foi deslogado
             cy.get('[data-cy="btn-profile-menu"]', { timeout: 15000 })
                 .should('exist')
                 .should('be.visible')

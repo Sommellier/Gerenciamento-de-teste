@@ -140,7 +140,8 @@ describe('getProjectDetails.controller', () => {
       })
       expect(getProjectDetailsUC.getProjectDetails).toHaveBeenCalledWith({
         projectId: project.id,
-        release: undefined
+        release: undefined,
+        requesterId: user.id
       })
     })
 
@@ -189,7 +190,8 @@ describe('getProjectDetails.controller', () => {
       })
       expect(getProjectDetailsUC.getProjectDetails).toHaveBeenCalledWith({
         projectId: project.id,
-        release: '2024-01'
+        release: '2024-01',
+        requesterId: user.id
       })
     })
 
@@ -229,7 +231,8 @@ describe('getProjectDetails.controller', () => {
       })
       expect(getProjectDetailsUC.getProjectDetails).toHaveBeenCalledWith({
         projectId: project.id,
-        release: undefined
+        release: undefined,
+        requesterId: user.id
       })
     })
 
@@ -247,7 +250,8 @@ describe('getProjectDetails.controller', () => {
       })
       expect(getProjectDetailsUC.getProjectDetails).toHaveBeenCalledWith({
         projectId: project.id,
-        release: undefined
+        release: undefined,
+        requesterId: user.id
       })
     })
 
@@ -264,7 +268,8 @@ describe('getProjectDetails.controller', () => {
       })
       expect(getProjectDetailsUC.getProjectDetails).toHaveBeenCalledWith({
         projectId: NaN,
-        release: undefined
+        release: undefined,
+        requesterId: user.id
       })
     })
 
@@ -349,7 +354,8 @@ describe('getProjectDetails.controller', () => {
       })
       expect(getProjectDetailsUC.getProjectDetails).toHaveBeenCalledWith({
         projectId: project.id,
-        release: undefined
+        release: undefined,
+        requesterId: user.id
       })
     })
   })

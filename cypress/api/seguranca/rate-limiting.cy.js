@@ -530,8 +530,11 @@ describe('API - Segurança: Testes de Rate Limiting', () => {
             successCount++
           } else if (response.status === 429) {
             rateLimited = true
-            expect(response.body).to.have.property('message')
-            expect(response.body.message).to.include('Limite de criação de convites')
+            // O express-rate-limit pode retornar a mensagem como string ou objeto
+            const errorMessage = typeof response.body === 'string' 
+              ? response.body 
+              : response.body?.message || response.body?.error || 'Rate limit excedido'
+            expect(errorMessage).to.include('Limite de criação de convites')
             
             cy.log(`✅ Rate limit aplicado após ${i + 1} tentativas`)
           }

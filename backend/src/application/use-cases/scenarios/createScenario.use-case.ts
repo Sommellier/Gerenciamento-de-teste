@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
+import { sanitizeTextOnly, sanitizeString } from '../../../utils/validation'
 
 interface CreateScenarioInput {
   projectId: number
@@ -88,16 +89,16 @@ export async function createScenario({
     // Criar o cenário com os passos
     const scenario = await prisma.testScenario.create({
       data: {
-        title,
-        description,
+        title: sanitizeTextOnly(title),
+        description: description ? sanitizeString(description) : null,
         type: type as any,
         priority: priority as any,
         tags: JSON.stringify(tags), // Converter array para JSON string
         projectId,
         steps: {
           create: steps.map((step, index) => ({
-            action: step.action,
-            expected: step.expected,
+            action: sanitizeString(step.action),
+            expected: sanitizeString(step.expected),
             stepOrder: index + 1
           }))
         }

@@ -1,6 +1,7 @@
 import { prisma } from '../../../infrastructure/prisma'
 import { AppError } from '../../../utils/AppError'
 import { logger } from '../../../utils/logger'
+import { sanitizeString } from '../../../utils/validation'
 
 interface AddStepCommentInput {
   stepId: number
@@ -35,7 +36,7 @@ export async function addStepComment({
     
     const comment = await prisma.stepComment.create({
       data: {
-        text,
+        text: sanitizeString(text),
         mentions: mentions ? JSON.stringify(mentions) : null,
         stepId,
         userId

@@ -246,12 +246,13 @@ import { useQuasar } from 'quasar'
 import { getProjectPackages, deletePackage } from '../services/package.service'
 import type { TestPackage } from '../services/package.service'
 import logger from '../utils/logger'
+import { validateRouteId } from '../utils/helpers'
 
 const route = useRoute()
 const router = useRouter()
 const $q = useQuasar()
 
-const projectId = computed(() => Number(route.params.projectId))
+const projectId = computed(() => validateRouteId(route.params.projectId))
 const loading = ref(false)
 const packages = ref<TestPackage[]>([])
 

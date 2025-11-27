@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit'
-import { Request } from 'express'
+import type { Request, Response } from 'express'
 
 // Verificar se está em desenvolvimento
 const isDevelopment = process.env.NODE_ENV !== 'production'
@@ -47,9 +47,13 @@ export const uploadLimiter = rateLimit({
 export const inviteLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
   max: inviteMax,
-  message: 'Limite de criação de convites excedido. Tente novamente mais tarde.',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req: Request, res: Response, _next: any, _options: any) => {
+    res.status(429).json({
+      message: 'Limite de criação de convites excedido. Tente novamente mais tarde.'
+    })
+  },
 })
 
 // Rate limiter para requisições sem autenticação

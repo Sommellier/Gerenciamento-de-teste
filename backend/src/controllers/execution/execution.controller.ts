@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { AppError } from '../../utils/AppError'
-import { prisma } from '../../infrastructure/prisma'
 import { logger } from '../../utils/logger'
+import { validateId } from '../../utils/validation'
 import { addStepComment } from '../../application/use-cases/execution/addStepComment.use-case'
 import { getStepComments } from '../../application/use-cases/execution/getStepComments.use-case'
 import { uploadStepAttachment } from '../../application/use-cases/execution/uploadStepAttachment.use-case'
@@ -22,24 +22,20 @@ type AuthenticatedRequest = Request & {
 }
 
 // Helper function to get valid userId
-async function getValidUserId(req: AuthenticatedRequest): Promise<number> {
-  if (req.user?.id) {
-    return req.user.id
+// Requer autenticação obrigatória - todas as rotas devem ter middleware 'auth'
+function getValidUserId(req: AuthenticatedRequest): number {
+  if (!req.user?.id) {
+    throw new AppError('Não autenticado', 401)
   }
-  // Buscar primeiro usuário do banco como fallback
-  const firstUser = await prisma.user.findFirst()
-  if (!firstUser) {
-    throw new AppError('Nenhum usuário encontrado no sistema', 500)
-  }
-  return firstUser.id
+  return req.user.id
 }
 
 export class ExecutionController {
   // POST /steps/:stepId/comments
   async addComment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const stepId = parseInt(req.params.stepId)
-      const userId = await getValidUserId(req)
+      const stepId = validateId(req.params.stepId, 'stepId')
+      const userId = getValidUserId(req)
       const { text, mentions } = req.body
 
       if (!text || text.trim().length === 0) {
@@ -65,8 +61,8 @@ export class ExecutionController {
   // GET /steps/:stepId/comments
   async getComments(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const stepId = parseInt(req.params.stepId)
-      const userId = await getValidUserId(req)
+      const stepId = validateId(req.params.stepId, 'stepId')
+      const userId = getValidUserId(req)
 
       const comments = await getStepComments({ stepId, userId })
 
@@ -82,8 +78,8 @@ export class ExecutionController {
   // POST /steps/:stepId/attachments
   async uploadAttachment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const stepId = parseInt(req.params.stepId)
-      const userId = await getValidUserId(req)
+      const stepId = validateId(req.params.stepId, 'stepId')
+      const userId = getValidUserId(req)
 
       if (!req.file) {
         throw new AppError('Arquivo não fornecido', 400)
@@ -107,8 +103,8 @@ export class ExecutionController {
   // GET /steps/:stepId/attachments
   async getAttachments(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const stepId = parseInt(req.params.stepId)
-      const userId = await getValidUserId(req)
+      const stepId = validateId(req.params.stepId, 'stepId')
+      const userId = getValidUserId(req)
 
       const attachments = await getStepAttachments({ stepId, userId })
 
@@ -124,8 +120,8 @@ export class ExecutionController {
   // DELETE /steps/:stepId/attachments/:attachmentId
   async deleteAttachment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const attachmentId = parseInt(req.params.attachmentId)
-      const userId = await getValidUserId(req)
+      const attachmentId = validateId(req.params.attachmentId, 'attachmentId')
+      const userId = getValidUserId(req)
 
       await deleteStepAttachment({ attachmentId, userId })
 
@@ -140,11 +136,11 @@ export class ExecutionController {
   // PUT /steps/:stepId/status
   async updateStepStatusHandler(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const stepId = parseInt(req.params.stepId)
-      const userId = await getValidUserId(req)
+      const stepId = validateId(req.params.stepId, 'stepId')
+      const userId = getValidUserId(req)
       const { status, actualResult } = req.body
 
-      logger.log('updateStepStatusHandler - stepId:', stepId, 'status:', status, 'actualResult:', actualResult)
+      logger.debug('updateStepStatusHandler - stepId:', stepId, 'status:', status, 'actualResult:', actualResult)
 
       if (!status) {
         throw new AppError('Status é obrigatório', 400)
@@ -157,7 +153,7 @@ export class ExecutionController {
         userId
       })
 
-      logger.log('updateStepStatusHandler - Step atualizado:', step)
+      logger.debug('updateStepStatusHandler - Step atualizado:', step)
 
       res.json({
         message: 'Status da etapa atualizado com sucesso',
@@ -172,8 +168,8 @@ export class ExecutionController {
   // POST /scenarios/:scenarioId/bugs
   async createBug(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const scenarioId = parseInt(req.params.scenarioId)
-      const userId = await getValidUserId(req)
+      const scenarioId = validateId(req.params.scenarioId, 'scenarioId')
+      const userId = getValidUserId(req)
       const { title, description, severity, relatedStepId } = req.body
 
       if (!title || title.trim().length === 0) {
@@ -189,7 +185,7 @@ export class ExecutionController {
         title,
         description,
         severity,
-        relatedStepId: relatedStepId ? parseInt(relatedStepId) : undefined,
+        relatedStepId: relatedStepId ? validateId(relatedStepId, 'relatedStepId') : undefined,
         userId
       })
 
@@ -205,8 +201,8 @@ export class ExecutionController {
   // POST /scenarios/:scenarioId/history
   async registerHistory(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const scenarioId = parseInt(req.params.scenarioId)
-      const userId = await getValidUserId(req)
+      const scenarioId = validateId(req.params.scenarioId, 'scenarioId')
+      const userId = getValidUserId(req)
       const { action, description, metadata } = req.body
 
       if (!action || action.trim().length === 0) {
@@ -233,8 +229,8 @@ export class ExecutionController {
   // GET /scenarios/:scenarioId/history
   async getHistory(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const scenarioId = parseInt(req.params.scenarioId)
-      const userId = await getValidUserId(req)
+      const scenarioId = validateId(req.params.scenarioId, 'scenarioId')
+      const userId = getValidUserId(req)
 
       const history = await getExecutionHistory({ scenarioId, userId })
 
@@ -250,8 +246,8 @@ export class ExecutionController {
   // GET /scenarios/:scenarioId/bugs
   async getScenarioBugs(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const scenarioId = parseInt(req.params.scenarioId)
-      const userId = await getValidUserId(req)
+      const scenarioId = validateId(req.params.scenarioId, 'scenarioId')
+      const userId = getValidUserId(req)
 
       const bugs = await getBugs({ scenarioId, userId })
 
@@ -267,9 +263,9 @@ export class ExecutionController {
   // GET /packages/:packageId/bugs (dentro do contexto de um projeto)
   async getPackageBugsHandler(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const packageId = parseInt(req.params.packageId)
-      const projectId = parseInt(req.params.projectId)
-      const userId = await getValidUserId(req)
+      const packageId = validateId(req.params.packageId, 'packageId')
+      const projectId = validateId(req.params.projectId, 'projectId')
+      const userId = getValidUserId(req)
 
       const bugs = await getPackageBugs({ packageId, projectId, userId })
 
@@ -285,8 +281,8 @@ export class ExecutionController {
   // PUT /bugs/:bugId
   async updateBugHandler(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const bugId = parseInt(req.params.bugId)
-      const userId = await getValidUserId(req)
+      const bugId = validateId(req.params.bugId, 'bugId')
+      const userId = getValidUserId(req)
       const { title, description, severity, status } = req.body
 
       const bug = await updateBug({
@@ -310,8 +306,8 @@ export class ExecutionController {
   // POST /bugs/:bugId/attachments
   async uploadBugAttachment(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const bugId = parseInt(req.params.bugId)
-      const userId = await getValidUserId(req)
+      const bugId = validateId(req.params.bugId, 'bugId')
+      const userId = getValidUserId(req)
       const file = req.file
 
       if (!file) {
@@ -336,8 +332,8 @@ export class ExecutionController {
   // DELETE /bugs/:bugId
   async deleteBugHandler(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
-      const bugId = parseInt(req.params.bugId)
-      const userId = await getValidUserId(req)
+      const bugId = validateId(req.params.bugId, 'bugId')
+      const userId = getValidUserId(req)
 
       const result = await deleteBug({ bugId, userId })
 
