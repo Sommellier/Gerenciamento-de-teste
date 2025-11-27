@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import type { Request, Response } from 'express'
 
 // Verificar se está em desenvolvimento
@@ -79,8 +79,8 @@ export const userLimiter = rateLimit({
     if (user?.id) {
       return `user:${user.id}`
     }
-    // Fallback para IP se não houver usuário autenticado
-    return req.ip || 'unknown'
+    // Fallback para IP usando helper para suportar IPv6 corretamente
+    return ipKeyGenerator(req) || 'unknown'
   },
   skipSuccessfulRequests: false, // Conta todas as requisições, bem-sucedidas ou não
 })
@@ -99,8 +99,8 @@ export const passwordResetLimiter = rateLimit({
     if (email && typeof email === 'string') {
       return `password-reset:${email.trim().toLowerCase()}`
     }
-    // Fallback para IP se não houver email
-    return `password-reset:ip:${req.ip || 'unknown'}`
+    // Fallback para IP usando helper para suportar IPv6 corretamente
+    return `password-reset:ip:${ipKeyGenerator(req) || 'unknown'}`
   },
   skipSuccessfulRequests: false, // Conta todas as requisições para prevenir abuso
 })
