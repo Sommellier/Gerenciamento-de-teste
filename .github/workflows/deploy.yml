@@ -116,7 +116,7 @@ jobs:
         run: pm2 deploy ecosystem.config.js production setup || true
 
       - name: PM2 deploy release
-        timeout-minutes: 15
+        timeout-minutes: 30
         run: |
           # Configurar SSH para manter conexão viva
           ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=yes target "echo 'SSH connection test'" || true
