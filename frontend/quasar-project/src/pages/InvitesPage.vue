@@ -562,6 +562,16 @@ const declineInvite = (invite: Invite) => {
 const confirmAccept = async () => {
   if (!inviteToProcess.value) return
   
+  // Validar se o token existe
+  if (!inviteToProcess.value.token) {
+    $q.notify({
+      type: 'negative',
+      message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+      position: 'top'
+    })
+    return
+  }
+  
   processingInvite.value = inviteToProcess.value.id
   try {
     // Usar a API real para aceitar o convite
@@ -608,6 +618,16 @@ const confirmAccept = async () => {
 
 const confirmDecline = async () => {
   if (!inviteToProcess.value) return
+  
+  // Validar se o token existe
+  if (!inviteToProcess.value.token) {
+    $q.notify({
+      type: 'negative',
+      message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+      position: 'top'
+    })
+    return
+  }
   
   processingInvite.value = inviteToProcess.value.id
   try {

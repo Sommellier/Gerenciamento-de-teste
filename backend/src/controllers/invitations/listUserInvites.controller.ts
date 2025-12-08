@@ -24,7 +24,7 @@ type UserInviteRow = {
   email: string
   role: string
   status: InviteStatus
-  // token: string // Removido por segurança - não deve ser exposto na API
+  token: string // Token necessário para aceitar/recusar convite (seguro pois é apenas para o próprio usuário)
   createdAt: Date
   expiresAt: Date
   acceptedAt: Date | null
@@ -115,7 +115,7 @@ export async function listUserInvites({
         email: true,
         role: true,
         status: true,
-        // token: false, // NÃO expor token por segurança - deve ser enviado apenas por email
+        token: true, // Retornar token para o próprio usuário logado (necessário para aceitar/recusar)
         createdAt: true,
         expiresAt: true,
         acceptedAt: true,
