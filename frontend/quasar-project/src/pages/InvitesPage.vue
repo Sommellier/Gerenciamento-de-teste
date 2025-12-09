@@ -459,6 +459,9 @@ const loadInvites = async () => {
 
     const response = await inviteService.listUserInvites(params)
     
+    // Debug: verificar se os tokens estão vindo
+    logger.log('Convites carregados:', response.items.map(i => ({ id: i.id, hasToken: !!i.token, token: i.token?.substring(0, 10) + '...' })))
+    
     invites.value = response.items
     totalPages.value = response.totalPages
   } catch (error) {
@@ -562,20 +565,62 @@ const declineInvite = (invite: Invite) => {
 const confirmAccept = async () => {
   if (!inviteToProcess.value) return
   
+  // Debug: verificar o convite antes de processar
+  logger.log('Tentando aceitar convite:', {
+    id: inviteToProcess.value.id,
+    hasToken: !!inviteToProcess.value.token,
+    token: inviteToProcess.value.token?.substring(0, 10) + '...',
+    fullInvite: inviteToProcess.value
+  })
+  
   // Validar se o token existe
-  if (!inviteToProcess.value.token) {
+  if (!inviteToProcess.value.token || inviteToProcess.value.token.trim() === '') {
+    logger.error('Token não encontrado no convite:', inviteToProcess.value)
+    
+    // Tentar recarregar os convites para obter o token atualizado
+    try {
+      await loadInvites()
+      // Verificar novamente após recarregar
+      const updatedInvite = invites.value.find(i => i.id === inviteToProcess.value!.id)
+      if (updatedInvite?.token) {
+        inviteToProcess.value.token = updatedInvite.token
+        // Continuar com o processo de aceitar
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: 'Token do convite não encontrado. Por favor, recarregue a página ou entre em contato com o administrador.',
+          position: 'top',
+          timeout: 5000
+        })
+        return
+      }
+    } catch (error) {
+      logger.error('Erro ao recarregar convites:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+        position: 'top'
+      })
+      return
+    }
+  }
+  
+  // Garantir que o token seja uma string válida
+  const token = inviteToProcess.value.token?.trim()
+  if (!token || token === '') {
+    logger.error('Token inválido após validação:', inviteToProcess.value)
     $q.notify({
       type: 'negative',
-      message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+      message: 'Token do convite inválido. Por favor, recarregue a página.',
       position: 'top'
     })
     return
   }
-  
+
   processingInvite.value = inviteToProcess.value.id
   try {
     // Usar a API real para aceitar o convite
-    await inviteService.acceptInvite(inviteToProcess.value.token)
+    await inviteService.acceptInvite(token)
     
     // Atualizar status local
     const invite = invites.value.find(i => i.id === inviteToProcess.value!.id)
@@ -620,19 +665,51 @@ const confirmDecline = async () => {
   if (!inviteToProcess.value) return
   
   // Validar se o token existe
-  if (!inviteToProcess.value.token) {
+  if (!inviteToProcess.value.token || inviteToProcess.value.token.trim() === '') {
+    // Tentar recarregar os convites para obter o token atualizado
+    try {
+      await loadInvites()
+      // Verificar novamente após recarregar
+      const updatedInvite = invites.value.find(i => i.id === inviteToProcess.value!.id)
+      if (updatedInvite?.token) {
+        inviteToProcess.value.token = updatedInvite.token
+        // Continuar com o processo de recusar
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: 'Token do convite não encontrado. Por favor, recarregue a página ou entre em contato com o administrador.',
+          position: 'top',
+          timeout: 5000
+        })
+        return
+      }
+    } catch (error) {
+      logger.error('Erro ao recarregar convites:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+        position: 'top'
+      })
+      return
+    }
+  }
+  
+  // Garantir que o token seja uma string válida
+  const token = inviteToProcess.value.token?.trim()
+  if (!token || token === '') {
+    logger.error('Token inválido após validação:', inviteToProcess.value)
     $q.notify({
       type: 'negative',
-      message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+      message: 'Token do convite inválido. Por favor, recarregue a página.',
       position: 'top'
     })
     return
   }
-  
+
   processingInvite.value = inviteToProcess.value.id
   try {
     // Usar a API real para recusar o convite
-    await inviteService.declineInvite(inviteToProcess.value.token)
+    await inviteService.declineInvite(token)
     
     // Atualizar status local
     const invite = invites.value.find(i => i.id === inviteToProcess.value!.id)

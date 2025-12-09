@@ -6,7 +6,7 @@ export interface Invite {
   email: string
   role: 'OWNER' | 'MANAGER' | 'TESTER' | 'APPROVER'
   status: 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
-  token: string
+  token: string | null // Token pode ser null em casos de dados inconsistentes
   createdAt: string
   expiresAt: string
   acceptedAt?: string | null

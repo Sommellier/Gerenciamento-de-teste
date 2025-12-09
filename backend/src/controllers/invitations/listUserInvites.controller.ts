@@ -24,7 +24,7 @@ type UserInviteRow = {
   email: string
   role: string
   status: InviteStatus
-  token: string // Token necessário para aceitar/recusar convite (seguro pois é apenas para o próprio usuário)
+  token: string | null // Token necessário para aceitar/recusar convite (seguro pois é apenas para o próprio usuário)
   createdAt: Date
   expiresAt: Date
   acceptedAt: Date | null
@@ -138,8 +138,18 @@ export async function listUserInvites({
     prisma.projectInvite.count({ where })
   ])
 
+  // Garantir que o token seja sempre incluído na resposta (mesmo que seja null)
+  // Isso ajuda a identificar problemas de dados no banco
+  const itemsWithToken = items.map(item => ({
+    ...item,
+    // Garantir que token seja sempre uma string ou null explícito
+    token: item.token && typeof item.token === 'string' && item.token.trim() !== '' 
+      ? item.token.trim() 
+      : null
+  }))
+
   return {
-    items: items as UserInviteRow[],
+    items: itemsWithToken as UserInviteRow[],
     total,
     page: safePage,
     pageSize: safeSize,
