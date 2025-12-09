@@ -3,6 +3,7 @@ import { AppError } from '../../utils/AppError'
 import { prisma } from '../../infrastructure/prisma'
 import type { InviteStatus } from '@prisma/client'
 import { validatePagination } from '../../utils/validation'
+import { randomBytes } from 'crypto'
 
 type AuthenticatedRequest = Request & {
   user?: { id: number; email?: string }
@@ -139,14 +140,57 @@ export async function listUserInvites({
   ])
 
   // Garantir que o token seja sempre incluído na resposta (mesmo que seja null)
-  // Isso ajuda a identificar problemas de dados no banco
-  const itemsWithToken = items.map(item => ({
-    ...item,
-    // Garantir que token seja sempre uma string ou null explícito
-    token: item.token && typeof item.token === 'string' && item.token.trim() !== '' 
-      ? item.token.trim() 
-      : null
-  }))
+  // Corrigir convites sem token automaticamente
+  const itemsWithToken = await Promise.all(
+    items.map(async (item) => {
+      // Verificar se token existe e é válido
+      let tokenValue: string | null = null
+      
+      if (item.token) {
+        if (typeof item.token === 'string' && item.token.trim() !== '') {
+          tokenValue = item.token.trim()
+        } else {
+          console.warn(`[listUserInvites] Token inválido para convite ID ${item.id}, tipo: ${typeof item.token}`)
+        }
+      }
+      
+      // Se o token estiver faltando e o convite ainda estiver PENDING, gerar um novo
+      if (!tokenValue && item.status === 'PENDING') {
+        console.warn(`[listUserInvites] Token não encontrado para convite ID ${item.id}, email: ${item.email}. Gerando novo token...`)
+        try {
+          const newToken = randomBytes(32).toString('hex')
+          await prisma.projectInvite.update({
+            where: { id: item.id },
+            data: { token: newToken }
+          })
+          tokenValue = newToken
+          console.log(`[listUserInvites] Novo token gerado para convite ID ${item.id}`)
+        } catch (err) {
+          console.error(`[listUserInvites] Erro ao gerar token para convite ID ${item.id}:`, err)
+          // Continuar com null se houver erro
+        }
+      } else if (!tokenValue) {
+        console.warn(`[listUserInvites] Token não encontrado para convite ID ${item.id}, email: ${item.email}, status: ${item.status}`)
+      }
+      
+      // Sempre incluir o campo token explicitamente (mesmo que seja null)
+      // Isso garante que o campo apareça no JSON
+      return {
+        id: item.id,
+        projectId: item.projectId,
+        email: item.email,
+        role: item.role,
+        status: item.status,
+        token: tokenValue, // Sempre definir explicitamente
+        createdAt: item.createdAt,
+        expiresAt: item.expiresAt,
+        acceptedAt: item.acceptedAt,
+        declinedAt: item.declinedAt,
+        project: item.project,
+        invitedBy: item.invitedBy
+      }
+    })
+  )
 
   return {
     items: itemsWithToken as UserInviteRow[],
@@ -197,7 +241,18 @@ export async function listUserInvitesController(
       sort
     })
 
-    return res.status(200).json(result)
+    // Log para debug - verificar se tokens estão sendo retornados
+    const itemsWithTokens = result.items.map(item => ({
+      ...item,
+      token: item.token || null // Garantir que token sempre exista (mesmo que null)
+    }))
+    
+    console.log(`[listUserInvitesController] Retornando ${itemsWithTokens.length} convites. Tokens presentes: ${itemsWithTokens.filter(i => i.token).length}`)
+    
+    return res.status(200).json({
+      ...result,
+      items: itemsWithTokens
+    })
   } catch (err) {
     if (err instanceof AppError) {
       return res.status(err.statusCode).json({ message: err.message })
