@@ -2292,40 +2292,81 @@ const formatBugDescription = (description: string) => {
 
 const downloadBugAttachment = async (attachment: StepAttachment) => {
   try {
-    const api = (await import('../services/api')).default
     const { getApiUrl } = await import('../services/api')
-    const baseURL = api.defaults.baseURL || `${getApiUrl()}/api`
+    const apiBaseUrl = getApiUrl()
     
     // Construir URL completa do anexo
+    // O backend serve arquivos estáticos em /uploads
     let fileUrl = attachment.url
-    if (!fileUrl.startsWith('http')) {
-      // Remover /api se estiver presente e adicionar a URL do anexo
-      const cleanBaseURL = baseURL.replace('/api', '')
-      fileUrl = fileUrl.startsWith('/') 
-        ? `${cleanBaseURL}${fileUrl}`
-        : `${cleanBaseURL}/${fileUrl}`
+    
+    if (!fileUrl) {
+      throw new Error('URL do anexo não encontrada')
     }
     
-    // Usar api service para garantir consistência e tratamento de erros
-    // Para download de arquivo, usar axios com responseType: 'blob'
-    const response = await api.get(fileUrl, {
-      responseType: 'blob'
+    logger.log('Download anexo - URL original:', fileUrl)
+    logger.log('Download anexo - API Base URL:', apiBaseUrl)
+    
+    // Se a URL já começa com http, usar diretamente
+    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
+      // URL absoluta - usar diretamente
+      logger.log('Download anexo - Usando URL absoluta:', fileUrl)
+    } else {
+      // URL relativa - construir URL completa
+      // Remover /api da baseURL se existir, pois /uploads não está sob /api
+      const baseUrl = apiBaseUrl.replace(/\/api$/, '')
+      fileUrl = fileUrl.startsWith('/') 
+        ? `${baseUrl}${fileUrl}`
+        : `${baseUrl}/${fileUrl}`
+      logger.log('Download anexo - URL construída:', fileUrl)
+    }
+    
+    // Obter token de autenticação (opcional, pois arquivos estáticos podem ser públicos)
+    const token = sessionStorage.getItem('token')
+    
+    // Fazer download usando fetch para ter mais controle
+    logger.log('Download anexo - Iniciando fetch...')
+    const response = await fetch(fileUrl, {
+      method: 'GET',
+      headers: {
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      }
     })
     
-    if (!response.data) {
-      throw new Error('Erro ao baixar arquivo')
+    logger.log('Download anexo - Response status:', response.status, response.statusText)
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '')
+      logger.error('Download anexo - Erro na resposta:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorText
+      })
+      throw new Error(`Erro ao baixar arquivo: ${response.status} ${response.statusText}`)
     }
     
-    // response.data já é um Blob quando responseType: 'blob'
-    const blob = response.data as Blob
+    // Converter resposta para blob
+    const blob = await response.blob()
+    
+    logger.log('Download anexo - Blob recebido:', {
+      size: blob.size,
+      type: blob.type
+    })
+    
+    if (!blob || blob.size === 0) {
+      throw new Error('Arquivo vazio ou inválido')
+    }
+    
+    // Criar link de download
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = attachment.originalName || attachment.filename
+    link.download = attachment.originalName || attachment.filename || 'anexo'
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
+    
+    logger.log('Download anexo - Download concluído com sucesso')
     
     Notify.create({
       type: 'positive',
@@ -2334,10 +2375,12 @@ const downloadBugAttachment = async (attachment: StepAttachment) => {
     })
   } catch (err: unknown) {
     logger.error('Erro ao baixar anexo:', err)
+    const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
     Notify.create({
       type: 'negative',
-      message: 'Erro ao baixar anexo',
-      position: 'top'
+      message: `Erro ao baixar anexo: ${errorMessage}`,
+      position: 'top',
+      timeout: 5000
     })
   }
 }
