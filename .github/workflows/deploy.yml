@@ -113,10 +113,16 @@ jobs:
           }
 
       - name: PM2 deploy setup
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
         run: pm2 deploy ecosystem.config.js production setup || true
 
       - name: PM2 deploy release
         timeout-minutes: 30
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
         run: |
           # Configurar SSH para manter conexão viva
           ssh -o ServerAliveInterval=60 -o ServerAliveCountMax=30 -o TCPKeepAlive=yes target "echo 'SSH connection test'" || true
