@@ -1,16 +1,17 @@
 import axios from 'axios'
 import { isValidRedirect } from '../utils/helpers'
 
-// Obter URL da API da variável de ambiente ou usar localhost como fallback para desenvolvimento
+// Obter URL base da API. Se não houver VITE_API_URL, usar caminho relativo (/api)
+// e deixar o proxy/rewrites do Vercel encaminhar para o backend.
 export const getApiUrl = () => {
-  // No Quasar/Vite, variáveis de ambiente são acessadas via import.meta.env
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
-  // Garantir que a URL não termine com / para evitar problemas
+  const apiUrl = import.meta.env.VITE_API_URL
+  if (!apiUrl) return '' // usa caminho relativo (/api)
   return apiUrl.replace(/\/$/, '')
 }
 
+const baseApiUrl = getApiUrl()
 const api = axios.create({
-  baseURL: `${getApiUrl()}/api`,
+  baseURL: baseApiUrl ? `${baseApiUrl}/api` : '/api',
   timeout: 10000 // 10 segundos de timeout
 })
 

@@ -6,6 +6,10 @@
   "framework": null,
   "rewrites": [
     {
+      "source": "/api/:match*",
+      "destination": "http://api.qamanager.online:3000/api/:match*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
