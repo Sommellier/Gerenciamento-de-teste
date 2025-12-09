@@ -12,9 +12,10 @@ module.exports = {
   ],
   deploy: {
     production: {
-      user: "ubuntu",
+      user: process.env.EC2_USER || "ubuntu",
       // IP Elástico (Elastic IP) - não muda mesmo após reiniciar a instância
-      host: "18.216.89.55", // IP elástico associado à instância
+      // Usa variável de ambiente se disponível (do GitHub Actions secret), senão usa o IP fixo
+      host: process.env.EC2_HOST || "18.216.89.55", // IP elástico associado à instância
       ref: "origin/main",
       repo: "git@github.com:Sommellier/Gerenciamento-de-teste.git",
       path: "/var/www/api-backend",
