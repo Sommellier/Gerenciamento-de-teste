@@ -428,8 +428,6 @@ const acceptDialog = ref(false)
 const declineDialog = ref(false)
 const inviteToProcess = ref<Invite | null>(null)
 
-// Options removed - not used
-
 // Methods
 const goBack = () => {
   void router.push('/dashboard')
@@ -521,8 +519,6 @@ const closeDeclineDialog = () => {
 type InviteStatus = 'PENDING' | 'ACCEPTED' | 'DECLINED' | 'EXPIRED'
 type InviteRole = 'OWNER' | 'MANAGER' | 'TESTER' | 'APPROVER'
 
-// Helper functions removed - not used
-
 const getStatusLabel = (status: string): string => {
   const labels: Record<InviteStatus, string> = {
     PENDING: 'Pendente',
@@ -573,49 +569,8 @@ const confirmAccept = async () => {
     fullInvite: inviteToProcess.value
   })
   
-  // Validar se o token existe
-  if (!inviteToProcess.value.token || inviteToProcess.value.token.trim() === '') {
-    logger.error('Token não encontrado no convite:', inviteToProcess.value)
-    
-    // Tentar recarregar os convites para obter o token atualizado
-    try {
-      await loadInvites()
-      // Verificar novamente após recarregar
-      const updatedInvite = invites.value.find(i => i.id === inviteToProcess.value!.id)
-      if (updatedInvite?.token) {
-        inviteToProcess.value.token = updatedInvite.token
-        // Continuar com o processo de aceitar
-      } else {
-        $q.notify({
-          type: 'negative',
-          message: 'Token do convite não encontrado. Por favor, recarregue a página ou entre em contato com o administrador.',
-          position: 'top',
-          timeout: 5000
-        })
-        return
-      }
-    } catch (error) {
-      logger.error('Erro ao recarregar convites:', error)
-      $q.notify({
-        type: 'negative',
-        message: 'Token do convite não encontrado. Por favor, recarregue a página.',
-        position: 'top'
-      })
-      return
-    }
-  }
-  
-  // Garantir que o token seja uma string válida
-  const token = inviteToProcess.value.token?.trim()
-  if (!token || token === '') {
-    logger.error('Token inválido após validação:', inviteToProcess.value)
-    $q.notify({
-      type: 'negative',
-      message: 'Token do convite inválido. Por favor, recarregue a página.',
-      position: 'top'
-    })
-    return
-  }
+  const token = await validateAndGetToken()
+  if (!token) return
 
   processingInvite.value = inviteToProcess.value.id
   try {
@@ -623,11 +578,7 @@ const confirmAccept = async () => {
     await inviteService.acceptInvite(token)
     
     // Atualizar status local
-    const invite = invites.value.find(i => i.id === inviteToProcess.value!.id)
-    if (invite) {
-      invite.status = 'ACCEPTED'
-      invite.acceptedAt = new Date().toISOString()
-    }
+    updateInviteStatus('ACCEPTED', 'acceptedAt')
     
     $q.notify({
       type: 'positive',
@@ -640,17 +591,7 @@ const confirmAccept = async () => {
     // Recarregar a lista para garantir sincronização
     await loadInvites()
   } catch (error: unknown) {
-    interface AxiosError {
-      response?: {
-        data?: {
-          message?: string
-        }
-      }
-    }
-    const axiosError = error && typeof error === 'object' && 'response' in error
-      ? error as AxiosError
-      : undefined
-    const message = axiosError?.response?.data?.message || 'Erro ao aceitar convite'
+    const message = handleAxiosError(error, 'Erro ao aceitar convite')
     $q.notify({
       type: 'negative',
       message,
@@ -664,47 +605,8 @@ const confirmAccept = async () => {
 const confirmDecline = async () => {
   if (!inviteToProcess.value) return
   
-  // Validar se o token existe
-  if (!inviteToProcess.value.token || inviteToProcess.value.token.trim() === '') {
-    // Tentar recarregar os convites para obter o token atualizado
-    try {
-      await loadInvites()
-      // Verificar novamente após recarregar
-      const updatedInvite = invites.value.find(i => i.id === inviteToProcess.value!.id)
-      if (updatedInvite?.token) {
-        inviteToProcess.value.token = updatedInvite.token
-        // Continuar com o processo de recusar
-      } else {
-        $q.notify({
-          type: 'negative',
-          message: 'Token do convite não encontrado. Por favor, recarregue a página ou entre em contato com o administrador.',
-          position: 'top',
-          timeout: 5000
-        })
-        return
-      }
-    } catch (error) {
-      logger.error('Erro ao recarregar convites:', error)
-      $q.notify({
-        type: 'negative',
-        message: 'Token do convite não encontrado. Por favor, recarregue a página.',
-        position: 'top'
-      })
-      return
-    }
-  }
-  
-  // Garantir que o token seja uma string válida
-  const token = inviteToProcess.value.token?.trim()
-  if (!token || token === '') {
-    logger.error('Token inválido após validação:', inviteToProcess.value)
-    $q.notify({
-      type: 'negative',
-      message: 'Token do convite inválido. Por favor, recarregue a página.',
-      position: 'top'
-    })
-    return
-  }
+  const token = await validateAndGetToken()
+  if (!token) return
 
   processingInvite.value = inviteToProcess.value.id
   try {
@@ -712,11 +614,7 @@ const confirmDecline = async () => {
     await inviteService.declineInvite(token)
     
     // Atualizar status local
-    const invite = invites.value.find(i => i.id === inviteToProcess.value!.id)
-    if (invite) {
-      invite.status = 'DECLINED'
-      invite.declinedAt = new Date().toISOString()
-    }
+    updateInviteStatus('DECLINED', 'declinedAt')
     
     $q.notify({
       type: 'info',
@@ -729,17 +627,7 @@ const confirmDecline = async () => {
     // Recarregar a lista para garantir sincronização
     await loadInvites()
   } catch (error: unknown) {
-    interface AxiosError {
-      response?: {
-        data?: {
-          message?: string
-        }
-      }
-    }
-    const axiosError = error && typeof error === 'object' && 'response' in error
-      ? error as AxiosError
-      : undefined
-    const message = axiosError?.response?.data?.message || 'Erro ao recusar convite'
+    const message = handleAxiosError(error, 'Erro ao recusar convite')
     $q.notify({
       type: 'negative',
       message,
@@ -764,6 +652,78 @@ const viewProject = () => {
   const projectId = selectedInvite.value.projectId
   closeMenu()
   void router.push(`/projects/${projectId}`)
+}
+
+// Função auxiliar para validar e obter token do convite
+const validateAndGetToken = async (): Promise<string | null> => {
+  if (!inviteToProcess.value) return null
+  
+  // Validar se o token existe
+  if (!inviteToProcess.value.token || inviteToProcess.value.token.trim() === '') {
+    // Tentar recarregar os convites para obter o token atualizado
+    try {
+      await loadInvites()
+      // Verificar novamente após recarregar
+      const updatedInvite = invites.value.find(i => i.id === inviteToProcess.value!.id)
+      if (updatedInvite?.token) {
+        inviteToProcess.value.token = updatedInvite.token
+      } else {
+        $q.notify({
+          type: 'negative',
+          message: 'Token do convite não encontrado. Por favor, recarregue a página ou entre em contato com o administrador.',
+          position: 'top',
+          timeout: 5000
+        })
+        return null
+      }
+    } catch (error) {
+      logger.error('Erro ao recarregar convites:', error)
+      $q.notify({
+        type: 'negative',
+        message: 'Token do convite não encontrado. Por favor, recarregue a página.',
+        position: 'top'
+      })
+      return null
+    }
+  }
+  
+  // Garantir que o token seja uma string válida
+  const token = inviteToProcess.value.token?.trim()
+  if (!token || token === '') {
+    logger.error('Token inválido após validação:', inviteToProcess.value)
+    $q.notify({
+      type: 'negative',
+      message: 'Token do convite inválido. Por favor, recarregue a página.',
+      position: 'top'
+    })
+    return null
+  }
+  
+  return token
+}
+
+// Função auxiliar para atualizar status local do convite
+const updateInviteStatus = (status: 'ACCEPTED' | 'DECLINED', timestampField: 'acceptedAt' | 'declinedAt') => {
+  const invite = invites.value.find(i => i.id === inviteToProcess.value!.id)
+  if (invite) {
+    invite.status = status
+    invite[timestampField] = new Date().toISOString()
+  }
+}
+
+// Função auxiliar para tratar erros do axios
+const handleAxiosError = (error: unknown, defaultMessage: string): string => {
+  interface AxiosError {
+    response?: {
+      data?: {
+        message?: string
+      }
+    }
+  }
+  const axiosError = error && typeof error === 'object' && 'response' in error
+    ? error as AxiosError
+    : undefined
+  return axiosError?.response?.data?.message || defaultMessage
 }
 
 onMounted(() => {
