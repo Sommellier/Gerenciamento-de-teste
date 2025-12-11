@@ -1,11 +1,10 @@
 import axios from 'axios'
 import { isValidRedirect } from '../utils/helpers'
 
-// Obter URL base da API. Se não houver VITE_API_URL, usar caminho relativo (/api)
-// e deixar o proxy/rewrites do Vercel encaminhar para o backend.
+// Obter URL base da API. Se não houver VITE_API_URL, usar localhost:3000 como
+// fallback explícito para manter compatibilidade com os testes e ambiente local.
 export const getApiUrl = () => {
-  const apiUrl = import.meta.env.VITE_API_URL
-  if (!apiUrl) return '' // usa caminho relativo (/api)
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000'
   return apiUrl.replace(/\/$/, '')
 }
 
