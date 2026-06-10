@@ -90,7 +90,7 @@ jobs:
             -Dsonar.newCode.referenceBranch=main
             -Dsonar.language=ts
             -Dsonar.sourceEncoding=UTF-8
-             # =========================
+      # =========================
       # FRONTEND (QUASAR)
       # =========================
       - name: Install Dependencies (frontend)
